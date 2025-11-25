@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import logoImage from "@/assets/logo-barbershop.png";
 
 const Index = () => {
   return (
@@ -10,9 +11,11 @@ const Index = () => {
       <div className="relative z-10 text-center space-y-8 px-4">
         <div className="space-y-4">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gold-gradient rounded-2xl flex items-center justify-center shadow-gold-glow-strong animate-float">
-              <span className="text-4xl font-bold text-background">N</span>
-            </div>
+            <img 
+              src={logoImage} 
+              alt="Natan Barbershop Logo" 
+              className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float"
+            />
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-foreground animate-fade-in">
