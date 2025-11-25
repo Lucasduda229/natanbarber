@@ -7,6 +7,7 @@ import GhostInput from "@/components/GhostInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import logoImage from "@/assets/logo-barbershop.png";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -121,6 +122,15 @@ const Register = () => {
       {/* Main Content */}
       <main className="relative z-10 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src={logoImage} 
+              alt="Natan Barbershop Logo" 
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float"
+            />
+          </div>
+
           {/* Hero Text */}
           <div className="text-center mb-8 space-y-2">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">
