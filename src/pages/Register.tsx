@@ -106,12 +106,16 @@ const Register = () => {
 
       {/* Header */}
       <header className="auth-header relative z-10 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gold-gradient rounded-lg flex items-center justify-center">
-            <span className="text-xl font-bold text-background">N</span>
-          </div>
-          <span className="text-xl font-bold text-foreground">Natan Barbershop</span>
-        </div>
+        <Link to="/" className="flex items-center gap-3 group">
+          <img 
+            src={logoImage} 
+            alt="Natan Barbershop" 
+            className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110 group-hover:border-primary/60"
+          />
+          <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+            Natan Barbershop
+          </span>
+        </Link>
         <Link to="/login">
           <Button variant="ghost" className="text-foreground hover:text-primary">
             Entrar
