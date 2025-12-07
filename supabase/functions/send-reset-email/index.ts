@@ -14,6 +14,38 @@ interface ResetEmailRequest {
   redirectTo: string;
 }
 
+// Simple in-memory rate limiting (per IP, resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_MAX = 5; // Max 5 requests
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // Per minute
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) {
+    return true;
+  }
+  
+  record.count++;
+  return false;
+}
+
+// Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateEmail(email: unknown): email is string {
+  return typeof email === 'string' && 
+         email.length > 0 && 
+         email.length <= 255 && 
+         emailRegex.test(email.trim());
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,9 +53,52 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, redirectTo }: ResetEmailRequest = await req.json();
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("cf-connecting-ip") || 
+                     "unknown";
     
-    console.log("Received reset password request for:", email);
+    // Check rate limit
+    if (isRateLimited(clientIP)) {
+      console.log("Rate limit exceeded for IP:", clientIP);
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const body = await req.json();
+    const { email, redirectTo } = body as ResetEmailRequest;
+    
+    // Validate email format
+    if (!validateEmail(email)) {
+      console.log("Invalid email format received");
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Validate redirectTo URL
+    if (!redirectTo || typeof redirectTo !== 'string' || redirectTo.length > 500) {
+      console.log("Invalid redirectTo URL");
+      return new Response(
+        JSON.stringify({ error: "Invalid redirect URL" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    console.log("Received reset password request for:", sanitizedEmail);
 
     // Create Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -33,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate password reset link
     const { data, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: email,
+      email: sanitizedEmail,
       options: {
         redirectTo: redirectTo,
       },
@@ -76,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Barbearia <onboarding@resend.dev>",
-        to: [email],
+        to: [sanitizedEmail],
         subject: "Redefinir sua senha",
         html: `
           <!DOCTYPE html>
@@ -120,7 +195,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResult = await emailResponse.json();
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent successfully:", emailResult);
 
     return new Response(JSON.stringify({ success: true, message: "Email enviado com sucesso" }), {
       status: 200,
