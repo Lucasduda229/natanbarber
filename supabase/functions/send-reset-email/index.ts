@@ -39,15 +39,30 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
+    // If user not found, return success anyway (security: don't reveal if email exists)
     if (resetError) {
-      console.error("Error generating reset link:", resetError);
-      throw new Error(resetError.message);
+      console.log("User not found or error generating link:", resetError.message);
+      // Return success to prevent email enumeration
+      return new Response(JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá um link de recuperação" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
     }
 
     const resetLink = data.properties?.action_link;
     
     if (!resetLink) {
-      throw new Error("Failed to generate reset link");
+      console.log("Failed to generate reset link");
+      return new Response(JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá um link de recuperação" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
     }
 
     console.log("Reset link generated successfully");
