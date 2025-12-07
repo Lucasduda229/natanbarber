@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
 
 const Index = () => {
@@ -16,6 +17,10 @@ const Index = () => {
               alt="Natan Barbershop Logo" 
               className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float"
             />
+          </div>
+          
+          <div className="flex justify-center">
+            <OpenClosedBadge />
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-foreground animate-fade-in">
