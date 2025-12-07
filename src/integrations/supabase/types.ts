@@ -64,6 +64,24 @@ export type Database = {
           },
         ]
       }
+      barbershop_status: {
+        Row: {
+          id: string
+          is_open: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          is_open?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_open?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       blocked_dates: {
         Row: {
           blocked_date: string

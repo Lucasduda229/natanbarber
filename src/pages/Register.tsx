@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User, Phone } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import OpenClosedBadge from "@/components/OpenClosedBadge";
 import GhostInput from "@/components/GhostInput";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -61,7 +62,10 @@ const Register = () => {
           <img src={logoImage} alt="Natan Barbershop" className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
           <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">Natan Barbershop</span>
         </Link>
-        <Link to="/login"><Button variant="ghost" className="text-foreground hover:text-primary">Entrar</Button></Link>
+        <div className="flex items-center gap-4">
+          <OpenClosedBadge />
+          <Link to="/login"><Button variant="ghost" className="text-foreground hover:text-primary">Entrar</Button></Link>
+        </div>
       </header>
       <main className="relative z-10 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">

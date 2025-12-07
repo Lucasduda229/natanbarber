@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3 } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import AdminStatusToggle from "@/components/AdminStatusToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -235,7 +236,12 @@ const Admin = () => {
 
       {/* Main Content */}
       <main className="admin-container relative z-10 px-4 py-6 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Painel Administrativo</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Painel Administrativo</h1>
+          <div className="w-full md:w-auto md:max-w-sm">
+            <AdminStatusToggle />
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
