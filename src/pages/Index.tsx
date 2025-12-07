@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -18,6 +19,16 @@ const Index = () => {
               className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float"
             />
           </div>
+          
+          <a 
+            href="https://www.instagram.com/_natan_barber_/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group"
+          >
+            <Instagram className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-sm">@_natan_barber_</span>
+          </a>
           
           <div className="flex justify-center">
             <OpenClosedBadge />
