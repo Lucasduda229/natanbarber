@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addDays, isSameDay, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronRight, User, LogOut } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronRight, User, LogOut, Phone, Copy } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +35,8 @@ const LOCATION = {
   cep: "CEP: 88882-000, Brasil",
 };
 
+const PIX_KEY = "48 9210-7035";
+
 const Booking = () => {
   const navigate = useNavigate();
   const { user, signOut, isAdmin } = useAuth();
@@ -44,10 +48,16 @@ const Booking = () => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Customer info fields
+  const [customerName, setCustomerName] = useState("");
+  const [customerWhatsApp, setCustomerWhatsApp] = useState("");
+  const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
 
   useEffect(() => {
     gsap.fromTo(".booking-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     fetchServices();
+    loadUserProfile();
   }, []);
 
   useEffect(() => {
@@ -55,6 +65,21 @@ const Booking = () => {
       fetchAvailableSlots(selectedDate);
     }
   }, [selectedDate]);
+
+  const loadUserProfile = async () => {
+    if (!user) return;
+    
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (profile) {
+      if (profile.full_name) setCustomerName(profile.full_name);
+      if (profile.phone) setCustomerWhatsApp(profile.phone);
+    }
+  };
 
   const fetchServices = async () => {
     const { data, error } = await supabase
@@ -128,6 +153,47 @@ const Booking = () => {
     gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
   };
 
+  const validateCustomerInfo = (): boolean => {
+    const errors: { name?: string; whatsapp?: string } = {};
+    
+    const trimmedName = customerName.trim();
+    if (!trimmedName) {
+      errors.name = "Nome é obrigatório";
+    } else if (trimmedName.length < 2) {
+      errors.name = "Nome deve ter pelo menos 2 caracteres";
+    } else if (trimmedName.length > 100) {
+      errors.name = "Nome deve ter no máximo 100 caracteres";
+    }
+    
+    const cleanWhatsApp = customerWhatsApp.replace(/\D/g, "");
+    if (!cleanWhatsApp) {
+      errors.whatsapp = "WhatsApp é obrigatório";
+    } else if (cleanWhatsApp.length < 10 || cleanWhatsApp.length > 11) {
+      errors.whatsapp = "WhatsApp deve ter 10 ou 11 dígitos";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCustomerInfoSubmit = async () => {
+    if (!validateCustomerInfo()) return;
+    
+    // Update profile with customer info
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ 
+          full_name: customerName.trim(), 
+          phone: customerWhatsApp.replace(/\D/g, "") 
+        })
+        .eq("user_id", user.id);
+    }
+    
+    setStep(4);
+    gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+  };
+
   const handleConfirmBooking = async () => {
     if (!selectedService || !selectedDate || !selectedTime || !user) return;
 
@@ -150,9 +216,14 @@ const Booking = () => {
       return;
     }
 
-    toast.success("Agendamento realizado!", { description: "Aguardando pagamento via PIX." });
-    setStep(4);
+    toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
+    setStep(5);
     gsap.fromTo(".step-content", { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)" });
+  };
+
+  const copyPixKey = () => {
+    navigator.clipboard.writeText(PIX_KEY.replace(/\s/g, ""));
+    toast.success("Chave PIX copiada!");
   };
 
   const handleLogout = async () => {
@@ -220,16 +291,16 @@ const Booking = () => {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3, 4].map((s) => (
-            <div key={s} className={`flex items-center ${s < 4 ? "flex-1" : ""}`}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div key={s} className={`flex items-center ${s < 5 ? "flex-1" : ""}`}>
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${
                   step >= s ? "bg-primary text-background" : "bg-muted text-muted-foreground"
                 }`}
               >
-                {step > s ? <Check className="w-5 h-5" /> : s}
+                {step > s ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : s}
               </div>
-              {s < 4 && <div className={`flex-1 h-1 mx-2 rounded ${step > s ? "bg-primary" : "bg-muted"}`} />}
+              {s < 5 && <div className={`flex-1 h-1 mx-1 sm:mx-2 rounded ${step > s ? "bg-primary" : "bg-muted"}`} />}
             </div>
           ))}
         </div>
@@ -352,8 +423,100 @@ const Booking = () => {
             </div>
           )}
 
-          {/* Step 3: Payment */}
+          {/* Step 3: Customer Info */}
           {step === 3 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 mb-6">
+                <Button variant="ghost" size="icon" onClick={goBack}>
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="text-2xl font-bold text-foreground">Seus Dados</h2>
+              </div>
+
+              <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <User className="w-5 h-5 text-primary" />
+                    Informações de Contato
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customerName" className="text-foreground">
+                      Nome Completo <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="customerName"
+                      placeholder="Digite seu nome completo"
+                      value={customerName}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        if (formErrors.name) setFormErrors(prev => ({ ...prev, name: undefined }));
+                      }}
+                      className={`bg-card/60 border-primary/20 ${formErrors.name ? 'border-destructive' : ''}`}
+                    />
+                    {formErrors.name && (
+                      <p className="text-sm text-destructive">{formErrors.name}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="customerWhatsApp" className="text-foreground">
+                      WhatsApp <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="customerWhatsApp"
+                        placeholder="(00) 00000-0000"
+                        value={customerWhatsApp}
+                        onChange={(e) => {
+                          setCustomerWhatsApp(e.target.value);
+                          if (formErrors.whatsapp) setFormErrors(prev => ({ ...prev, whatsapp: undefined }));
+                        }}
+                        className={`pl-10 bg-card/60 border-primary/20 ${formErrors.whatsapp ? 'border-destructive' : ''}`}
+                      />
+                    </div>
+                    {formErrors.whatsapp && (
+                      <p className="text-sm text-destructive">{formErrors.whatsapp}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Usaremos este número para entrar em contato sobre seu agendamento
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Summary */}
+              <Card className="bg-primary/5 border-primary/30">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Scissors className="w-4 h-4 text-primary" />
+                      <span className="text-foreground">{selectedService?.name}</span>
+                    </div>
+                    <span className="text-primary font-bold">R$ {selectedService?.price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CalendarIcon className="w-4 h-4" />
+                    <span>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</span>
+                    <Clock className="w-4 h-4 ml-2" />
+                    <span>{selectedTime?.slice(0, 5)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button
+                onClick={handleCustomerInfoSubmit}
+                className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow"
+              >
+                Continuar
+              </Button>
+            </div>
+          )}
+
+          {/* Step 4: Confirmation */}
+          {step === 4 && (
             <div className="space-y-6">
               <div className="flex items-center gap-4 mb-6">
                 <Button variant="ghost" size="icon" onClick={goBack}>
@@ -367,6 +530,14 @@ const Booking = () => {
                   <CardTitle className="text-foreground">Resumo do Agendamento</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="font-semibold text-foreground">{customerName}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-border">
+                    <span className="text-muted-foreground">WhatsApp</span>
+                    <span className="font-semibold text-foreground">{customerWhatsApp}</span>
+                  </div>
                   <div className="flex items-center justify-between py-2 border-b border-border">
                     <span className="text-muted-foreground">Serviço</span>
                     <span className="font-semibold text-foreground">{selectedService?.name}</span>
@@ -396,20 +567,30 @@ const Booking = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-foreground">
                     <CreditCard className="w-5 h-5 text-primary" />
-                    Forma de Pagamento
+                    Pagamento via PIX
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="flex items-center gap-4 p-4 rounded-lg border-2 border-primary bg-primary/5">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                       <span className="text-xl font-bold text-primary">PIX</span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground">Pagamento via PIX</h4>
-                      <p className="text-sm text-muted-foreground">Pague na hora do atendimento</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground">Chave PIX (Telefone)</h4>
+                      <p className="text-lg font-mono text-primary truncate">{PIX_KEY}</p>
                     </div>
-                    <Check className="w-6 h-6 text-primary ml-auto" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyPixKey}
+                      className="border-primary/30 hover:bg-primary/10 flex-shrink-0"
+                    >
+                      <Copy className="w-4 h-4 text-primary" />
+                    </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Realize o pagamento via PIX na hora do atendimento ou antes
+                  </p>
                 </CardContent>
               </Card>
 
@@ -430,19 +611,23 @@ const Booking = () => {
             </div>
           )}
 
-          {/* Step 4: Success */}
-          {step === 4 && (
+          {/* Step 5: Success */}
+          {step === 5 && (
             <div className="text-center space-y-6 py-12">
               <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
                 <Check className="w-12 h-12 text-primary" />
               </div>
-              <h2 className="text-3xl font-bold text-foreground">Agendamento Confirmado!</h2>
+              <h2 className="text-3xl font-bold text-foreground">Pedido Enviado!</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Seu horário foi reservado com sucesso. Lembre-se de chegar 5 minutos antes do seu horário.
+                Seu agendamento foi enviado e está aguardando aprovação do barbeiro. Você receberá uma confirmação em breve.
               </p>
 
               <Card className="bg-card/40 backdrop-blur-xl border-primary/20 max-w-md mx-auto">
                 <CardContent className="p-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Cliente</span>
+                    <span className="font-semibold text-foreground">{customerName}</span>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Serviço</span>
                     <span className="font-semibold text-foreground">{selectedService?.name}</span>
@@ -464,11 +649,29 @@ const Booking = () => {
                 </CardContent>
               </Card>
 
+              <Card className="bg-primary/5 border-primary/30 max-w-md mx-auto">
+                <CardContent className="p-4">
+                  <p className="text-sm text-foreground mb-2 font-semibold">Chave PIX para pagamento:</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-primary text-lg">{PIX_KEY}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyPixKey}
+                      className="border-primary/30 hover:bg-primary/10"
+                    >
+                      <Copy className="w-4 h-4 mr-1" />
+                      Copiar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button onClick={() => navigate("/my-appointments")} className="bg-gold-gradient text-background">
                   Ver Meus Agendamentos
                 </Button>
-                <Button variant="outline" onClick={() => { setStep(1); setSelectedService(null); setSelectedDate(undefined); setSelectedTime(null); }}>
+                <Button variant="outline" onClick={() => { setStep(1); setSelectedService(null); setSelectedDate(undefined); setSelectedTime(null); setCustomerName(""); setCustomerWhatsApp(""); }}>
                   Novo Agendamento
                 </Button>
               </div>
