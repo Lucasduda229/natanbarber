@@ -73,6 +73,11 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <GhostInput icon={Mail} name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} error={errors.email} autoFocus />
               <GhostInput icon={Lock} name="password" type="password" placeholder="Sua senha" value={formData.password} onChange={handleChange} error={errors.password} />
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  Esqueci a senha
+                </Link>
+              </div>
               <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow">
                 {loading ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />Entrando...</span> : "Entrar"}
               </Button>
