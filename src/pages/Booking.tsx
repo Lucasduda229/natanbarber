@@ -167,11 +167,12 @@ const Booking = () => {
     }
   };
 
-  // Disable past dates and Sundays
+  // Disable past dates, Sundays (0) and Mondays (1)
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return date < today || getDay(date) === 0;
+    const dayOfWeek = getDay(date);
+    return date < today || dayOfWeek === 0 || dayOfWeek === 1;
   };
 
   return (
