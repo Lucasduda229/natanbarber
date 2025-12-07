@@ -307,7 +307,125 @@ const Admin = () => {
           </TabsList>
 
           {/* Appointments Tab */}
-          <TabsContent value="appointments" className="space-y-4">
+          <TabsContent value="appointments" className="space-y-6">
+            {/* Pending Appointments Section - Always visible at top */}
+            {appointments.filter(a => a.status === "pending").length > 0 && (
+              <Card className="bg-yellow-500/5 backdrop-blur-xl border-yellow-500/30">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-yellow-500">
+                    <Clock className="w-5 h-5" />
+                    Pedidos Aguardando Aprovação ({appointments.filter(a => a.status === "pending").length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {appointments
+                    .filter(a => a.status === "pending")
+                    .sort((a, b) => {
+                      const dateA = new Date(`${a.appointment_date}T${a.appointment_time}`);
+                      const dateB = new Date(`${b.appointment_date}T${b.appointment_time}`);
+                      return dateA.getTime() - dateB.getTime();
+                    })
+                    .map((appointment) => (
+                    <div 
+                      key={appointment.id} 
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-card/40 border border-yellow-500/20"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-xl bg-yellow-500/10 flex flex-col items-center justify-center">
+                          <span className="text-lg font-bold text-yellow-500">
+                            {format(parseISO(appointment.appointment_date), "dd")}
+                          </span>
+                          <span className="text-xs text-yellow-500 uppercase">
+                            {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground flex items-center gap-2">
+                            <Users className="w-4 h-4 text-yellow-500" />
+                            {appointment.profiles?.full_name || "Cliente"}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{appointment.profiles?.phone || "Sem telefone"}</p>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {appointment.appointment_time.slice(0, 5)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Scissors className="w-4 h-4" />
+                              {appointment.services.name}
+                            </span>
+                            <span className="font-bold text-primary">R$ {appointment.services.price.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Aceitar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-card border-primary/20">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Deseja confirmar o agendamento de {appointment.profiles?.full_name || "Cliente"} para {format(parseISO(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.appointment_time.slice(0, 5)}?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => updateAppointmentStatus(appointment.id, "confirmed")}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Recusar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-card border-primary/20">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Recusar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja recusar o agendamento de {appointment.profiles?.full_name || "Cliente"}? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Voltar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => updateAppointmentStatus(appointment.id, "cancelled")}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Recusar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* All Appointments Section */}
             <div className="flex items-center gap-4 mb-4">
               <input
                 type="date"
