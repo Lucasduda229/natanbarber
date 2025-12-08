@@ -52,7 +52,7 @@ const Booking = () => {
   const { user, isAdmin } = useAuth();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -142,10 +142,28 @@ const Booking = () => {
   };
 
   const handleServiceSelect = (service: Service) => {
-    setSelectedService(service);
+    setSelectedServices(prev => {
+      const isSelected = prev.some(s => s.id === service.id);
+      if (isSelected) {
+        return prev.filter(s => s.id !== service.id);
+      } else {
+        return [...prev, service];
+      }
+    });
+  };
+
+  const handleContinueToDate = () => {
+    if (selectedServices.length === 0) {
+      toast.error("Selecione pelo menos um serviço");
+      return;
+    }
     setStep(2);
     gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
   };
+
+  // Cálculos de totais
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -199,27 +217,46 @@ const Booking = () => {
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedService || !selectedDate || !selectedTime || !user) return;
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime || !user) return;
 
     setLoading(true);
 
-    const { error } = await supabase.from("appointments").insert({
-      user_id: user.id,
-      service_id: selectedService.id,
-      appointment_date: format(selectedDate, "yyyy-MM-dd"),
-      appointment_time: selectedTime,
-      status: "pending",
-      payment_status: "pending",
-      payment_method: "pix",
-    });
+    // Criar o agendamento com o primeiro serviço (para compatibilidade)
+    const { data: appointment, error } = await supabase
+      .from("appointments")
+      .insert({
+        user_id: user.id,
+        service_id: selectedServices[0].id,
+        appointment_date: format(selectedDate, "yyyy-MM-dd"),
+        appointment_time: selectedTime,
+        status: "pending",
+        payment_status: "pending",
+        payment_method: "pix",
+      })
+      .select()
+      .single();
 
-    setLoading(false);
-
-    if (error) {
+    if (error || !appointment) {
+      setLoading(false);
       toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
       return;
     }
 
+    // Inserir todos os serviços na tabela de junção
+    const appointmentServices = selectedServices.map(service => ({
+      appointment_id: appointment.id,
+      service_id: service.id,
+    }));
+
+    const { error: servicesError } = await supabase
+      .from("appointment_services")
+      .insert(appointmentServices);
+
+    if (servicesError) {
+      console.error("Error inserting appointment services:", servicesError);
+    }
+
+    setLoading(false);
     toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
     setStep(5);
     gsap.fromTo(".step-content", { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)" });
@@ -360,52 +397,100 @@ const Booking = () => {
               </h3>
               
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {services.map((service) => (
-                  <Card
-                    key={service.id}
-                    className="bg-card/60 backdrop-blur-xl border-primary/10 hover:border-primary/40 cursor-pointer transition-all group"
-                    onClick={() => handleServiceSelect(service)}
-                  >
-                    <CardContent className="p-5">
-                      {/* Icons */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
-                          <img src={logoImage} alt="" className="w-full h-full object-cover" />
+                {services.map((service) => {
+                  const isSelected = selectedServices.some(s => s.id === service.id);
+                  return (
+                    <Card
+                      key={service.id}
+                      className={`bg-card/60 backdrop-blur-xl cursor-pointer transition-all group ${
+                        isSelected 
+                          ? "border-primary border-2 ring-2 ring-primary/20" 
+                          : "border-primary/10 hover:border-primary/40"
+                      }`}
+                      onClick={() => handleServiceSelect(service)}
+                    >
+                      <CardContent className="p-5 relative">
+                        {/* Selection indicator */}
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="w-4 h-4 text-background" />
+                          </div>
+                        )}
+                        
+                        {/* Icons */}
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-10 h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
+                            <img src={logoImage} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Scissors className="w-5 h-5 text-primary" />
+                          </div>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Scissors className="w-5 h-5 text-primary" />
+                        
+                        {/* Service Info */}
+                        <h4 className={`font-semibold transition-colors mb-1 ${isSelected ? "text-primary" : "text-foreground group-hover:text-primary"}`}>
+                          {service.name}
+                        </h4>
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          {service.description || "Serviço profissional de qualidade"}
+                        </p>
+                        
+                        {/* Price and Action */}
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-xl font-bold text-primary">
+                              R$ {service.price.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {service.duration_minutes} minutos
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            className={isSelected 
+                              ? "bg-primary text-background" 
+                              : "bg-card hover:bg-card/80 text-foreground border border-primary/30 hover:border-primary"
+                            }
+                          >
+                            {isSelected ? "Selecionado" : "Selecionar"}
+                          </Button>
                         </div>
-                      </div>
-                      
-                      {/* Service Info */}
-                      <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
-                        {service.name}
-                      </h4>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {service.description || "Serviço profissional de qualidade"}
-                      </p>
-                      
-                      {/* Price and Action */}
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-xl font-bold text-primary">
-                            R$ {service.price.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {service.duration_minutes} minutos
-                          </p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          className="bg-card hover:bg-card/80 text-foreground border border-primary/30 hover:border-primary"
-                        >
-                          Selecionar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
+
+              {/* Continuar button e resumo */}
+              {selectedServices.length > 0 && (
+                <Card className="bg-primary/5 border-primary/30 mt-6">
+                  <CardContent className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      {selectedServices.map((service) => (
+                        <div key={service.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-primary" />
+                            <span className="text-foreground">{service.name}</span>
+                          </div>
+                          <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div>
+                        <p className="text-sm text-muted-foreground">{selectedServices.length} serviço(s) • {totalDuration} min</p>
+                        <p className="text-lg font-bold text-primary">Total: R$ {totalPrice.toFixed(2)}</p>
+                      </div>
+                      <Button 
+                        onClick={handleContinueToDate}
+                        className="bg-gold-gradient hover:opacity-90 text-background font-semibold"
+                      >
+                        Continuar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
@@ -476,15 +561,23 @@ const Booking = () => {
               </Card>
             </div>
 
-            {/* Selected Service Summary */}
-            {selectedService && (
+            {/* Selected Services Summary */}
+            {selectedServices.length > 0 && (
               <Card className="bg-primary/5 border-primary/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Scissors className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-foreground">{selectedService.name}</span>
+                <CardContent className="p-4 space-y-2">
+                  {selectedServices.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Scissors className="w-4 h-4 text-primary" />
+                        <span className="text-foreground">{service.name}</span>
+                      </div>
+                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
+                    <span className="font-semibold text-foreground">Total</span>
+                    <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
                   </div>
-                  <span className="text-primary font-bold">R$ {selectedService.price.toFixed(2)}</span>
                 </CardContent>
               </Card>
             )}
@@ -558,18 +651,24 @@ const Booking = () => {
             {/* Summary */}
             <Card className="bg-primary/5 border-primary/30">
               <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Scissors className="w-4 h-4 text-primary" />
-                    <span className="text-foreground">{selectedService?.name}</span>
+                {selectedServices.map((service) => (
+                  <div key={service.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Scissors className="w-4 h-4 text-primary" />
+                      <span className="text-foreground">{service.name}</span>
+                    </div>
+                    <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
                   </div>
-                  <span className="text-primary font-bold">R$ {selectedService?.price.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                ))}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
                   <CalendarIcon className="w-4 h-4" />
                   <span>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</span>
                   <Clock className="w-4 h-4 ml-2" />
                   <span>{selectedTime?.slice(0, 5)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -606,9 +705,14 @@ const Booking = () => {
                   <span className="text-muted-foreground">WhatsApp</span>
                   <span className="font-semibold text-foreground">{customerWhatsApp}</span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Serviço</span>
-                  <span className="font-semibold text-foreground">{selectedService?.name}</span>
+                <div className="py-2 border-b border-border">
+                  <span className="text-muted-foreground block mb-2">Serviços</span>
+                  {selectedServices.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between py-1">
+                      <span className="text-foreground">{service.name}</span>
+                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Data</span>
@@ -621,12 +725,12 @@ const Booking = () => {
                   <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Duração</span>
-                  <span className="font-semibold text-foreground">{selectedService?.duration_minutes} minutos</span>
+                  <span className="text-muted-foreground">Duração Total</span>
+                  <span className="font-semibold text-foreground">{totalDuration} minutos</span>
                 </div>
                 <div className="flex items-center justify-between py-4">
                   <span className="text-lg font-semibold text-foreground">Total</span>
-                  <span className="text-2xl font-bold text-primary">R$ {selectedService?.price.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -650,8 +754,8 @@ const Booking = () => {
                         pixKey: PIX_KEY,
                         merchantName: "NATAN BARBER",
                         merchantCity: "LAURO MULLER",
-                        amount: selectedService?.price,
-                        description: selectedService?.name?.substring(0, 25),
+                        amount: totalPrice,
+                        description: selectedServices.map(s => s.name).join(", ").substring(0, 25),
                       })}
                       size={160}
                       level="M"
@@ -722,9 +826,14 @@ const Booking = () => {
                   <span className="text-muted-foreground">Cliente</span>
                   <span className="font-semibold text-foreground">{customerName}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Serviço</span>
-                  <span className="font-semibold text-foreground">{selectedService?.name}</span>
+                <div className="py-2">
+                  <span className="text-muted-foreground block mb-1">Serviços</span>
+                  {selectedServices.map((service) => (
+                    <div key={service.id} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{service.name}</span>
+                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Data</span>
@@ -738,7 +847,7 @@ const Booking = () => {
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-border">
                   <span className="font-semibold text-foreground">Total (PIX)</span>
-                  <span className="text-xl font-bold text-primary">R$ {selectedService?.price.toFixed(2)}</span>
+                  <span className="text-xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -769,7 +878,7 @@ const Booking = () => {
                 variant="outline" 
                 onClick={() => { 
                   setStep(1); 
-                  setSelectedService(null); 
+                  setSelectedServices([]); 
                   setSelectedDate(undefined); 
                   setSelectedTime(null); 
                   setCustomerName(""); 
