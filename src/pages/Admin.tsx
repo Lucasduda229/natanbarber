@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { GalleryManager } from "@/components/GalleryManager";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { getConfirmationMessage } from "@/lib/whatsapp";
 
 interface Appointment {
   id: string;
@@ -749,6 +751,17 @@ const Admin = () => {
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
+
+                        <WhatsAppButton
+                          phone={appointment.profiles?.phone || ""}
+                          message={getConfirmationMessage(
+                            appointment.profiles?.full_name || "Cliente",
+                            appointment.services.name,
+                            format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
+                            appointment.appointment_time.slice(0, 5)
+                          )}
+                          disabled={!appointment.profiles?.phone}
+                        />
                       </div>
                     </div>
                   ))}
@@ -848,6 +861,17 @@ const Admin = () => {
                               <SelectItem value="refunded">Reembolsado</SelectItem>
                             </SelectContent>
                           </Select>
+
+                          <WhatsAppButton
+                            phone={appointment.profiles?.phone || ""}
+                            message={getConfirmationMessage(
+                              appointment.profiles?.full_name || "Cliente",
+                              appointment.services.name,
+                              format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
+                              appointment.appointment_time.slice(0, 5)
+                            )}
+                            disabled={!appointment.profiles?.phone}
+                          />
                         </div>
                       </div>
                     </CardContent>
