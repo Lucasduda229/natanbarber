@@ -43,23 +43,14 @@ const OpenClosedBadge = () => {
 
   return (
     <div
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm transition-all ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
         isOpen
-          ? "bg-green-500/10 border-green-500/30 text-green-500"
-          : "bg-red-500/10 border-red-500/30 text-red-500"
+          ? "text-green-500"
+          : "text-red-500"
       }`}
     >
-      {isOpen ? (
-        <>
-          <DoorOpen className="w-4 h-4" />
-          <span className="text-sm font-medium">Aberto</span>
-        </>
-      ) : (
-        <>
-          <DoorClosed className="w-4 h-4" />
-          <span className="text-sm font-medium">Fechado</span>
-        </>
-      )}
+      <div className={`w-2.5 h-2.5 rounded-full ${isOpen ? "bg-green-500" : "bg-red-500"} animate-pulse`} />
+      <span className="text-sm font-medium">{isOpen ? "Aberto Agora" : "Fechado"}</span>
     </div>
   );
 };
