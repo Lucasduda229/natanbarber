@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
+import pixIcon from "@/assets/pix-icon.png";
 
 interface Service {
   id: string;
@@ -653,8 +654,8 @@ const Booking = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg border-2 border-primary bg-primary/5">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xl font-bold text-primary">PIX</span>
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center flex-shrink-0 p-1.5">
+                    <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-foreground">Chave PIX (Telefone)</h4>
