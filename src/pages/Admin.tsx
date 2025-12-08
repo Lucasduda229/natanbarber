@@ -81,7 +81,8 @@ const Admin = () => {
   };
 
   const fetchAppointments = async () => {
-    const { data, error } = await supabase
+    // Fetch appointments
+    const { data: appointmentsData, error: appointmentsError } = await supabase
       .from("appointments")
       .select(`
         id,
@@ -89,10 +90,7 @@ const Admin = () => {
         appointment_time,
         status,
         payment_status,
-        profiles!appointments_user_id_fkey (
-          full_name,
-          phone
-        ),
+        user_id,
         services (
           name,
           price
@@ -101,9 +99,41 @@ const Admin = () => {
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
 
-    if (!error && data) {
-      setAppointments(data as unknown as Appointment[]);
+    if (appointmentsError) {
+      console.error("Error fetching appointments:", appointmentsError);
+      return;
     }
+
+    if (!appointmentsData || appointmentsData.length === 0) {
+      setAppointments([]);
+      return;
+    }
+
+    // Get unique user_ids
+    const userIds = [...new Set(appointmentsData.map(a => a.user_id))];
+
+    // Fetch profiles for these users
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone")
+      .in("user_id", userIds);
+
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+
+    // Create a map of user_id to profile
+    const profilesMap = new Map(
+      (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
+    );
+
+    // Combine appointments with profiles
+    const appointmentsWithProfiles = appointmentsData.map(appointment => ({
+      ...appointment,
+      profiles: profilesMap.get(appointment.user_id) || null,
+    }));
+
+    setAppointments(appointmentsWithProfiles as unknown as Appointment[]);
   };
 
   const fetchBlockedDates = async () => {
