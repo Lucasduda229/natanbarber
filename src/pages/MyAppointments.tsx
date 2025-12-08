@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO, isPast } from "date-fns";
+import { format, parseISO, isPast, subHours, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ProfileMenu } from "@/components/ProfileMenu";
+import CancellationPolicy from "@/components/CancellationPolicy";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,12 @@ const MyAppointments = () => {
     fetchAppointments();
   };
 
+  const isWithinCancellationWindow = (date: string, time: string): boolean => {
+    const appointmentDateTime = parseISO(`${date}T${time}`);
+    const twoHoursBefore = subHours(appointmentDateTime, 2);
+    return isBefore(new Date(), twoHoursBefore);
+  };
+
   const upcomingAppointments = appointments.filter(
     (a) => a.status !== "cancelled" && a.status !== "completed" && !isPast(parseISO(`${a.appointment_date}T${a.appointment_time}`))
   );
@@ -202,6 +209,7 @@ const MyAppointments = () => {
                                   {paymentLabels[appointment.payment_status]} (PIX)
                                 </Badge>
                               </div>
+                              <CancellationPolicy variant="compact" />
                             </div>
                           </div>
 
@@ -220,8 +228,16 @@ const MyAppointments = () => {
                               <AlertDialogContent className="bg-card border-border">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle className="text-foreground">Cancelar Agendamento?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+                                  <AlertDialogDescription className="space-y-3">
+                                    <span>Tem certeza que deseja cancelar este agendamento?</span>
+                                    {!isWithinCancellationWindow(appointment.appointment_date, appointment.appointment_time) && (
+                                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
+                                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm">
+                                          <strong>Atenção:</strong> Este agendamento está a menos de 2 horas. Uma taxa de cancelamento de até 50% poderá ser cobrada.
+                                        </span>
+                                      </div>
+                                    )}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
