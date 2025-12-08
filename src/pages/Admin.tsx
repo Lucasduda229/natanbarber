@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
+import { GalleryManager } from "@/components/GalleryManager";
 
 interface Appointment {
   id: string;
@@ -623,6 +624,10 @@ const Admin = () => {
               <Lock className="w-4 h-4 mr-2" />
               Horários
             </TabsTrigger>
+            <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background">
+              <Image className="w-4 h-4 mr-2" />
+              Galeria
+            </TabsTrigger>
           </TabsList>
 
           {/* AI Assistant Tab */}
@@ -933,6 +938,11 @@ const Admin = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Gallery Tab */}
+          <TabsContent value="gallery">
+            <GalleryManager />
           </TabsContent>
         </Tabs>
       </main>
