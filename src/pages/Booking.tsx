@@ -40,7 +40,7 @@ const LOCATION = {
   cep: "CEP: 88882-000, Brasil",
 };
 
-const PIX_KEY = "48 9210-7035";
+const PIX_KEY = "48992107035";
 const PHONE = "(48) 99210-7035";
 const INSTAGRAM = "@_natan_barber_";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Visconde+de+Barbacena+99999+Barro+Branco+Lauro+Muller+SC";
