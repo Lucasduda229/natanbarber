@@ -334,28 +334,21 @@ const Admin = () => {
   const resetStats = async () => {
     setLoading(true);
     
-    // Archive all completed appointments
-    const { error: error1 } = await supabase
+    // Archive ALL appointments (pending, confirmed, completed, cancelled)
+    const { error } = await supabase
       .from("appointments")
       .update({ status: "archived" })
-      .eq("status", "completed");
+      .neq("status", "archived");
 
-    // Archive all confirmed appointments that are paid
-    const { error: error2 } = await supabase
-      .from("appointments")
-      .update({ status: "archived" })
-      .eq("status", "confirmed")
-      .eq("payment_status", "paid");
-
-    if (error1 || error2) {
-      console.error("Reset errors:", error1, error2);
-      toast.error("Erro ao resetar estatísticas");
+    if (error) {
+      console.error("Reset error:", error);
+      toast.error("Erro ao resetar painel");
       setLoading(false);
       return;
     }
 
-    toast.success("Estatísticas resetadas!", { 
-      description: "Os agendamentos finalizados foram arquivados." 
+    toast.success("Painel resetado!", { 
+      description: "Todos os agendamentos foram arquivados." 
     });
     fetchData();
   };
@@ -406,31 +399,37 @@ const Admin = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="border-primary/30 text-primary hover:bg-primary/10"
-                disabled={stats.completed === 0}
+                className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                disabled={appointments.filter(a => a.status !== "archived").length === 0}
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Resetar
+                Resetar Painel
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-primary/20">
+            <AlertDialogContent className="bg-card border-destructive/20">
               <AlertDialogHeader>
-                <AlertDialogTitle>Resetar Estatísticas</AlertDialogTitle>
+                <AlertDialogTitle className="text-destructive">⚠️ Resetar Painel Completamente</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Isso vai arquivar todos os {stats.completed} agendamentos finalizados (concluídos + confirmados pagos) e zerar a receita de R$ {stats.revenue.toFixed(2)}. 
+                  Isso vai arquivar <strong>TODOS</strong> os agendamentos:
                   <br /><br />
-                  Os agendamentos pendentes e confirmados não pagos não serão afetados.
+                  • {stats.pending} pendentes
+                  <br />
+                  • {appointments.filter(a => a.status === "confirmed").length} confirmados
+                  <br />
+                  • {appointments.filter(a => a.status === "completed").length} concluídos
+                  <br />
+                  • Receita: R$ {stats.revenue.toFixed(2)}
                   <br /><br />
-                  <strong>Esta ação não pode ser desfeita.</strong>
+                  <strong className="text-destructive">Esta ação não pode ser desfeita!</strong>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={resetStats}
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-destructive hover:bg-destructive/90"
                 >
-                  Confirmar Reset
+                  Confirmar Reset Total
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
