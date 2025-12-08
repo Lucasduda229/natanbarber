@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3 } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -320,6 +320,27 @@ const Admin = () => {
     fetchBlockedDates();
   };
 
+  const resetStats = async () => {
+    setLoading(true);
+    
+    // Archive all completed appointments by changing status to 'archived'
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: "archived" })
+      .eq("status", "completed");
+
+    if (error) {
+      toast.error("Erro ao resetar estatísticas");
+      setLoading(false);
+      return;
+    }
+
+    toast.success("Estatísticas resetadas!", { 
+      description: "Os agendamentos concluídos foram arquivados." 
+    });
+    fetchData();
+  };
+
   const filteredAppointments = appointments.filter((a) => {
     if (!filterDate) return true;
     return a.appointment_date === filterDate;
@@ -359,6 +380,44 @@ const Admin = () => {
         </div>
 
         {/* Stats */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Estatísticas</h2>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-primary/30 text-primary hover:bg-primary/10"
+                disabled={stats.completed === 0}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Resetar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-card border-primary/20">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Resetar Estatísticas</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso vai arquivar todos os {stats.completed} agendamentos concluídos e zerar a receita de R$ {stats.revenue.toFixed(2)}. 
+                  <br /><br />
+                  Os agendamentos pendentes e confirmados não serão afetados.
+                  <br /><br />
+                  <strong>Esta ação não pode ser desfeita.</strong>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={resetStats}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Confirmar Reset
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-4 flex items-center gap-4">
