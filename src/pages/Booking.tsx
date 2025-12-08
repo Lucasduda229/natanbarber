@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, User, LogOut, Phone, Copy, Navigation, Instagram } from "lucide-react";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -260,6 +261,7 @@ const Booking = () => {
         </div>
 
         <nav className="flex items-center gap-1 sm:gap-2">
+          <NotificationsDropdown />
           <Button 
             variant="ghost" 
             size="sm" 

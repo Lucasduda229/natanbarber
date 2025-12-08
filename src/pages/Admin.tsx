@@ -333,6 +333,9 @@ const Admin = () => {
   };
 
   const updateAppointmentStatus = async (id: string, status: string) => {
+    // Get appointment details for notification
+    const appointment = appointments.find(a => a.id === id);
+    
     const { error } = await supabase
       .from("appointments")
       .update({ status })
@@ -343,27 +346,39 @@ const Admin = () => {
       return;
     }
 
-    // Enviar notificação por email quando confirmar ou cancelar
-    if (status === "confirmed" || status === "cancelled") {
-      try {
-        const { error: notifyError } = await supabase.functions.invoke("notify-appointment", {
-          body: { appointment_id: id, type: status }
-        });
+    // Criar notificação push interna quando confirmar ou cancelar
+    if ((status === "confirmed" || status === "cancelled") && appointment) {
+      const { data: appointmentData } = await supabase
+        .from("appointments")
+        .select("user_id, appointment_date, appointment_time, services(name, price)")
+        .eq("id", id)
+        .single();
+
+      if (appointmentData) {
+        const dateFormatted = format(parseISO(appointmentData.appointment_date), "dd/MM/yyyy", { locale: ptBR });
+        const timeFormatted = appointmentData.appointment_time.slice(0, 5);
+        const serviceName = appointmentData.services?.name || "Serviço";
+        const servicePrice = appointmentData.services?.price || 0;
+
+        const title = status === "confirmed" 
+          ? "Agendamento Confirmado! ✓" 
+          : "Agendamento Cancelado";
         
-        if (notifyError) {
-          console.error("Erro ao enviar notificação:", notifyError);
-          toast.warning("Status atualizado, mas não foi possível notificar o cliente");
-        } else {
-          toast.success(`Status atualizado e cliente notificado por email!`);
-        }
-      } catch (err) {
-        console.error("Erro ao notificar:", err);
-        toast.success(`Status atualizado para ${statusLabels[status]}`);
+        const message = status === "confirmed"
+          ? `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi confirmado! Valor: R$ ${servicePrice.toFixed(2)}`
+          : `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi cancelado.`;
+
+        await supabase.from("notifications").insert({
+          user_id: appointmentData.user_id,
+          title,
+          message,
+          type: status,
+          appointment_id: id
+        });
       }
-    } else {
-      toast.success(`Status atualizado para ${statusLabels[status]}`);
     }
 
+    toast.success(`Status atualizado para ${statusLabels[status]}`);
     fetchData();
   };
 
