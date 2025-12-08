@@ -611,24 +611,26 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="appointments" className="space-y-6">
-          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20">
-            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Scissors className="w-4 h-4 mr-2" />
-              Agendamentos
-            </TabsTrigger>
-            <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Bot className="w-4 h-4 mr-2" />
-              Assistente IA
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Lock className="w-4 h-4 mr-2" />
-              Horários
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Image className="w-4 h-4 mr-2" />
-              Galeria
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <Scissors className="w-4 h-4 mr-2" />
+                Agendamentos
+              </TabsTrigger>
+              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <Bot className="w-4 h-4 mr-2" />
+                Assistente IA
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <Lock className="w-4 h-4 mr-2" />
+                Horários
+              </TabsTrigger>
+              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <Image className="w-4 h-4 mr-2" />
+                Galeria
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* AI Assistant Tab */}
           <TabsContent value="ai-assistant">
