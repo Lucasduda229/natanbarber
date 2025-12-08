@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -96,8 +96,19 @@ const Admin = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [filterDate, setFilterDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [stats, setStats] = useState({ today: 0, pending: 0, completed: 0, revenue: 0 });
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isConnected, setIsConnected] = useState(true);
+
+  // Manual refresh function
+  const handleManualRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+    toast.success("Dashboard atualizado!", { duration: 2000 });
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -111,7 +122,7 @@ const Admin = () => {
 
     // Set up realtime subscription for appointments
     const appointmentsChannel = supabase
-      .channel('admin-appointments-changes')
+      .channel('admin-appointments-realtime')
       .on(
         'postgres_changes',
         {
@@ -121,7 +132,8 @@ const Admin = () => {
         },
         (payload) => {
           console.log('Appointment change detected:', payload);
-          // Refresh data when any appointment changes
+          setLastUpdate(new Date());
+          // Refresh all data when any appointment changes
           fetchData();
           
           // Show notification and play sound for new appointments
@@ -131,14 +143,24 @@ const Admin = () => {
               description: "Um novo pedido foi recebido.",
               duration: 5000
             });
+          } else if (payload.eventType === 'UPDATE') {
+            toast.info("📝 Agendamento atualizado", { duration: 2000 });
+          } else if (payload.eventType === 'DELETE') {
+            toast.info("🗑️ Agendamento removido", { duration: 2000 });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Appointments channel error');
+          toast.error("Erro na conexão real-time. Clique em Atualizar.");
+        }
+      });
 
     // Set up realtime subscription for blocked_dates
     const blockedDatesChannel = supabase
-      .channel('admin-blocked-dates-changes')
+      .channel('admin-blocked-dates-realtime')
       .on(
         'postgres_changes',
         {
@@ -146,23 +168,61 @@ const Admin = () => {
           schema: 'public',
           table: 'blocked_dates'
         },
-        () => {
+        (payload) => {
+          console.log('Blocked dates change detected:', payload);
+          setLastUpdate(new Date());
           fetchBlockedDates();
+          
+          if (payload.eventType === 'INSERT') {
+            toast.info("🚫 Horário bloqueado", { duration: 2000 });
+          } else if (payload.eventType === 'DELETE') {
+            toast.info("✅ Horário desbloqueado", { duration: 2000 });
+          }
         }
       )
       .subscribe();
+
+    // Set up realtime subscription for barbershop_status
+    const statusChannel = supabase
+      .channel('admin-status-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'barbershop_status'
+        },
+        (payload) => {
+          console.log('Barbershop status change detected:', payload);
+          setLastUpdate(new Date());
+        }
+      )
+      .subscribe();
+
+    // Auto-refresh every 30 seconds as fallback
+    const autoRefreshInterval = setInterval(() => {
+      fetchData();
+      setLastUpdate(new Date());
+    }, 30000);
 
     // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(blockedDatesChannel);
+      supabase.removeChannel(statusChannel);
+      clearInterval(autoRefreshInterval);
     };
   }, [isAdmin, authLoading]);
 
   const fetchData = async () => {
-    setLoading(true);
-    await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats()]);
-    setLoading(false);
+    try {
+      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats()]);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchAppointments = async () => {
@@ -385,10 +445,36 @@ const Admin = () => {
       {/* Main Content */}
       <main className="admin-container relative z-10 px-4 py-6 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Painel Administrativo</h1>
-          <div className="w-full md:w-auto md:max-w-sm">
-            <AdminStatusToggle />
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground">Painel Administrativo</h1>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className="text-xs text-muted-foreground">
+                {isConnected ? 'Sincronizado' : 'Desconectado'}
+              </span>
+            </div>
           </div>
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="border-primary/30 hover:bg-primary/10"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <div className="w-full md:w-auto md:max-w-sm">
+              <AdminStatusToggle />
+            </div>
+          </div>
+        </div>
+        
+        {/* Last update indicator */}
+        <div className="text-xs text-muted-foreground mb-4 flex items-center gap-2">
+          <Clock className="w-3 h-3" />
+          Última atualização: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
         </div>
 
         {/* Stats */}
