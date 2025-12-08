@@ -531,8 +531,8 @@ const Booking = () => {
                           
                           <div className="flex items-start gap-4">
                             {/* Icon */}
-                            <div className="w-16 h-16 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold-glow">
-                              <Scissors className="w-8 h-8 text-background" />
+                            <div className="w-16 h-16 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold-glow overflow-hidden p-1">
+                              <img src={logoImage} alt="Natan Barber" className="w-full h-full object-cover rounded-xl" />
                             </div>
                             
                             <div className="flex-1">
