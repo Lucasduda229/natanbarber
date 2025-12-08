@@ -5,6 +5,3 @@ verify_jwt = false
 
 [functions.ai-appointment-parser]
 verify_jwt = false
-
-[functions.notify-appointment]
-verify_jwt = false

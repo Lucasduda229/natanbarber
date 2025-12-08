@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle } from "lucide-react";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ const MyAppointments = () => {
           Voltar
         </Button>
         <div className="flex items-center gap-3">
+          <NotificationsDropdown />
           <img src={logoImage} alt="Natan Barbershop" className="w-10 h-10 rounded-full object-cover border-2 border-primary/30" />
         </div>
       </header>
