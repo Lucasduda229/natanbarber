@@ -637,9 +637,9 @@ const Booking = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-primary/40 bg-gradient-to-r from-primary/10 to-primary/5 shadow-lg">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#32BCAD] to-[#00A896] flex items-center justify-center flex-shrink-0 shadow-md">
-                    <img src={pixIcon} alt="PIX" className="w-8 h-8 object-contain brightness-0 invert" />
+                <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-primary/40 bg-primary/5">
+                  <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2 shadow-sm">
+                    <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-foreground">Chave PIX (Telefone)</h4>
