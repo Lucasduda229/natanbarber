@@ -72,6 +72,54 @@ const Admin = () => {
 
     gsap.fromTo(".admin-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     fetchData();
+
+    // Set up realtime subscription for appointments
+    const appointmentsChannel = supabase
+      .channel('admin-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          // Refresh data when any appointment changes
+          fetchData();
+          
+          // Show notification for new appointments
+          if (payload.eventType === 'INSERT') {
+            toast.info("Novo agendamento!", { 
+              description: "Um novo pedido foi recebido.",
+              duration: 5000
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // Set up realtime subscription for blocked_dates
+    const blockedDatesChannel = supabase
+      .channel('admin-blocked-dates-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'blocked_dates'
+        },
+        () => {
+          fetchBlockedDates();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(blockedDatesChannel);
+    };
   }, [isAdmin, authLoading]);
 
   const fetchData = async () => {
