@@ -397,68 +397,81 @@ const Booking = () => {
               </h3>
               
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {services.map((service) => {
-                  const isSelected = selectedServices.some(s => s.id === service.id);
-                  return (
-                    <Card
-                      key={service.id}
-                      className={`bg-card/60 backdrop-blur-xl cursor-pointer transition-all group ${
-                        isSelected 
-                          ? "border-primary border-2 ring-2 ring-primary/20" 
-                          : "border-primary/10 hover:border-primary/40"
-                      }`}
-                      onClick={() => handleServiceSelect(service)}
-                    >
-                      <CardContent className="p-5 relative">
-                        {/* Selection indicator */}
-                        {isSelected && (
-                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="w-4 h-4 text-background" />
+                {/* Filtrar serviços regulares (excluir assinaturas) e ordenar */}
+                {services
+                  .filter(s => !s.name.toLowerCase().includes('assinatura') && !s.name.toLowerCase().includes('premium'))
+                  .sort((a, b) => {
+                    // Ordem personalizada: Cortes primeiro, depois outros
+                    const order = ['Corte Tradicional', 'Corte Degradê', 'Sobrancelha', 'Barba'];
+                    const indexA = order.indexOf(a.name);
+                    const indexB = order.indexOf(b.name);
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return a.price - b.price;
+                  })
+                  .map((service) => {
+                    const isSelected = selectedServices.some(s => s.id === service.id);
+                    return (
+                      <Card
+                        key={service.id}
+                        className={`bg-card/60 backdrop-blur-xl cursor-pointer transition-all group ${
+                          isSelected 
+                            ? "border-primary border-2 ring-2 ring-primary/20" 
+                            : "border-primary/10 hover:border-primary/40"
+                        }`}
+                        onClick={() => handleServiceSelect(service)}
+                      >
+                        <CardContent className="p-5 relative">
+                          {/* Selection indicator */}
+                          {isSelected && (
+                            <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-4 h-4 text-background" />
+                            </div>
+                          )}
+                          
+                          {/* Icons */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
+                              <img src={logoImage} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Scissors className="w-5 h-5 text-primary" />
+                            </div>
                           </div>
-                        )}
-                        
-                        {/* Icons */}
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-10 h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
-                            <img src={logoImage} alt="" className="w-full h-full object-cover" />
+                          
+                          {/* Service Info */}
+                          <h4 className={`font-semibold transition-colors mb-1 ${isSelected ? "text-primary" : "text-foreground group-hover:text-primary"}`}>
+                            {service.name}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                            {service.description || "Serviço profissional de qualidade"}
+                          </p>
+                          
+                          {/* Price and Action */}
+                          <div className="flex items-end justify-between">
+                            <div>
+                              <p className="text-xl font-bold text-primary">
+                                R$ {service.price.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {service.duration_minutes} minutos
+                              </p>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              className={isSelected 
+                                ? "bg-primary text-background" 
+                                : "bg-card hover:bg-card/80 text-foreground border border-primary/30 hover:border-primary"
+                              }
+                            >
+                              {isSelected ? "Selecionado" : "Selecionar"}
+                            </Button>
                           </div>
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Scissors className="w-5 h-5 text-primary" />
-                          </div>
-                        </div>
-                        
-                        {/* Service Info */}
-                        <h4 className={`font-semibold transition-colors mb-1 ${isSelected ? "text-primary" : "text-foreground group-hover:text-primary"}`}>
-                          {service.name}
-                        </h4>
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                          {service.description || "Serviço profissional de qualidade"}
-                        </p>
-                        
-                        {/* Price and Action */}
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <p className="text-xl font-bold text-primary">
-                              R$ {service.price.toFixed(2)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {service.duration_minutes} minutos
-                            </p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            className={isSelected 
-                              ? "bg-primary text-background" 
-                              : "bg-card hover:bg-card/80 text-foreground border border-primary/30 hover:border-primary"
-                            }
-                          >
-                            {isSelected ? "Selecionado" : "Selecionar"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
               </div>
 
               {/* Continuar button e resumo */}
@@ -492,6 +505,66 @@ const Booking = () => {
                 </Card>
               )}
             </div>
+
+            {/* Assinaturas Section */}
+            {services.some(s => s.name.toLowerCase().includes('assinatura') || s.name.toLowerCase().includes('premium')) && (
+              <div className="space-y-4 mt-8">
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <div className="w-1 h-5 bg-primary rounded-full" />
+                  Assinaturas Natan
+                </h3>
+                
+                <div className="grid gap-4">
+                  {services
+                    .filter(s => s.name.toLowerCase().includes('assinatura') || s.name.toLowerCase().includes('premium'))
+                    .map((subscription) => (
+                      <Card
+                        key={subscription.id}
+                        className="bg-gradient-to-br from-primary/10 via-card/80 to-primary/5 backdrop-blur-xl border-primary/30 hover:border-primary/60 cursor-pointer transition-all overflow-hidden"
+                        onClick={() => handleServiceSelect(subscription)}
+                      >
+                        <CardContent className="p-6 relative">
+                          {/* Premium badge */}
+                          <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-gold-gradient text-background text-xs font-bold">
+                            PREMIUM
+                          </div>
+                          
+                          <div className="flex items-start gap-4">
+                            {/* Icon */}
+                            <div className="w-16 h-16 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold-glow">
+                              <Scissors className="w-8 h-8 text-background" />
+                            </div>
+                            
+                            <div className="flex-1">
+                              <h4 className="text-xl font-bold text-foreground mb-2">
+                                {subscription.name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                {subscription.description || "Acesso exclusivo a serviços premium"}
+                              </p>
+                              
+                              <div className="flex items-end justify-between">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Por apenas</p>
+                                  <p className="text-3xl font-bold text-primary">
+                                    R$ {subscription.price.toFixed(2)}
+                                    <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                                  </p>
+                                </div>
+                                <Button 
+                                  className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-6"
+                                >
+                                  Assinar
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
