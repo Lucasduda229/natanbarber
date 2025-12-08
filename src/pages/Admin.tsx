@@ -343,7 +343,27 @@ const Admin = () => {
       return;
     }
 
-    toast.success(`Status atualizado para ${statusLabels[status]}`);
+    // Enviar notificação por email quando confirmar ou cancelar
+    if (status === "confirmed" || status === "cancelled") {
+      try {
+        const { error: notifyError } = await supabase.functions.invoke("notify-appointment", {
+          body: { appointment_id: id, type: status }
+        });
+        
+        if (notifyError) {
+          console.error("Erro ao enviar notificação:", notifyError);
+          toast.warning("Status atualizado, mas não foi possível notificar o cliente");
+        } else {
+          toast.success(`Status atualizado e cliente notificado por email!`);
+        }
+      } catch (err) {
+        console.error("Erro ao notificar:", err);
+        toast.success(`Status atualizado para ${statusLabels[status]}`);
+      }
+    } else {
+      toast.success(`Status atualizado para ${statusLabels[status]}`);
+    }
+
     fetchData();
   };
 
