@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
 import { ServiceGallery } from "@/components/ServiceGallery";
+import { ReviewsDisplay } from "@/components/ReviewsDisplay";
 import logoImage from "@/assets/logo-barbershop.png";
 
 const Index = () => {
@@ -72,8 +73,13 @@ const Index = () => {
       </div>
 
       {/* Gallery Section */}
-      <div className="relative z-10 px-4 pb-12 max-w-6xl mx-auto">
+      <div className="relative z-10 px-4 pb-8 max-w-6xl mx-auto">
         <ServiceGallery />
+      </div>
+
+      {/* Reviews Section */}
+      <div className="relative z-10 px-4 pb-12 max-w-6xl mx-auto">
+        <ReviewsDisplay />
       </div>
     </div>
   );
