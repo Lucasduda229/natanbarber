@@ -643,8 +643,8 @@ const Booking = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* QR Code PIX */}
-                <div className="flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-primary/40 bg-gradient-to-b from-white to-gray-50">
-                  <div className="p-4 bg-white rounded-2xl shadow-lg">
+                <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-primary/30 bg-card/50">
+                  <div className="p-3 bg-white rounded-xl">
                     <QRCodeSVG
                       value={generatePixPayload({
                         pixKey: PIX_KEY,
@@ -653,7 +653,7 @@ const Booking = () => {
                         amount: selectedService?.price,
                         description: selectedService?.name?.substring(0, 25),
                       })}
-                      size={180}
+                      size={160}
                       level="M"
                       includeMargin={false}
                       bgColor="#ffffff"
