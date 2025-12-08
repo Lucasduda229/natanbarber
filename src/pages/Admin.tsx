@@ -54,6 +54,42 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
+// Notification sound using Web Audio API
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create oscillator for a pleasant notification tone
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Two-tone notification sound
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+    oscillator.frequency.setValueAtTime(1108.73, audioContext.currentTime + 0.15); // C#6
+    
+    oscillator.type = 'sine';
+    
+    // Fade in and out for smooth sound
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.2);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.35);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.35);
+    
+    // Cleanup
+    setTimeout(() => {
+      audioContext.close();
+    }, 500);
+  } catch (error) {
+    console.log('Could not play notification sound:', error);
+  }
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading } = useAuth();
@@ -88,9 +124,10 @@ const Admin = () => {
           // Refresh data when any appointment changes
           fetchData();
           
-          // Show notification for new appointments
+          // Show notification and play sound for new appointments
           if (payload.eventType === 'INSERT') {
-            toast.info("Novo agendamento!", { 
+            playNotificationSound();
+            toast.info("🔔 Novo agendamento!", { 
               description: "Um novo pedido foi recebido.",
               duration: 5000
             });
