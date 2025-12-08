@@ -450,14 +450,9 @@ const Booking = () => {
                           
                           {/* Price and Action */}
                           <div className="flex items-end justify-between">
-                            <div>
-                              <p className="text-xl font-bold text-primary">
-                                R$ {service.price.toFixed(2)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {service.duration_minutes} minutos
-                              </p>
-                            </div>
+                            <p className="text-xl font-bold text-primary">
+                              R$ {service.price.toFixed(2)}
+                            </p>
                             <Button 
                               size="sm" 
                               className={isSelected 
