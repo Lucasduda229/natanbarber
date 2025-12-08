@@ -239,7 +239,8 @@ const Admin = () => {
       .from("appointments")
       .select("id")
       .eq("appointment_date", today)
-      .neq("status", "cancelled");
+      .neq("status", "cancelled")
+      .neq("status", "archived");
 
     const { data: pendingData } = await supabase
       .from("appointments")
@@ -251,13 +252,23 @@ const Admin = () => {
       .select("services(price)")
       .eq("status", "completed");
 
-    const revenue = completedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
+    // Count confirmed with paid status for revenue calculation
+    const { data: confirmedPaidData } = await supabase
+      .from("appointments")
+      .select("services(price)")
+      .eq("status", "confirmed")
+      .eq("payment_status", "paid");
+
+    const completedRevenue = completedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
+    const confirmedPaidRevenue = confirmedPaidData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
+    const totalRevenue = completedRevenue + confirmedPaidRevenue;
+    const totalCompleted = (completedData?.length || 0) + (confirmedPaidData?.length || 0);
 
     setStats({
       today: todayData?.length || 0,
       pending: pendingData?.length || 0,
-      completed: completedData?.length || 0,
-      revenue,
+      completed: totalCompleted,
+      revenue: totalRevenue,
     });
   };
 
@@ -323,20 +334,28 @@ const Admin = () => {
   const resetStats = async () => {
     setLoading(true);
     
-    // Archive all completed appointments by changing status to 'archived'
-    const { error } = await supabase
+    // Archive all completed appointments
+    const { error: error1 } = await supabase
       .from("appointments")
       .update({ status: "archived" })
       .eq("status", "completed");
 
-    if (error) {
+    // Archive all confirmed appointments that are paid
+    const { error: error2 } = await supabase
+      .from("appointments")
+      .update({ status: "archived" })
+      .eq("status", "confirmed")
+      .eq("payment_status", "paid");
+
+    if (error1 || error2) {
+      console.error("Reset errors:", error1, error2);
       toast.error("Erro ao resetar estatísticas");
       setLoading(false);
       return;
     }
 
     toast.success("Estatísticas resetadas!", { 
-      description: "Os agendamentos concluídos foram arquivados." 
+      description: "Os agendamentos finalizados foram arquivados." 
     });
     fetchData();
   };
@@ -398,9 +417,9 @@ const Admin = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Resetar Estatísticas</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Isso vai arquivar todos os {stats.completed} agendamentos concluídos e zerar a receita de R$ {stats.revenue.toFixed(2)}. 
+                  Isso vai arquivar todos os {stats.completed} agendamentos finalizados (concluídos + confirmados pagos) e zerar a receita de R$ {stats.revenue.toFixed(2)}. 
                   <br /><br />
-                  Os agendamentos pendentes e confirmados não serão afetados.
+                  Os agendamentos pendentes e confirmados não pagos não serão afetados.
                   <br /><br />
                   <strong>Esta ação não pode ser desfeita.</strong>
                 </AlertDialogDescription>
