@@ -25,10 +25,10 @@ export const ReviewsDisplay = () => {
   }, []);
 
   const fetchReviews = async () => {
-    // Fetch reviews
+    // Fetch reviews (without profile data for privacy - RLS protects profiles)
     const { data: reviewsData, error } = await supabase
       .from("reviews")
-      .select("id, rating, comment, created_at, user_id")
+      .select("id, rating, comment, created_at")
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -43,22 +43,11 @@ export const ReviewsDisplay = () => {
       return;
     }
 
-    // Get unique user_ids
-    const userIds = [...new Set(reviewsData.map(r => r.user_id))];
-
-    // Fetch profiles
-    const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("user_id, full_name")
-      .in("user_id", userIds);
-
-    const profilesMap = new Map(
-      (profilesData || []).map(p => [p.user_id, { full_name: p.full_name }])
-    );
-
+    // Reviews are displayed without customer names for privacy
     const reviewsWithProfiles = reviewsData.map(review => ({
       ...review,
-      profiles: profilesMap.get(review.user_id) || null,
+      user_id: "", // Not exposed
+      profiles: null, // Privacy: don't expose customer names publicly
     }));
 
     setReviews(reviewsWithProfiles);
