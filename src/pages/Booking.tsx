@@ -630,11 +630,14 @@ const Booking = () => {
             </Card>
 
             <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-foreground text-base">
                   <CreditCard className="w-5 h-5 text-primary" />
                   Pagamento via PIX
                 </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Garanta seu horário! Realize o pagamento e confirme sua reserva.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-primary/40 bg-primary/5">
@@ -654,9 +657,6 @@ const Booking = () => {
                     <Copy className="w-4 h-4 text-primary" />
                   </Button>
                 </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  Realize o pagamento via PIX na hora do atendimento ou antes
-                </p>
               </CardContent>
             </Card>
 
