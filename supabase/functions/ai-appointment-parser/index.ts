@@ -14,9 +14,17 @@ serve(async (req) => {
   try {
     const { message } = await req.json();
     
-    if (!message) {
+    // Input validation: check type and length to prevent abuse
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Mensagem não fornecida' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (message.length > 1000) {
+      return new Response(
+        JSON.stringify({ error: 'Mensagem muito longa. Máximo de 1000 caracteres.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
