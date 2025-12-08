@@ -543,6 +543,34 @@ const Booking = () => {
                                 {subscription.description || "Acesso exclusivo a serviços premium"}
                               </p>
                               
+                              {/* Benefits List */}
+                              <div className="grid grid-cols-2 gap-2 mb-4">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Cortes ilimitados</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Prioridade no agendamento</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Barba inclusa</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Sobrancelha grátis</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Hidratação mensal</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Descontos em produtos</span>
+                                </div>
+                              </div>
+                              
                               <div className="flex items-end justify-between">
                                 <div>
                                   <p className="text-sm text-muted-foreground">Por apenas</p>
