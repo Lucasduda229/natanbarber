@@ -228,16 +228,8 @@ const MyAppointments = () => {
                               <AlertDialogContent className="bg-card border-border">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle className="text-foreground">Cancelar Agendamento?</AlertDialogTitle>
-                                  <AlertDialogDescription className="space-y-3">
-                                    <span>Tem certeza que deseja cancelar este agendamento?</span>
-                                    {!isWithinCancellationWindow(appointment.appointment_date, appointment.appointment_time) && (
-                                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
-                                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm">
-                                          <strong>Atenção:</strong> Este agendamento está a menos de 2 horas. Uma taxa de cancelamento de até 50% poderá ser cobrada.
-                                        </span>
-                                      </div>
-                                    )}
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja cancelar este agendamento?
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
