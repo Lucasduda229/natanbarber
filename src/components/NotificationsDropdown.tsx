@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Check, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,12 +36,52 @@ const typeIcons: Record<string, React.ReactNode> = {
   info: <Bell className="w-4 h-4 text-primary" />,
 };
 
+// Create notification sound using Web Audio API
+const playNotificationSound = () => {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (error) {
+    console.log('Audio not supported');
+  }
+};
+
 export const NotificationsDropdown = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const previousCountRef = useRef<number>(0);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setNotifications(data);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -53,7 +93,20 @@ export const NotificationsDropdown = () => {
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            playNotificationSound();
+            fetchNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
@@ -68,20 +121,7 @@ export const NotificationsDropdown = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user]);
-
-  const fetchNotifications = async () => {
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user?.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-
-    if (!error && data) {
-      setNotifications(data);
-    }
-  };
+  }, [user, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
     await supabase
@@ -101,6 +141,7 @@ export const NotificationsDropdown = () => {
     
     fetchNotifications();
   };
+
 
   if (!user) return null;
 
