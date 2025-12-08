@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
+import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 
 interface Appointment {
   id: string;
@@ -579,11 +580,20 @@ const Admin = () => {
               <Scissors className="w-4 h-4 mr-2" />
               Agendamentos
             </TabsTrigger>
+            <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background">
+              <Bot className="w-4 h-4 mr-2" />
+              Assistente IA
+            </TabsTrigger>
             <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background">
               <Lock className="w-4 h-4 mr-2" />
               Horários
             </TabsTrigger>
           </TabsList>
+
+          {/* AI Assistant Tab */}
+          <TabsContent value="ai-assistant">
+            <AIAssistantPanel />
+          </TabsContent>
 
           {/* Appointments Tab */}
           <TabsContent value="appointments" className="space-y-6">
