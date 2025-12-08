@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { ReviewForm } from "@/components/ReviewForm";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ interface Appointment {
     price: number;
     duration_minutes: number;
   };
+  hasReview?: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -52,6 +54,7 @@ const MyAppointments = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [reviewedAppointments, setReviewedAppointments] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,11 +84,20 @@ const MyAppointments = () => {
       .order("appointment_date", { ascending: false })
       .order("appointment_time", { ascending: false });
 
-    setLoading(false);
-
     if (!error && data) {
+      // Check which appointments have reviews
+      const { data: reviews } = await supabase
+        .from("reviews")
+        .select("appointment_id")
+        .eq("user_id", user?.id);
+
+      const reviewedIds = new Set((reviews || []).map(r => r.appointment_id));
+      setReviewedAppointments(reviewedIds);
+
       setAppointments(data as Appointment[]);
     }
+    
+    setLoading(false);
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -258,9 +270,24 @@ const MyAppointments = () => {
                               <span className="text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
-                          <Badge variant="outline" className={statusColors[appointment.status]}>
-                            {statusLabels[appointment.status]}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {appointment.status === "completed" && !reviewedAppointments.has(appointment.id) && (
+                              <ReviewForm 
+                                appointmentId={appointment.id} 
+                                serviceName={appointment.services.name}
+                                onReviewSubmitted={fetchAppointments}
+                              />
+                            )}
+                            {reviewedAppointments.has(appointment.id) && (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                                <Star className="w-3 h-3 mr-1 fill-primary" />
+                                Avaliado
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className={statusColors[appointment.status]}>
+                              {statusLabels[appointment.status]}
+                            </Badge>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
