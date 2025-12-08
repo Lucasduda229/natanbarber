@@ -334,11 +334,11 @@ const Admin = () => {
   const resetStats = async () => {
     setLoading(true);
     
-    // Archive ALL appointments (pending, confirmed, completed, cancelled)
+    // DELETE ALL appointments permanently
     const { error } = await supabase
       .from("appointments")
-      .update({ status: "archived" })
-      .neq("status", "archived");
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
 
     if (error) {
       console.error("Reset error:", error);
@@ -348,7 +348,7 @@ const Admin = () => {
     }
 
     toast.success("Painel resetado!", { 
-      description: "Todos os agendamentos foram arquivados." 
+      description: "Todos os agendamentos foram excluídos permanentemente." 
     });
     fetchData();
   };
@@ -408,9 +408,9 @@ const Admin = () => {
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-card border-destructive/20">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive">⚠️ Resetar Painel Completamente</AlertDialogTitle>
+                <AlertDialogTitle className="text-destructive">⚠️ Excluir Todos os Agendamentos</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Isso vai arquivar <strong>TODOS</strong> os agendamentos:
+                  Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os agendamentos:
                   <br /><br />
                   • {stats.pending} pendentes
                   <br />
@@ -418,9 +418,11 @@ const Admin = () => {
                   <br />
                   • {appointments.filter(a => a.status === "completed").length} concluídos
                   <br />
-                  • Receita: R$ {stats.revenue.toFixed(2)}
+                  • {appointments.filter(a => a.status === "cancelled").length} cancelados
+                  <br />
+                  • Receita perdida: R$ {stats.revenue.toFixed(2)}
                   <br /><br />
-                  <strong className="text-destructive">Esta ação não pode ser desfeita!</strong>
+                  <strong className="text-destructive">⚠️ ATENÇÃO: Esta ação NÃO pode ser desfeita!</strong>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
