@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, User, LogOut, Phone, Copy, Navigation, Instagram } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, User, Phone, Copy, Navigation, Instagram } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewsDisplay } from "@/components/ReviewsDisplay";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -46,7 +47,7 @@ const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Vis
 
 const Booking = () => {
   const navigate = useNavigate();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -227,10 +228,6 @@ const Booking = () => {
     toast.success("Chave PIX copiada!");
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   const goBack = () => {
     if (step > 1) {
@@ -263,15 +260,6 @@ const Booking = () => {
 
         <nav className="flex items-center gap-1 sm:gap-2">
           <NotificationsDropdown />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate("/my-appointments")} 
-            className="text-foreground hover:text-primary text-xs sm:text-sm"
-          >
-            <CalendarIcon className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Meus Agendamentos</span>
-          </Button>
           {isAdmin && (
             <Button 
               variant="ghost" 
@@ -282,14 +270,7 @@ const Booking = () => {
               Admin
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout} 
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <LogOut className="w-5 h-5" />
-          </Button>
+          <ProfileMenu />
         </nav>
       </header>
 
