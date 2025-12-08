@@ -2,3 +2,6 @@ project_id = "ttecccbrigcckurnezhl"
 
 [functions.send-reset-email]
 verify_jwt = false
+
+[functions.ai-appointment-parser]
+verify_jwt = false
