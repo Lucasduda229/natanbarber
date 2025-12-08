@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { generatePixPayload } from "@/lib/pix";
+import { QRCodeSVG } from "qrcode.react";
 import logoImage from "@/assets/logo-barbershop.png";
 import pixIcon from "@/assets/pix-icon.png";
 
@@ -640,13 +642,37 @@ const Booking = () => {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-primary/40 bg-primary/5">
-                  <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2 shadow-sm">
+                {/* QR Code PIX */}
+                <div className="flex flex-col items-center gap-4 p-6 rounded-xl border-2 border-primary/40 bg-gradient-to-b from-white to-gray-50">
+                  <div className="p-4 bg-white rounded-2xl shadow-lg">
+                    <QRCodeSVG
+                      value={generatePixPayload({
+                        pixKey: PIX_KEY,
+                        merchantName: "NATAN BARBER",
+                        merchantCity: "LAURO MULLER",
+                        amount: selectedService?.price,
+                        description: selectedService?.name?.substring(0, 25),
+                      })}
+                      size={180}
+                      level="M"
+                      includeMargin={false}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Escaneie o QR Code com seu app de banco
+                  </p>
+                </div>
+
+                {/* Chave PIX manual */}
+                <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card/50">
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2 shadow-sm">
                     <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-foreground">Chave PIX (Telefone)</h4>
-                    <p className="text-lg font-mono text-primary truncate">{PIX_KEY}</p>
+                    <h4 className="text-sm font-medium text-muted-foreground">Ou copie a chave</h4>
+                    <p className="text-base font-mono text-foreground truncate">{PIX_KEY}</p>
                   </div>
                   <Button
                     variant="outline"
