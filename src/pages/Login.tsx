@@ -24,7 +24,14 @@ const Login = () => {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email.trim()) newErrors.email = "Email é obrigatório";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!formData.email.trim()) {
+      newErrors.email = "Email é obrigatório";
+    } else if (!emailRegex.test(formData.email.trim())) {
+      newErrors.email = "Email inválido";
+    }
+    
     if (!formData.password) newErrors.password = "Senha é obrigatória";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
