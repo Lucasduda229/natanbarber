@@ -98,7 +98,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterDate, setFilterDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [stats, setStats] = useState({ today: 0, pending: 0, completed: 0, revenue: 0 });
+  const [stats, setStats] = useState({ today: 0, pending: 0, confirmed: 0, revenue: 0 });
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isConnected, setIsConnected] = useState(true);
 
@@ -307,27 +307,26 @@ const Admin = () => {
       .select("id")
       .eq("status", "pending");
 
+    // Count all confirmed appointments
+    const { data: confirmedData } = await supabase
+      .from("appointments")
+      .select("services(price)")
+      .eq("status", "confirmed");
+
+    // Count completed appointments for revenue
     const { data: completedData } = await supabase
       .from("appointments")
       .select("services(price)")
       .eq("status", "completed");
 
-    // Count confirmed with paid status for revenue calculation
-    const { data: confirmedPaidData } = await supabase
-      .from("appointments")
-      .select("services(price)")
-      .eq("status", "confirmed")
-      .eq("payment_status", "paid");
-
+    const confirmedRevenue = confirmedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
     const completedRevenue = completedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
-    const confirmedPaidRevenue = confirmedPaidData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
-    const totalRevenue = completedRevenue + confirmedPaidRevenue;
-    const totalCompleted = (completedData?.length || 0) + (confirmedPaidData?.length || 0);
+    const totalRevenue = confirmedRevenue + completedRevenue;
 
     setStats({
       today: todayData?.length || 0,
       pending: pendingData?.length || 0,
-      completed: totalCompleted,
+      confirmed: confirmedData?.length || 0,
       revenue: totalRevenue,
     });
   };
@@ -549,14 +548,14 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/40 backdrop-blur-xl border-green-500/20">
+          <Card className="bg-card/40 backdrop-blur-xl border-blue-500/20">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Check className="w-6 h-6 text-green-500" />
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Check className="w-6 h-6 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
+                <p className="text-2xl font-bold text-foreground">{stats.confirmed}</p>
+                <p className="text-sm text-muted-foreground">Confirmados</p>
               </div>
             </CardContent>
           </Card>
