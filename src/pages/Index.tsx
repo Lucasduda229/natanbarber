@@ -3,14 +3,16 @@ import { Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
+import { ServiceGallery } from "@/components/ServiceGallery";
 import logoImage from "@/assets/logo-barbershop.png";
 
 const Index = () => {
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen relative overflow-hidden">
       <AnimatedBackground />
       
-      <div className="relative z-10 text-center space-y-8 px-4">
+      {/* Hero Section */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] text-center px-4 py-12">
         <div className="space-y-4">
           <div className="flex justify-center mb-6">
             <img 
@@ -43,7 +45,7 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in mt-8">
           <Link to="/register">
             <Button 
               size="lg"
@@ -64,9 +66,14 @@ const Index = () => {
           </Link>
         </div>
 
-        <p className="text-sm text-muted-foreground animate-fade-in">
+        <p className="text-sm text-muted-foreground animate-fade-in mt-4">
           Agende seu horário de forma rápida e exclusiva
         </p>
+      </div>
+
+      {/* Gallery Section */}
+      <div className="relative z-10 px-4 pb-12 max-w-6xl mx-auto">
+        <ServiceGallery />
       </div>
     </div>
   );

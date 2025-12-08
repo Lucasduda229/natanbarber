@@ -4,7 +4,6 @@ import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, User, LogOut, Phone, Copy, Navigation, Instagram } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
-import { ServiceGallery } from "@/components/ServiceGallery";
 import { ReviewsDisplay } from "@/components/ReviewsDisplay";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
@@ -425,9 +424,6 @@ const Booking = () => {
                 ))}
               </div>
             </div>
-
-            {/* Gallery Section */}
-            <ServiceGallery />
 
             {/* Reviews Section */}
             <ReviewsDisplay />
