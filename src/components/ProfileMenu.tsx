@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Camera, LogOut, Calendar, Settings } from "lucide-react";
+import { User, Camera, LogOut, Calendar, Settings, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -29,7 +29,7 @@ interface Profile {
 
 export const ProfileMenu = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -181,6 +181,16 @@ export const ProfileMenu = () => {
             <Calendar className="w-4 h-4 mr-2" />
             Meus Agendamentos
           </DropdownMenuItem>
+
+          {isAdmin && (
+            <DropdownMenuItem
+              onClick={() => navigate("/admin")}
+              className="cursor-pointer text-primary"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Painel Admin
+            </DropdownMenuItem>
+          )}
           
           <DropdownMenuSeparator />
           
