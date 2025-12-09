@@ -895,6 +895,14 @@ const Admin = () => {
               <Button variant="outline" onClick={() => setFilterDate("")} className="w-full sm:w-auto">
                 Ver Todos
               </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/admin/history")} 
+                className="w-full sm:w-auto gap-2"
+              >
+                <History className="w-4 h-4" />
+                Histórico Completo
+              </Button>
             </div>
 
             {loading ? (

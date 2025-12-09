@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Booking from "./pages/Booking";
 import MyAppointments from "./pages/MyAppointments";
 import Admin from "./pages/Admin";
+import AppointmentHistory from "./pages/AppointmentHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/booking" element={<Booking />} />
             <Route path="/my-appointments" element={<MyAppointments />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/history" element={<AppointmentHistory />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
