@@ -74,7 +74,24 @@ export const ReviewsDisplay = () => {
   }
 
   if (reviews.length === 0) {
-    return null;
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <div className="w-1 h-5 bg-primary rounded-full" />
+          <MessageSquare className="w-5 h-5 text-primary" />
+          Avaliações dos Clientes
+        </h3>
+        <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
+          <CardContent className="p-6 text-center">
+            <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground">Ainda não há avaliações.</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">
+              Seja o primeiro a avaliar nosso serviço!
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const renderStars = (rating: number) => (
