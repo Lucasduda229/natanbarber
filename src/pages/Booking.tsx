@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +21,56 @@ import { generatePixPayload } from "@/lib/pix";
 import { QRCodeSVG } from "qrcode.react";
 import logoImage from "@/assets/logo-barbershop.png";
 import pixIcon from "@/assets/pix-icon.png";
+
+// Step progress indicator component
+const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
+  const steps = ["Serviços", "Data/Hora", "Dados", "Confirmar", "Concluído"];
+  
+  return (
+    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8">
+      {steps.slice(0, totalSteps).map((label, index) => {
+        const stepNumber = index + 1;
+        const isActive = stepNumber === currentStep;
+        const isCompleted = stepNumber < currentStep;
+        
+        return (
+          <div key={index} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div 
+                className={`
+                  w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold
+                  transition-all duration-500 ease-out
+                  ${isCompleted 
+                    ? "bg-primary text-background scale-90" 
+                    : isActive 
+                      ? "bg-gold-gradient text-background shadow-gold-glow scale-110" 
+                      : "bg-card/60 text-muted-foreground border border-primary/20"
+                  }
+                `}
+              >
+                {isCompleted ? <Check className="w-4 h-4" /> : stepNumber}
+              </div>
+              <span className={`
+                text-[10px] sm:text-xs mt-1 transition-colors duration-300 hidden sm:block
+                ${isActive ? "text-primary font-medium" : "text-muted-foreground"}
+              `}>
+                {label}
+              </span>
+            </div>
+            {index < totalSteps - 1 && (
+              <div 
+                className={`
+                  w-6 sm:w-12 h-0.5 mx-1 sm:mx-2 transition-all duration-500
+                  ${isCompleted ? "bg-primary" : "bg-border"}
+                `} 
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 interface Service {
   id: string;
@@ -62,6 +112,48 @@ const Booking = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const prevStepRef = useRef(1);
+
+  // Animated step transition
+  const animateStepTransition = useCallback((direction: "forward" | "backward") => {
+    if (stepContentRef.current) {
+      const isForward = direction === "forward";
+      
+      // Exit animation
+      gsap.to(stepContentRef.current, {
+        opacity: 0,
+        x: isForward ? -30 : 30,
+        duration: 0.2,
+        ease: "power2.in",
+        onComplete: () => {
+          // Entry animation
+          gsap.fromTo(
+            stepContentRef.current,
+            { opacity: 0, x: isForward ? 40 : -40 },
+            { 
+              opacity: 1, 
+              x: 0, 
+              duration: 0.4, 
+              ease: "power3.out",
+              onComplete: () => {
+                // Animate children with stagger
+                const children = stepContentRef.current?.querySelectorAll(".animate-in");
+                if (children && children.length > 0) {
+                  gsap.fromTo(
+                    children,
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }
+                  );
+                }
+              }
+            }
+          );
+        }
+      });
+    }
+  }, []);
+
 
   useEffect(() => {
     gsap.fromTo(".booking-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
@@ -157,8 +249,8 @@ const Booking = () => {
       toast.error("Selecione pelo menos um serviço");
       return;
     }
-    setStep(2);
-    gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+    animateStepTransition("forward");
+    setTimeout(() => setStep(2), 200);
   };
 
   // Cálculos de totais
@@ -171,8 +263,8 @@ const Booking = () => {
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
-    setStep(3);
-    gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+    animateStepTransition("forward");
+    setTimeout(() => setStep(3), 200);
   };
 
   const validateCustomerInfo = (): boolean => {
@@ -211,8 +303,8 @@ const Booking = () => {
         .eq("user_id", user.id);
     }
     
-    setStep(4);
-    gsap.fromTo(".step-content", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+    animateStepTransition("forward");
+    setTimeout(() => setStep(4), 200);
   };
 
   const handleConfirmBooking = async () => {
@@ -258,7 +350,24 @@ const Booking = () => {
     setLoading(false);
     toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
     setStep(5);
-    gsap.fromTo(".step-content", { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.7)" });
+    // Special success animation
+    setTimeout(() => {
+      if (stepContentRef.current) {
+        gsap.fromTo(
+          stepContentRef.current,
+          { opacity: 0, scale: 0.9 },
+          { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }
+        );
+        const successIcon = stepContentRef.current.querySelector(".success-icon");
+        if (successIcon) {
+          gsap.fromTo(
+            successIcon,
+            { scale: 0, rotation: -180 },
+            { scale: 1, rotation: 0, duration: 0.5, delay: 0.2, ease: "back.out(2)" }
+          );
+        }
+      }
+    }, 50);
   };
 
   const copyPixKey = () => {
@@ -269,8 +378,8 @@ const Booking = () => {
 
   const goBack = () => {
     if (step > 1) {
-      setStep(step - 1);
-      gsap.fromTo(".step-content", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4 });
+      animateStepTransition("backward");
+      setTimeout(() => setStep(step - 1), 200);
     }
   };
 
@@ -342,7 +451,12 @@ const Booking = () => {
 
       {/* Main Content */}
       <main className="booking-container relative z-10 px-4 pb-12 max-w-5xl mx-auto">
+        {/* Step Progress Indicator - Only show for steps 2-4 */}
+        {step > 1 && step < 5 && (
+          <StepIndicator currentStep={step} totalSteps={5} />
+        )}
         
+        <div ref={stepContentRef}>
         {/* Step 1: Services and Location */}
         {step === 1 && (
           <div className="step-content space-y-8">
@@ -605,7 +719,7 @@ const Booking = () => {
         {/* Step 2: Select Date & Time */}
         {step === 2 && (
           <div className="step-content space-y-6">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-4 sm:mb-6 animate-in">
               <Button variant="ghost" size="icon" onClick={goBack} className="hover:bg-primary/10">
                 <ChevronLeft className="w-5 h-5" />
               </Button>
@@ -614,7 +728,7 @@ const Booking = () => {
 
             <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               {/* Calendar */}
-              <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
+              <Card className="bg-card/60 backdrop-blur-xl border-primary/20 animate-in">
                 <CardHeader className="pb-2 sm:pb-4">
                   <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
                     <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -695,14 +809,14 @@ const Booking = () => {
         {/* Step 3: Customer Info */}
         {step === 3 && (
           <div className="step-content space-y-6">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-4 sm:mb-6 animate-in">
               <Button variant="ghost" size="icon" onClick={goBack} className="hover:bg-primary/10">
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <h2 className="text-xl sm:text-2xl font-bold text-foreground">Seus Dados</h2>
             </div>
 
-            <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
+            <Card className="bg-card/60 backdrop-blur-xl border-primary/20 animate-in">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground text-base">
                   <User className="w-5 h-5 text-primary" />
@@ -783,7 +897,7 @@ const Booking = () => {
 
             <Button
               onClick={handleCustomerInfoSubmit}
-              className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow"
+              className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow animate-in"
             >
               Continuar
             </Button>
@@ -793,14 +907,14 @@ const Booking = () => {
         {/* Step 4: Confirmation */}
         {step === 4 && (
           <div className="step-content space-y-6">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-4 sm:mb-6 animate-in">
               <Button variant="ghost" size="icon" onClick={goBack} className="hover:bg-primary/10">
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <h2 className="text-xl sm:text-2xl font-bold text-foreground">Confirmar Agendamento</h2>
             </div>
 
-            <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
+            <Card className="bg-card/60 backdrop-blur-xl border-primary/20 animate-in">
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="text-foreground text-sm sm:text-base">Resumo do Agendamento</CardTitle>
               </CardHeader>
@@ -915,14 +1029,16 @@ const Booking = () => {
 
         {/* Step 5: Success */}
         {step === 5 && (
-          <div className="step-content text-center space-y-6 py-12">
-            <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-              <Check className="w-12 h-12 text-primary" />
+          <div className="step-content text-center space-y-6 py-8 sm:py-12">
+            <div className="success-icon w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+              <Check className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Pedido Enviado!</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Seu agendamento foi enviado e está aguardando aprovação do barbeiro. Você receberá uma confirmação em breve.
-            </p>
+            <div className="animate-success-child">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Pedido Enviado!</h2>
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                Seu agendamento foi enviado e está aguardando aprovação do barbeiro. Você receberá uma confirmação em breve.
+              </p>
+            </div>
 
             <Card className="bg-card/60 backdrop-blur-xl border-primary/20 max-w-md mx-auto">
               <CardContent className="p-6 space-y-3">
@@ -995,6 +1111,7 @@ const Booking = () => {
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );
