@@ -10,8 +10,10 @@ interface Review {
   rating: number;
   comment: string | null;
   created_at: string;
+  user_id: string;
   profiles: {
     full_name: string | null;
+    avatar_url: string | null;
   } | null;
 }
 
@@ -25,10 +27,10 @@ export const ReviewsDisplay = () => {
   }, []);
 
   const fetchReviews = async () => {
-    // Fetch reviews (without profile data for privacy - RLS protects profiles)
+    // Fetch reviews with profile data (name and avatar)
     const { data: reviewsData, error } = await supabase
       .from("reviews")
-      .select("id, rating, comment, created_at")
+      .select("id, rating, comment, created_at, user_id")
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -43,11 +45,17 @@ export const ReviewsDisplay = () => {
       return;
     }
 
-    // Reviews are displayed without customer names for privacy
+    // Fetch profiles for reviewers
+    const userIds = reviewsData.map(r => r.user_id);
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_url")
+      .in("user_id", userIds);
+
+    // Map profiles to reviews
     const reviewsWithProfiles = reviewsData.map(review => ({
       ...review,
-      user_id: "", // Not exposed
-      profiles: null, // Privacy: don't expose customer names publicly
+      profiles: profilesData?.find(p => p.user_id === review.user_id) || null,
     }));
 
     setReviews(reviewsWithProfiles);
@@ -140,8 +148,16 @@ export const ReviewsDisplay = () => {
           <Card key={review.id} className="bg-card/60 backdrop-blur-xl border-primary/10">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {review.profiles?.avatar_url ? (
+                    <img 
+                      src={review.profiles.avatar_url} 
+                      alt={review.profiles?.full_name || "Cliente"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-primary" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
