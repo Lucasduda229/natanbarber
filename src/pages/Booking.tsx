@@ -517,64 +517,76 @@ const Booking = () => {
                         className="bg-gradient-to-br from-primary/10 via-card/80 to-primary/5 backdrop-blur-xl border-primary/30 hover:border-primary/60 cursor-pointer transition-all overflow-hidden"
                         onClick={() => handleServiceSelect(subscription)}
                       >
-                        <CardContent className="p-6 relative">
+                        <CardContent className="p-4 sm:p-6 relative">
                           {/* Premium badge */}
-                          <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-gold-gradient text-background text-xs font-bold">
+                          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2 sm:px-3 py-1 rounded-full bg-gold-gradient text-background text-[10px] sm:text-xs font-bold">
                             PREMIUM
                           </div>
                           
-                          <div className="flex items-start gap-4">
-                            {/* Icon */}
-                            <div className="w-16 h-16 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold-glow overflow-hidden p-1">
-                              <img src={logoImage} alt="Natan Barber" className="w-full h-full object-cover rounded-xl" />
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                            {/* Icon and Title for mobile */}
+                            <div className="flex items-center gap-3 sm:block">
+                              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold-glow overflow-hidden p-0.5 sm:p-1 flex-shrink-0">
+                                <img src={logoImage} alt="Natan Barber" className="w-full h-full object-cover rounded-lg sm:rounded-xl" />
+                              </div>
+                              <div className="sm:hidden">
+                                <h4 className="text-base font-bold text-foreground pr-16">
+                                  {subscription.name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  {subscription.description || "Acesso exclusivo a serviços premium"}
+                                </p>
+                              </div>
                             </div>
                             
                             <div className="flex-1">
-                              <h4 className="text-xl font-bold text-foreground mb-2">
+                              {/* Title for desktop */}
+                              <h4 className="hidden sm:block text-xl font-bold text-foreground mb-2">
                                 {subscription.name}
                               </h4>
-                              <p className="text-sm text-muted-foreground mb-4">
+                              <p className="hidden sm:block text-sm text-muted-foreground mb-4">
                                 {subscription.description || "Acesso exclusivo a serviços premium"}
                               </p>
                               
-                              {/* Benefits List */}
-                              <div className="grid grid-cols-2 gap-2 mb-4">
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                              {/* Benefits List - Responsive grid */}
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 sm:gap-2 mb-4">
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                                   <span className="text-foreground">Cortes ilimitados</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <span className="text-foreground">Prioridade no agendamento</span>
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground truncate">Prioridade agendamento</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                                   <span className="text-foreground">Barba inclusa</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                                   <span className="text-foreground">Sobrancelha grátis</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                                   <span className="text-foreground">Hidratação mensal</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <span className="text-foreground">Descontos em produtos</span>
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                  <span className="text-foreground">Descontos produtos</span>
                                 </div>
                               </div>
                               
-                              <div className="flex items-end justify-between">
+                              {/* Price and CTA - Stack on mobile */}
+                              <div className="flex flex-row items-center justify-between gap-3 pt-2 border-t border-primary/10 sm:border-0 sm:pt-0">
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Por apenas</p>
-                                  <p className="text-3xl font-bold text-primary">
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Por apenas</p>
+                                  <p className="text-2xl sm:text-3xl font-bold text-primary">
                                     R$ {subscription.price.toFixed(2)}
-                                    <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                                    <span className="text-xs sm:text-sm font-normal text-muted-foreground">/mês</span>
                                   </p>
                                 </div>
                                 <Button 
-                                  className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-6"
+                                  className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-4 sm:px-6 text-sm"
                                 >
                                   Assinar
                                 </Button>
