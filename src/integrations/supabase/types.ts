@@ -463,6 +463,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_reviewer_profiles: {
+        Args: { reviewer_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
