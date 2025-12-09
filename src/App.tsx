@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -13,6 +14,7 @@ import Booking from "./pages/Booking";
 import MyAppointments from "./pages/MyAppointments";
 import Admin from "./pages/Admin";
 import AppointmentHistory from "./pages/AppointmentHistory";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <OfflineIndicator />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -34,6 +37,7 @@ const App = () => (
             <Route path="/my-appointments" element={<MyAppointments />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/history" element={<AppointmentHistory />} />
+            <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
