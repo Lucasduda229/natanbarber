@@ -152,16 +152,16 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
     }
   };
 
-  // Calculate stats
-  const completedAppointments = appointments.filter(a => a.status === "completed");
-  const totalSpent = completedAppointments.reduce((sum, a) => sum + (a.services?.price || 0), 0);
+  // Calculate stats - include confirmed and completed appointments
+  const confirmedOrCompleted = appointments.filter(a => a.status === "completed" || a.status === "confirmed");
+  const totalSpent = confirmedOrCompleted.reduce((sum, a) => sum + (a.services?.price || 0), 0);
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) 
     : "N/A";
 
-  // Find favorite service
+  // Find favorite service based on confirmed/completed
   const serviceCounts: Record<string, number> = {};
-  completedAppointments.forEach(a => {
+  confirmedOrCompleted.forEach(a => {
     const serviceName = a.services?.name || "Desconhecido";
     serviceCounts[serviceName] = (serviceCounts[serviceName] || 0) + 1;
   });
@@ -209,7 +209,7 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               <Card className="bg-primary/10 border-primary/20">
                 <CardContent className="p-3 text-center">
-                  <div className="text-2xl font-bold text-primary">{completedAppointments.length}</div>
+                  <div className="text-2xl font-bold text-primary">{confirmedOrCompleted.length}</div>
                   <div className="text-xs text-muted-foreground">Visitas</div>
                 </CardContent>
               </Card>
