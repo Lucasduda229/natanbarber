@@ -455,23 +455,86 @@ const Admin = () => {
   const resetStats = async () => {
     setLoading(true);
     
-    // DELETE ALL appointments permanently
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+    try {
+      // Get current admin user id to exclude from deletion
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminUserId = user?.id;
 
-    if (error) {
+      // DELETE ALL appointments permanently
+      const { error: appointmentsError } = await supabase
+        .from("appointments")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (appointmentsError) {
+        console.error("Error deleting appointments:", appointmentsError);
+        toast.error("Erro ao deletar agendamentos");
+        setLoading(false);
+        return;
+      }
+
+      // DELETE ALL blocked dates
+      const { error: blockedError } = await supabase
+        .from("blocked_dates")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (blockedError) {
+        console.error("Error deleting blocked dates:", blockedError);
+      }
+
+      // DELETE ALL notifications
+      const { error: notificationsError } = await supabase
+        .from("notifications")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (notificationsError) {
+        console.error("Error deleting notifications:", notificationsError);
+      }
+
+      // DELETE ALL reviews
+      const { error: reviewsError } = await supabase
+        .from("reviews")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (reviewsError) {
+        console.error("Error deleting reviews:", reviewsError);
+      }
+
+      // DELETE ALL profiles EXCEPT admin
+      if (adminUserId) {
+        const { error: profilesError } = await supabase
+          .from("profiles")
+          .delete()
+          .neq("user_id", adminUserId);
+
+        if (profilesError) {
+          console.error("Error deleting profiles:", profilesError);
+        }
+
+        // DELETE ALL user roles EXCEPT admin
+        const { error: rolesError } = await supabase
+          .from("user_roles")
+          .delete()
+          .neq("user_id", adminUserId);
+
+        if (rolesError) {
+          console.error("Error deleting user roles:", rolesError);
+        }
+      }
+
+      toast.success("Painel resetado!", { 
+        description: "Todos os dados foram excluídos permanentemente." 
+      });
+      fetchData();
+    } catch (error) {
       console.error("Reset error:", error);
       toast.error("Erro ao resetar painel");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    toast.success("Painel resetado!", { 
-      description: "Todos os agendamentos foram excluídos permanentemente." 
-    });
-    fetchData();
   };
 
   const filteredAppointments = appointments.filter((a) => {
@@ -562,10 +625,12 @@ const Admin = () => {
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-card border-destructive/20">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive">⚠️ Excluir Todos os Agendamentos</AlertDialogTitle>
+                <AlertDialogTitle className="text-destructive">⚠️ Resetar Sistema Completo</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os agendamentos:
+                  Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os dados:
                   <br /><br />
+                  <strong>Agendamentos:</strong>
+                  <br />
                   • {stats.pending} pendentes
                   <br />
                   • {appointments.filter(a => a.status === "confirmed").length} confirmados
@@ -575,6 +640,16 @@ const Admin = () => {
                   • {appointments.filter(a => a.status === "cancelled").length} cancelados
                   <br />
                   • Receita perdida: R$ {stats.revenue.toFixed(2)}
+                  <br /><br />
+                  <strong>Também serão deletados:</strong>
+                  <br />
+                  • Todos os clientes cadastrados (exceto admin)
+                  <br />
+                  • Todas as notificações
+                  <br />
+                  • Todas as avaliações
+                  <br />
+                  • Todos os horários bloqueados
                   <br /><br />
                   <strong className="text-destructive">⚠️ ATENÇÃO: Esta ação NÃO pode ser desfeita!</strong>
                 </AlertDialogDescription>
