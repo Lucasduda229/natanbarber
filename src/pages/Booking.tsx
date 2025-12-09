@@ -163,7 +163,6 @@ const Booking = () => {
 
   // Cálculos de totais
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -486,7 +485,7 @@ const Booking = () => {
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-border">
                       <div>
-                        <p className="text-sm text-muted-foreground">{selectedServices.length} serviço(s) • {totalDuration} min</p>
+                        <p className="text-sm text-muted-foreground">{selectedServices.length} serviço(s)</p>
                         <p className="text-lg font-bold text-primary">Total: R$ {totalPrice.toFixed(2)}</p>
                       </div>
                       <Button 
@@ -819,10 +818,6 @@ const Booking = () => {
                 <div className="flex items-center justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Horário</span>
                   <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
-                </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Duração Total</span>
-                  <span className="font-semibold text-foreground">{totalDuration} minutos</span>
                 </div>
                 <div className="flex items-center justify-between py-4">
                   <span className="text-lg font-semibold text-foreground">Total</span>

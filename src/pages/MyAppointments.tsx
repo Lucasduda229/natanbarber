@@ -27,8 +27,7 @@ interface Appointment {
   services: {
     name: string;
     price: number;
-    duration_minutes: number;
-  };
+  } | null;
   hasReview?: boolean;
 }
 
@@ -78,8 +77,7 @@ const MyAppointments = () => {
         payment_status,
         services (
           name,
-          price,
-          duration_minutes
+          price
         )
       `)
       .eq("user_id", user?.id)
@@ -192,14 +190,13 @@ const MyAppointments = () => {
                             <div>
                               <h3 className="font-semibold text-foreground flex items-center gap-2">
                                 <Scissors className="w-4 h-4 text-primary" />
-                                {appointment.services.name}
+                                {appointment.services?.name || "Serviço"}
                               </h3>
                               <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
                                   {appointment.appointment_time.slice(0, 5)}
                                 </span>
-                                <span>{appointment.services.duration_minutes} min</span>
                               </div>
                               <div className="flex items-center gap-2 mt-2">
                                 <Badge variant="outline" className={statusColors[appointment.status]}>
@@ -215,7 +212,7 @@ const MyAppointments = () => {
 
                           <div className="flex items-center gap-3">
                             <span className="text-xl font-bold text-primary">
-                              R$ {appointment.services.price.toFixed(2)}
+                              R$ {appointment.services?.price?.toFixed(2) || "0.00"}
                             </span>
 
                             <AlertDialog>
@@ -275,7 +272,7 @@ const MyAppointments = () => {
                               </span>
                             </div>
                             <div>
-                              <h3 className="font-medium text-muted-foreground">{appointment.services.name}</h3>
+                              <h3 className="font-medium text-muted-foreground">{appointment.services?.name || "Serviço"}</h3>
                               <span className="text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
@@ -283,7 +280,7 @@ const MyAppointments = () => {
                             {appointment.status === "completed" && !reviewedAppointments.has(appointment.id) && (
                               <ReviewForm 
                                 appointmentId={appointment.id} 
-                                serviceName={appointment.services.name}
+                                serviceName={appointment.services?.name || "Serviço"}
                                 onReviewSubmitted={fetchAppointments}
                               />
                             )}

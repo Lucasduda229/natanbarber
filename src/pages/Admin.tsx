@@ -34,7 +34,7 @@ interface Appointment {
   services: {
     name: string;
     price: number;
-  };
+  } | null;
 }
 
 interface BlockedDate {
@@ -685,9 +685,9 @@ const Admin = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <Scissors className="w-4 h-4" />
-                              {appointment.services.name}
+                              {appointment.services?.name || "Serviço"}
                             </span>
-                            <span className="font-bold text-primary">R$ {appointment.services.price.toFixed(2)}</span>
+                            <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
                           </div>
                         </div>
                       </div>
@@ -756,7 +756,7 @@ const Admin = () => {
                           phone={appointment.profiles?.phone || ""}
                           message={getConfirmationMessage(
                             appointment.profiles?.full_name || "Cliente",
-                            appointment.services.name,
+                            appointment.services?.name || "Serviço",
                             format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                             appointment.appointment_time.slice(0, 5)
                           )}
@@ -820,7 +820,7 @@ const Admin = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Scissors className="w-4 h-4" />
-                                {appointment.services.name}
+                                {appointment.services?.name || "Serviço"}
                               </span>
                             </div>
                           </div>
@@ -831,7 +831,7 @@ const Admin = () => {
                             {statusLabels[appointment.status]}
                           </Badge>
 
-                          <span className="font-bold text-primary">R$ {appointment.services.price.toFixed(2)}</span>
+                          <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
 
                           <Select
                             value={appointment.status}
@@ -866,7 +866,7 @@ const Admin = () => {
                             phone={appointment.profiles?.phone || ""}
                             message={getConfirmationMessage(
                               appointment.profiles?.full_name || "Cliente",
-                              appointment.services.name,
+                              appointment.services?.name || "Serviço",
                               format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                               appointment.appointment_time.slice(0, 5)
                             )}
