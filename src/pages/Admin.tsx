@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -20,6 +20,7 @@ import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { GalleryManager } from "@/components/GalleryManager";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CustomerHistory } from "@/components/CustomerHistory";
+import { ClientsList } from "@/components/ClientsList";
 import { getConfirmationMessage } from "@/lib/whatsapp";
 
 interface Appointment {
@@ -634,6 +635,10 @@ const Admin = () => {
                 <Image className="w-4 h-4 mr-2" />
                 Galeria
               </TabsTrigger>
+              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <UserCheck className="w-4 h-4 mr-2" />
+                Clientes
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -981,6 +986,11 @@ const Admin = () => {
           {/* Gallery Tab */}
           <TabsContent value="gallery">
             <GalleryManager />
+          </TabsContent>
+
+          {/* Clients Tab */}
+          <TabsContent value="clients">
+            <ClientsList />
           </TabsContent>
         </Tabs>
       </main>
