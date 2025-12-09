@@ -21,6 +21,7 @@ import { GalleryManager } from "@/components/GalleryManager";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { ClientsList } from "@/components/ClientsList";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 
@@ -562,6 +563,7 @@ const Admin = () => {
           <span className="hidden sm:inline">Voltar</span>
         </Button>
         <div className="flex items-center gap-2 sm:gap-3">
+          <NotificationsDropdown />
           <img src={logoImage} alt="Natan Barbershop" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-primary/30" />
           <Badge className="bg-primary/20 text-primary border-primary/30 text-xs sm:text-sm">Admin</Badge>
         </div>
