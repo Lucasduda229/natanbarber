@@ -45,17 +45,15 @@ export const ReviewsDisplay = () => {
       return;
     }
 
-    // Fetch profiles for reviewers
+    // Use secure function to get only safe profile fields (no phone/admin_notes)
     const userIds = reviewsData.map(r => r.user_id);
     const { data: profilesData } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, avatar_url")
-      .in("user_id", userIds);
+      .rpc("get_reviewer_profiles", { reviewer_user_ids: userIds });
 
     // Map profiles to reviews
     const reviewsWithProfiles = reviewsData.map(review => ({
       ...review,
-      profiles: profilesData?.find(p => p.user_id === review.user_id) || null,
+      profiles: profilesData?.find((p: { user_id: string }) => p.user_id === review.user_id) || null,
     }));
 
     setReviews(reviewsWithProfiles);
