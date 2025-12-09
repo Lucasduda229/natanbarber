@@ -80,7 +80,7 @@ const Register = () => {
           </div>
           <div className="text-center mb-8 space-y-2">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground">Seja Bem-vindo</h1>
-            <p className="text-muted-foreground text-lg">Crie sua conta e garanta seu horário</p>
+            <p className="text-muted-foreground text-base">Agende seu horário de forma rápida e exclusiva</p>
           </div>
           <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-8 border border-primary/20 shadow-gold-glow">
             <form onSubmit={handleSubmit} className="space-y-6">
