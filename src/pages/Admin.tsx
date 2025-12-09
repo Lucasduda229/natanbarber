@@ -599,35 +599,35 @@ const Admin = () => {
           Última atualização: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Estatísticas</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">Estatísticas</h2>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleManualRefresh}
               disabled={refreshing}
-              className="border-primary/30 hover:bg-primary/10"
+              className="border-primary/30 hover:bg-primary/10 h-8 text-xs sm:text-sm"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Atualizar
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                className="border-destructive/50 text-destructive hover:bg-destructive/10 h-8 text-xs sm:text-sm"
                 disabled={appointments.filter(a => a.status !== "archived").length === 0}
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Resetar Painel
+                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Resetar Painel</span>
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-destructive/20">
+            <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive">⚠️ Resetar Sistema Completo</AlertDialogTitle>
-                <AlertDialogDescription>
+                <AlertDialogTitle className="text-destructive text-base sm:text-lg">⚠️ Resetar Sistema Completo</AlertDialogTitle>
+                <AlertDialogDescription className="text-sm max-h-[60vh] overflow-y-auto">
                   Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os dados:
                   <br /><br />
                   <strong>Agendamentos:</strong>
@@ -655,11 +655,11 @@ const Admin = () => {
                   <strong className="text-destructive">⚠️ ATENÇÃO: Esta ação NÃO pode ser desfeita!</strong>
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={resetStats}
-                  className="bg-destructive hover:bg-destructive/90"
+                  className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                 >
                   Confirmar Reset Total
                 </AlertDialogAction>
@@ -719,32 +719,32 @@ const Admin = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="appointments" className="space-y-6">
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 inline-flex w-auto min-w-full sm:min-w-0">
-              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <Scissors className="w-4 h-4 mr-2" />
-                Agendamentos
+        <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
+          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 inline-flex w-auto min-w-max gap-0.5 p-1">
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Agendamentos</span>
               </TabsTrigger>
-              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <Bot className="w-4 h-4 mr-2" />
-                Assistente IA
+              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Assistente IA</span>
               </TabsTrigger>
-              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <Lock className="w-4 h-4 mr-2" />
-                Horários
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Horários</span>
               </TabsTrigger>
-              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <Image className="w-4 h-4 mr-2" />
-                Galeria
+              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Galeria</span>
               </TabsTrigger>
-              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <UserCheck className="w-4 h-4 mr-2" />
-                Clientes
+              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Clientes</span>
               </TabsTrigger>
-              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
-                <Trophy className="w-4 h-4 mr-2" />
-                Fidelidade
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
+                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Fidelidade</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -776,60 +776,60 @@ const Admin = () => {
                     .map((appointment) => (
                     <div 
                       key={appointment.id} 
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-card/40 border border-yellow-500/20"
+                      className="flex flex-col gap-3 p-3 sm:p-4 rounded-lg bg-card/40 border border-yellow-500/20"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-xl bg-yellow-500/10 flex flex-col items-center justify-center">
-                          <span className="text-lg font-bold text-yellow-500">
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-yellow-500/10 flex flex-col items-center justify-center flex-shrink-0">
+                          <span className="text-base sm:text-lg font-bold text-yellow-500">
                             {format(parseISO(appointment.appointment_date), "dd")}
                           </span>
-                          <span className="text-xs text-yellow-500 uppercase">
+                          <span className="text-[10px] sm:text-xs text-yellow-500 uppercase">
                             {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
                           </span>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground flex items-center gap-2">
-                            <Users className="w-4 h-4 text-yellow-500" />
-                            {appointment.profiles?.full_name || "Cliente"}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />
+                            <span className="truncate">{appointment.profiles?.full_name || "Cliente"}</span>
                           </h3>
-                          <p className="text-sm text-muted-foreground">{appointment.profiles?.phone || "Sem telefone"}</p>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{appointment.profiles?.phone || "Sem telefone"}</p>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
+                              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               {appointment.appointment_time.slice(0, 5)}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Scissors className="w-4 h-4" />
-                              {appointment.services?.name || "Serviço"}
+                              <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <span className="truncate max-w-[80px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
                             </span>
                             <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
                               size="sm" 
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              className="bg-green-600 hover:bg-green-700 text-white h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none"
                             >
-                              <Check className="w-4 h-4 mr-1" />
-                              Aceitar
+                              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Aceitar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-primary/20">
+                          <AlertDialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Agendamento</AlertDialogTitle>
-                              <AlertDialogDescription>
+                              <AlertDialogTitle className="text-base sm:text-lg">Confirmar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription className="text-sm">
                                 Deseja confirmar o agendamento de {appointment.profiles?.full_name || "Cliente"} para {format(parseISO(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.appointment_time.slice(0, 5)}?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
                               <AlertDialogAction 
                                 onClick={() => updateAppointmentStatus(appointment.id, "confirmed")}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                               >
                                 Confirmar
                               </AlertDialogAction>
@@ -842,24 +842,24 @@ const Admin = () => {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+                              className="border-red-500/50 text-red-500 hover:bg-red-500/10 h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm flex-1 sm:flex-none"
                             >
-                              <X className="w-4 h-4 mr-1" />
-                              Recusar
+                              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Recusar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-primary/20">
+                          <AlertDialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Recusar Agendamento</AlertDialogTitle>
-                              <AlertDialogDescription>
+                              <AlertDialogTitle className="text-base sm:text-lg">Recusar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription className="text-sm">
                                 Tem certeza que deseja recusar o agendamento de {appointment.profiles?.full_name || "Cliente"}? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Voltar</AlertDialogCancel>
+                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="w-full sm:w-auto">Voltar</AlertDialogCancel>
                               <AlertDialogAction 
                                 onClick={() => updateAppointmentStatus(appointment.id, "cancelled")}
-                                className="bg-red-600 hover:bg-red-700"
+                                className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                               >
                                 Recusar
                               </AlertDialogAction>
@@ -885,14 +885,14 @@ const Admin = () => {
             )}
 
             {/* All Appointments Section */}
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-4">
               <input
                 type="date"
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="bg-card/40 border border-primary/20 rounded-lg px-4 py-2 text-foreground"
+                className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2 text-foreground text-sm w-full sm:w-auto"
               />
-              <Button variant="outline" onClick={() => setFilterDate("")}>
+              <Button variant="outline" onClick={() => setFilterDate("")} className="w-full sm:w-auto">
                 Ver Todos
               </Button>
             </div>
@@ -911,57 +911,57 @@ const Admin = () => {
               <div className="space-y-3">
                 {filteredAppointments.map((appointment) => (
                   <Card key={appointment.id} className="bg-card/40 backdrop-blur-xl border-primary/20">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
-                            <span className="text-lg font-bold text-primary">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col gap-3 sm:gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
+                            <span className="text-base sm:text-lg font-bold text-primary">
                               {format(parseISO(appointment.appointment_date), "dd")}
                             </span>
-                            <span className="text-xs text-primary uppercase">
+                            <span className="text-[10px] sm:text-xs text-primary uppercase">
                               {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
                             </span>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground flex items-center gap-2">
-                              <Users className="w-4 h-4 text-primary" />
-                              {appointment.profiles?.full_name || "Cliente"}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                              <span className="truncate">{appointment.profiles?.full_name || "Cliente"}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-primary flex-shrink-0"
                                 onClick={() => setSelectedCustomerId(appointment.user_id)}
                                 title="Ver histórico do cliente"
                               >
-                                <History className="w-4 h-4" />
+                                <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </Button>
                             </h3>
-                            <p className="text-sm text-muted-foreground">{appointment.profiles?.phone || "Sem telefone"}</p>
-                            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{appointment.profiles?.phone || "Sem telefone"}</p>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
+                                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 {appointment.appointment_time.slice(0, 5)}
                               </span>
                               <span className="flex items-center gap-1">
-                                <Scissors className="w-4 h-4" />
-                                {appointment.services?.name || "Serviço"}
+                                <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <span className="truncate max-w-[100px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge variant="outline" className={statusColors[appointment.status]}>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-border">
+                          <Badge variant="outline" className={`${statusColors[appointment.status]} text-xs`}>
                             {statusLabels[appointment.status]}
                           </Badge>
 
-                          <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                          <span className="font-bold text-primary text-sm sm:text-base">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
 
                           <Select
                             value={appointment.status}
                             onValueChange={(value) => updateAppointmentStatus(appointment.id, value)}
                           >
-                            <SelectTrigger className="w-32 h-8 bg-card/60">
+                            <SelectTrigger className="w-[110px] sm:w-32 h-7 sm:h-8 bg-card/60 text-xs sm:text-sm">
                               <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent>
@@ -976,7 +976,7 @@ const Admin = () => {
                             value={appointment.payment_status}
                             onValueChange={(value) => updatePaymentStatus(appointment.id, value)}
                           >
-                            <SelectTrigger className="w-28 h-8 bg-card/60">
+                            <SelectTrigger className="w-[100px] sm:w-28 h-7 sm:h-8 bg-card/60 text-xs sm:text-sm">
                               <SelectValue placeholder="Pagamento" />
                             </SelectTrigger>
                             <SelectContent>

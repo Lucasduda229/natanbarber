@@ -421,43 +421,43 @@ const Booking = () => {
                         }`}
                         onClick={() => handleServiceSelect(service)}
                       >
-                        <CardContent className="p-5 relative">
+                        <CardContent className="p-3 sm:p-5 relative">
                           {/* Selection indicator */}
                           {isSelected && (
-                            <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-4 h-4 text-background" />
+                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
                             </div>
                           )}
                           
                           {/* Icons */}
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
+                          <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-card border border-primary/20 flex items-center justify-center overflow-hidden">
                               <img src={logoImage} alt="" className="w-full h-full object-cover" />
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Scissors className="w-5 h-5 text-primary" />
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Scissors className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                             </div>
                           </div>
                           
                           {/* Service Info */}
-                          <h4 className={`font-semibold transition-colors mb-1 ${isSelected ? "text-primary" : "text-foreground group-hover:text-primary"}`}>
+                          <h4 className={`font-semibold transition-colors mb-0.5 sm:mb-1 text-sm sm:text-base pr-6 ${isSelected ? "text-primary" : "text-foreground group-hover:text-primary"}`}>
                             {service.name}
                           </h4>
-                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-2">
                             {service.description || "Serviço profissional de qualidade"}
                           </p>
                           
                           {/* Price and Action */}
                           <div className="flex items-end justify-between">
-                            <p className="text-xl font-bold text-primary">
+                            <p className="text-lg sm:text-xl font-bold text-primary">
                               R$ {service.price.toFixed(2)}
                             </p>
                             <Button 
                               size="sm" 
-                              className={isSelected 
+                              className={`h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm ${isSelected 
                                 ? "bg-primary text-background" 
                                 : "bg-card hover:bg-card/80 text-foreground border border-primary/30 hover:border-primary"
-                              }
+                              }`}
                             >
                               {isSelected ? "Selecionado" : "Selecionar"}
                             </Button>
@@ -470,27 +470,27 @@ const Booking = () => {
 
               {/* Continuar button e resumo */}
               {selectedServices.length > 0 && (
-                <Card className="bg-primary/5 border-primary/30 mt-6">
-                  <CardContent className="p-4 space-y-4">
-                    <div className="space-y-2">
+                <Card className="bg-primary/5 border-primary/30 mt-4 sm:mt-6">
+                  <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                    <div className="space-y-1.5 sm:space-y-2">
                       {selectedServices.map((service) => (
-                        <div key={service.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-primary" />
-                            <span className="text-foreground">{service.name}</span>
+                        <div key={service.id} className="flex items-center justify-between text-xs sm:text-sm">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                            <span className="text-foreground truncate">{service.name}</span>
                           </div>
-                          <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                          <span className="text-muted-foreground flex-shrink-0">R$ {service.price.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-border">
                       <div>
-                        <p className="text-sm text-muted-foreground">{selectedServices.length} serviço(s)</p>
-                        <p className="text-lg font-bold text-primary">Total: R$ {totalPrice.toFixed(2)}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{selectedServices.length} serviço(s)</p>
+                        <p className="text-base sm:text-lg font-bold text-primary">Total: R$ {totalPrice.toFixed(2)}</p>
                       </div>
                       <Button 
                         onClick={handleContinueToDate}
-                        className="bg-gold-gradient hover:opacity-90 text-background font-semibold"
+                        className="bg-gold-gradient hover:opacity-90 text-background font-semibold h-9 sm:h-10 px-4 sm:px-6 text-sm"
                       >
                         Continuar
                       </Button>
@@ -612,47 +612,48 @@ const Booking = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-foreground">Escolha Data e Horário</h2>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               {/* Calendar */}
               <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground text-base">
-                    <CalendarIcon className="w-5 h-5 text-primary" />
+                <CardHeader className="pb-2 sm:pb-4">
+                  <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+                    <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     Selecione a Data
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-2 sm:px-6 pb-4">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     disabled={disabledDays}
                     locale={ptBR}
-                    className="rounded-md border-0 pointer-events-auto"
+                    className="rounded-md border-0 pointer-events-auto w-full"
                   />
                 </CardContent>
               </Card>
 
               {/* Time Slots */}
               <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground text-base">
-                    <Clock className="w-5 h-5 text-primary" />
+                <CardHeader className="pb-2 sm:pb-4">
+                  <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     Horários Disponíveis
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6">
                   {!selectedDate ? (
-                    <p className="text-muted-foreground text-center py-8">Selecione uma data primeiro</p>
+                    <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm">Selecione uma data primeiro</p>
                   ) : availableSlots.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">Nenhum horário disponível nesta data</p>
+                    <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm">Nenhum horário disponível nesta data</p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2 max-h-[250px] sm:max-h-[300px] overflow-y-auto pr-1 sm:pr-2">
                       {availableSlots.map((slot) => (
                         <Button
                           key={slot.id}
                           variant={selectedTime === slot.slot_time ? "default" : "outline"}
-                          className={`${
+                          size="sm"
+                          className={`h-9 sm:h-10 text-xs sm:text-sm ${
                             selectedTime === slot.slot_time
                               ? "bg-primary text-background"
                               : "border-primary/30 hover:border-primary hover:bg-primary/10"
@@ -671,18 +672,18 @@ const Booking = () => {
             {/* Selected Services Summary */}
             {selectedServices.length > 0 && (
               <Card className="bg-primary/5 border-primary/30">
-                <CardContent className="p-4 space-y-2">
+                <CardContent className="p-3 sm:p-4 space-y-1.5 sm:space-y-2">
                   {selectedServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Scissors className="w-4 h-4 text-primary" />
-                        <span className="text-foreground">{service.name}</span>
+                    <div key={service.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                        <span className="text-foreground truncate">{service.name}</span>
                       </div>
-                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                      <span className="text-muted-foreground flex-shrink-0">R$ {service.price.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
-                    <span className="font-semibold text-foreground">Total</span>
+                    <span className="font-semibold text-foreground text-sm sm:text-base">Total</span>
                     <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
                   </div>
                 </CardContent>
@@ -800,58 +801,58 @@ const Booking = () => {
             </div>
 
             <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-foreground text-base">Resumo do Agendamento</CardTitle>
+              <CardHeader className="pb-2 sm:pb-4">
+                <CardTitle className="text-foreground text-sm sm:text-base">Resumo do Agendamento</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Cliente</span>
-                  <span className="font-semibold text-foreground">{customerName}</span>
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
+                  <span className="text-muted-foreground text-sm">Cliente</span>
+                  <span className="font-semibold text-foreground text-sm sm:text-base truncate ml-2">{customerName}</span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">WhatsApp</span>
-                  <span className="font-semibold text-foreground">{customerWhatsApp}</span>
+                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
+                  <span className="text-muted-foreground text-sm">WhatsApp</span>
+                  <span className="font-semibold text-foreground text-sm sm:text-base">{customerWhatsApp}</span>
                 </div>
-                <div className="py-2 border-b border-border">
-                  <span className="text-muted-foreground block mb-2">Serviços</span>
+                <div className="py-1.5 sm:py-2 border-b border-border">
+                  <span className="text-muted-foreground block mb-1.5 sm:mb-2 text-sm">Serviços</span>
                   {selectedServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between py-1">
-                      <span className="text-foreground">{service.name}</span>
-                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                    <div key={service.id} className="flex items-center justify-between py-0.5 sm:py-1">
+                      <span className="text-foreground text-sm truncate">{service.name}</span>
+                      <span className="text-muted-foreground text-sm flex-shrink-0">R$ {service.price.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Data</span>
-                  <span className="font-semibold text-foreground">
+                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
+                  <span className="text-muted-foreground text-sm">Data</span>
+                  <span className="font-semibold text-foreground text-sm sm:text-base">
                     {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Horário</span>
-                  <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
+                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
+                  <span className="text-muted-foreground text-sm">Horário</span>
+                  <span className="font-semibold text-foreground text-sm sm:text-base">{selectedTime?.slice(0, 5)}</span>
                 </div>
-                <div className="flex items-center justify-between py-4">
-                  <span className="text-lg font-semibold text-foreground">Total</span>
-                  <span className="text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
+                <div className="flex items-center justify-between py-3 sm:py-4">
+                  <span className="text-base sm:text-lg font-semibold text-foreground">Total</span>
+                  <span className="text-xl sm:text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-foreground text-base">
-                  <CreditCard className="w-5 h-5 text-primary" />
+                <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   Pagamento via PIX
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Garanta seu horário! Realize o pagamento e confirme sua reserva.
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {/* QR Code PIX */}
-                <div className="flex flex-col items-center gap-4 p-6 rounded-xl border border-primary/30 bg-card/50">
-                  <div className="p-3 bg-white rounded-xl">
+                <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl border border-primary/30 bg-card/50">
+                  <div className="p-2 sm:p-3 bg-white rounded-xl">
                     <QRCodeSVG
                       value={generatePixPayload({
                         pixKey: PIX_KEY,
@@ -860,34 +861,34 @@ const Booking = () => {
                         amount: totalPrice,
                         description: selectedServices.map(s => s.name).join(", ").substring(0, 25),
                       })}
-                      size={160}
+                      size={140}
                       level="M"
                       includeMargin={false}
                       bgColor="#ffffff"
                       fgColor="#000000"
                     />
                   </div>
-                  <p className="text-sm text-muted-foreground text-center">
+                  <p className="text-xs sm:text-sm text-muted-foreground text-center">
                     Escaneie o QR Code com seu app de banco
                   </p>
                 </div>
 
                 {/* Chave PIX manual */}
-                <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card/50">
-                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-2 shadow-sm">
+                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border bg-card/50">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
                     <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-muted-foreground">Ou copie a chave</h4>
-                    <p className="text-base font-mono text-foreground truncate">{PIX_KEY}</p>
+                    <h4 className="text-xs sm:text-sm font-medium text-muted-foreground">Ou copie a chave</h4>
+                    <p className="text-sm sm:text-base font-mono text-foreground truncate">{PIX_KEY}</p>
                   </div>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={copyPixKey}
-                    className="border-primary/30 hover:bg-primary/10 flex-shrink-0 h-10 w-10"
+                    className="border-primary/30 hover:bg-primary/10 flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                   >
-                    <Copy className="w-4 h-4 text-primary" />
+                    <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                   </Button>
                 </div>
               </CardContent>
