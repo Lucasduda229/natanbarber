@@ -12,15 +12,21 @@ import logoImage from "@/assets/logo-barbershop.png";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { signUp, user } = useAuth();
+  const { signUp, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (user) navigate("/booking");
+    // Only redirect if auth is finished loading AND user exists
+    if (!authLoading && user) {
+      navigate("/booking");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
     gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
-  }, [user, navigate]);
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
