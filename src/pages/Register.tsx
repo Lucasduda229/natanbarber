@@ -71,26 +71,26 @@ const Register = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <AnimatedBackground />
-      <header className="auth-header relative z-10 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
-        <Link to="/" className="flex items-center gap-3 group">
-          <img src={logoImage} alt="Natan Barbershop" className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
-          <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">Natan Barbershop</span>
+      <header className="auth-header relative z-10 flex items-center justify-between px-3 sm:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
+          <img src={logoImage} alt="Natan Barbershop" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
+          <span className="text-base sm:text-xl font-bold text-foreground group-hover:text-primary transition-colors hidden sm:block">Natan Barbershop</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <OpenClosedBadge />
-          <Link to="/login"><Button variant="ghost" className="text-foreground hover:text-primary">Entrar</Button></Link>
+          <Link to="/login"><Button variant="ghost" className="text-foreground hover:text-primary text-sm sm:text-base px-2 sm:px-4">Entrar</Button></Link>
         </div>
       </header>
-      <main className="relative z-10 flex items-center justify-center px-4 py-12">
+      <main className="relative z-10 flex items-center justify-center px-3 sm:px-4 py-6 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="flex justify-center mb-6 auth-logo" style={{ opacity: 0 }}>
-            <img src={logoImage} alt="Logo" className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" />
+          <div className="flex justify-center mb-4 sm:mb-6 auth-logo" style={{ opacity: 0 }}>
+            <img src={logoImage} alt="Logo" className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" />
           </div>
-          <div className="text-center mb-8 space-y-2">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground auth-title" style={{ opacity: 0 }}>Seja Bem-vindo</h1>
-            <p className="text-muted-foreground text-base auth-subtitle" style={{ opacity: 0 }}>Agende seu horário de forma rápida e exclusiva</p>
+          <div className="text-center mb-6 sm:mb-8 space-y-2">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-foreground auth-title" style={{ opacity: 0 }}>Seja Bem-vindo</h1>
+            <p className="text-muted-foreground text-sm sm:text-base auth-subtitle" style={{ opacity: 0 }}>Agende seu horário de forma rápida e exclusiva</p>
           </div>
-          <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-8 border border-primary/20 shadow-gold-glow" style={{ opacity: 0 }}>
+          <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-5 sm:p-8 border border-primary/20 shadow-gold-glow" style={{ opacity: 0 }}>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="form-field" style={{ opacity: 0 }}>
                 <GhostInput icon={User} name="name" type="text" placeholder="Seu nome completo" value={formData.name} onChange={handleChange} error={errors.name} autoFocus />

@@ -156,20 +156,20 @@ const LoyaltyProgramManager = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Trophy className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold text-foreground">Programas de Fidelidade</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          <h2 className="text-lg sm:text-2xl font-bold text-foreground">Programas de Fidelidade</h2>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()} className="bg-gold-gradient">
+            <Button onClick={() => resetForm()} className="bg-gold-gradient w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Novo Programa
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-primary/20">
+          <DialogContent className="bg-card border-primary/20 mx-3 sm:mx-0 max-w-[calc(100%-1.5rem)] sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="text-foreground">
                 {editingProgram ? "Editar Programa" : "Criar Programa de Fidelidade"}
@@ -247,14 +247,14 @@ const LoyaltyProgramManager = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
           {programs.map((program) => (
             <Card key={program.id} className={`bg-card/40 border-primary/20 transition-all ${!program.is_active && "opacity-60"}`}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Trophy className={`h-5 w-5 ${program.is_active ? "text-primary" : "text-muted-foreground"}`} />
-                    <CardTitle className="text-lg text-foreground">{program.name}</CardTitle>
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Trophy className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${program.is_active ? "text-primary" : "text-muted-foreground"}`} />
+                    <CardTitle className="text-base sm:text-lg text-foreground truncate">{program.name}</CardTitle>
                   </div>
                   <Switch
                     checked={program.is_active}
@@ -262,18 +262,18 @@ const LoyaltyProgramManager = () => {
                   />
                 </div>
                 {program.description && (
-                  <CardDescription className="text-muted-foreground">{program.description}</CardDescription>
+                  <CardDescription className="text-muted-foreground text-sm line-clamp-2">{program.description}</CardDescription>
                 )}
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 text-sm">
+              <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <Users className="h-4 w-4" />
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>{program.required_visits} visitas</span>
                   </div>
                   <div className="flex items-center gap-1 text-primary">
-                    <Gift className="h-4 w-4" />
-                    <span>{program.reward_description}</span>
+                    <Gift className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate max-w-[120px] sm:max-w-none">{program.reward_description}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
