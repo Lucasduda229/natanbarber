@@ -496,7 +496,20 @@ const Admin = () => {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="w-full md:w-auto md:max-w-sm">
+            <AdminStatusToggle />
+          </div>
+        </div>
+        
+        {/* Last update indicator */}
+        <div className="text-xs text-muted-foreground mb-4 flex items-center gap-2">
+          <Clock className="w-3 h-3" />
+          Última atualização: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Estatísticas</h2>
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -507,21 +520,6 @@ const Admin = () => {
               <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
-            <div className="w-full md:w-auto md:max-w-sm">
-              <AdminStatusToggle />
-            </div>
-          </div>
-        </div>
-        
-        {/* Last update indicator */}
-        <div className="text-xs text-muted-foreground mb-4 flex items-center gap-2">
-          <Clock className="w-3 h-3" />
-          Última atualização: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Estatísticas</h2>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
@@ -564,6 +562,7 @@ const Admin = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
