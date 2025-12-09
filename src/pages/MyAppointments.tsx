@@ -136,27 +136,28 @@ const MyAppointments = () => {
       <AnimatedBackground />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary">
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Voltar
+      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
+        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4">
+          <ChevronLeft className="w-5 h-5 sm:mr-2" />
+          <span className="hidden sm:inline">Voltar</span>
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <NotificationsDropdown />
           <ProfileMenu />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="appointments-container relative z-10 px-4 py-6 max-w-4xl mx-auto">
-        <Tabs defaultValue="appointments" className="space-y-6">
-          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 w-full grid grid-cols-2">
-            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Calendar className="w-4 h-4 mr-2" />
-              Agendamentos
+      <main className="appointments-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-4xl mx-auto">
+        <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
+          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 w-full grid grid-cols-2 h-auto">
+            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background py-2.5 sm:py-2 text-xs sm:text-sm">
+              <Calendar className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Agendamentos</span>
+              <span className="xs:hidden">Agenda</span>
             </TabsTrigger>
-            <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background">
-              <Trophy className="w-4 h-4 mr-2" />
+            <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background py-2.5 sm:py-2 text-xs sm:text-sm">
+              <Trophy className="w-4 h-4 mr-1 sm:mr-2" />
               Fidelidade
             </TabsTrigger>
           </TabsList>

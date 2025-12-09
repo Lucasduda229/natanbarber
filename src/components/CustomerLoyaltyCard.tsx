@@ -85,13 +85,13 @@ const CustomerLoyaltyCard = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-full bg-primary/20">
-          <Trophy className="h-6 w-6 text-primary" />
+      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="p-1.5 sm:p-2 rounded-full bg-primary/20">
+          <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Programa de Fidelidade</h2>
-          <p className="text-sm text-muted-foreground">Acompanhe seu progresso e recompensas</p>
+          <h2 className="text-lg sm:text-xl font-bold text-foreground">Programa de Fidelidade</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">Acompanhe seu progresso e recompensas</p>
         </div>
       </div>
 
@@ -108,51 +108,51 @@ const CustomerLoyaltyCard = () => {
             className={`bg-card/40 backdrop-blur-xl border-primary/20 overflow-hidden transition-all ${canClaim ? "ring-2 ring-primary/50" : ""}`}
           >
             {canClaim && (
-              <div className="bg-gold-gradient px-4 py-2 text-background text-center text-sm font-semibold">
+              <div className="bg-gold-gradient px-3 sm:px-4 py-1.5 sm:py-2 text-background text-center text-xs sm:text-sm font-semibold">
                 🎉 Parabéns! Você pode resgatar sua recompensa!
               </div>
             )}
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${canClaim ? "bg-primary" : "bg-primary/20"}`}>
-                  <Star className={`h-5 w-5 ${canClaim ? "text-background" : "text-primary"}`} />
+            <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`p-1.5 sm:p-2 rounded-full flex-shrink-0 ${canClaim ? "bg-primary" : "bg-primary/20"}`}>
+                  <Star className={`h-4 w-4 sm:h-5 sm:w-5 ${canClaim ? "text-background" : "text-primary"}`} />
                 </div>
-                <div>
-                  <CardTitle className="text-lg text-foreground">{program.name}</CardTitle>
+                <div className="min-w-0">
+                  <CardTitle className="text-base sm:text-lg text-foreground truncate">{program.name}</CardTitle>
                   {program.description && (
-                    <CardDescription className="text-muted-foreground text-sm">
+                    <CardDescription className="text-muted-foreground text-xs sm:text-sm line-clamp-2">
                       {program.description}
                     </CardDescription>
                   )}
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6 pb-3 sm:pb-6">
               {/* Progress visualization */}
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Seu progresso</span>
-                  <span className="text-sm font-bold text-foreground">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Seu progresso</span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">
                     {currentVisits} / {program.required_visits}
                   </span>
                 </div>
-                <Progress value={progressPercent} className="h-4" />
+                <Progress value={progressPercent} className="h-3 sm:h-4" />
                 
                 {/* Stamp visualization */}
-                <div className="flex flex-wrap gap-2 justify-center py-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center py-2">
                   {Array.from({ length: program.required_visits }).map((_, index) => (
                     <div
                       key={index}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 transition-all ${
                         index < currentVisits
                           ? "bg-primary border-primary text-background"
                           : "bg-transparent border-muted-foreground/30 text-muted-foreground/30"
                       }`}
                     >
                       {index < currentVisits ? (
-                        <CheckCircle2 className="h-5 w-5" />
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
-                        <span className="text-xs font-bold">{index + 1}</span>
+                        <span className="text-[10px] sm:text-xs font-bold">{index + 1}</span>
                       )}
                     </div>
                   ))}
@@ -160,11 +160,11 @@ const CustomerLoyaltyCard = () => {
               </div>
 
               {/* Reward info */}
-              <div className={`flex items-center gap-3 p-3 rounded-lg ${canClaim ? "bg-primary/20" : "bg-muted/20"}`}>
-                <Gift className={`h-6 w-6 ${canClaim ? "text-primary" : "text-muted-foreground"}`} />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Recompensa</p>
-                  <p className={`text-sm ${canClaim ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+              <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg ${canClaim ? "bg-primary/20" : "bg-muted/20"}`}>
+                <Gift className={`h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 ${canClaim ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-foreground">Recompensa</p>
+                  <p className={`text-xs sm:text-sm truncate ${canClaim ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                     {program.reward_description}
                   </p>
                 </div>
@@ -172,8 +172,8 @@ const CustomerLoyaltyCard = () => {
 
               {/* Stats */}
               {rewardsClaimed > 0 && (
-                <div className="flex items-center gap-2 text-sm text-primary">
-                  <Trophy className="h-4 w-4" />
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-primary">
+                  <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>
                     {rewardsClaimed} recompensa{rewardsClaimed > 1 ? "s" : ""} já resgatada{rewardsClaimed > 1 ? "s" : ""}
                   </span>
@@ -181,7 +181,7 @@ const CustomerLoyaltyCard = () => {
               )}
 
               {!canClaim && (
-                <p className="text-center text-sm text-muted-foreground">
+                <p className="text-center text-xs sm:text-sm text-muted-foreground">
                   Faltam <span className="font-bold text-primary">{program.required_visits - currentVisits}</span> visita(s) para sua recompensa
                 </p>
               )}

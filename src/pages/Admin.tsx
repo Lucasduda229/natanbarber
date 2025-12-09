@@ -556,22 +556,22 @@ const Admin = () => {
       <AnimatedBackground />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary">
-          <ChevronLeft className="w-5 h-5 mr-2" />
-          Voltar
+      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
+        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4">
+          <ChevronLeft className="w-5 h-5 sm:mr-2" />
+          <span className="hidden sm:inline">Voltar</span>
         </Button>
-        <div className="flex items-center gap-3">
-          <img src={logoImage} alt="Natan Barbershop" className="w-10 h-10 rounded-full object-cover border-2 border-primary/30" />
-          <Badge className="bg-primary/20 text-primary border-primary/30">Admin</Badge>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <img src={logoImage} alt="Natan Barbershop" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-primary/30" />
+          <Badge className="bg-primary/20 text-primary border-primary/30 text-xs sm:text-sm">Admin</Badge>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="admin-container relative z-10 px-4 py-6 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-foreground">Painel Administrativo</h1>
+      <main className="admin-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-7xl mx-auto">
+        <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
             <div className="flex items-center gap-2">
               {syncing ? (
                 <>
@@ -669,51 +669,51 @@ const Admin = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stats.today}</p>
-                <p className="text-sm text-muted-foreground">Hoje</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.today}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Hoje</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-yellow-500/20">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-500" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.pending}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pendentes</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-blue-500/20">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Check className="w-6 h-6 text-blue-500" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stats.confirmed}</p>
-                <p className="text-sm text-muted-foreground">Confirmados</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.confirmed}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Confirmados</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-primary" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-primary">R$ {stats.revenue.toFixed(0)}</p>
-                <p className="text-sm text-muted-foreground">Receita Total</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-primary">R$ {stats.revenue.toFixed(0)}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
               </div>
             </CardContent>
           </Card>

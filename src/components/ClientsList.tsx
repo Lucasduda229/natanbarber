@@ -209,39 +209,39 @@ export function ClientsList() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
         <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-primary" />
+          <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{totalClients}</p>
-              <p className="text-sm text-muted-foreground">Total Cadastrados</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-foreground">{totalClients}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Cadastrados</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card/40 backdrop-blur-xl border-green-500/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-              <Star className="w-6 h-6 text-green-500" />
+          <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <Star className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{activeClients}</p>
-              <p className="text-sm text-muted-foreground">Clientes Ativos</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-foreground">{activeClients}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Ativos</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/40 backdrop-blur-xl border-blue-500/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-blue-500" />
+        <Card className="bg-card/40 backdrop-blur-xl border-blue-500/20 col-span-2 sm:col-span-1">
+          <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">R$ {totalRevenue.toFixed(0)}</p>
-              <p className="text-sm text-muted-foreground">Receita Total</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl font-bold text-foreground">R$ {totalRevenue.toFixed(0)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita Total</p>
             </div>
           </CardContent>
         </Card>
@@ -331,7 +331,7 @@ export function ClientsList() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -339,10 +339,10 @@ export function ClientsList() {
                               setLoyaltyClientId(client.user_id);
                               setLoyaltyClientName(client.full_name || "Cliente");
                             }}
-                            className="border-primary/30 text-primary hover:bg-primary/10"
+                            className="border-primary/30 text-primary hover:bg-primary/10 px-2 sm:px-3"
                           >
-                            <Trophy className="w-4 h-4 mr-1" />
-                            Fidelidade
+                            <Trophy className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Fidelidade</span>
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
