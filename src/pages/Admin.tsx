@@ -109,6 +109,7 @@ const Admin = () => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isConnected, setIsConnected] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // Manual refresh function
   const handleManualRefresh = useCallback(async () => {
@@ -142,7 +143,7 @@ const Admin = () => {
           console.log('Appointment change detected:', payload);
           setLastUpdate(new Date());
           // Refresh all data when any appointment changes
-          fetchData();
+          fetchData(true);
           
           // Show notification and play sound for new appointments
           if (payload.eventType === 'INSERT') {
@@ -209,7 +210,7 @@ const Admin = () => {
 
     // Auto-refresh every 30 seconds as fallback
     const autoRefreshInterval = setInterval(() => {
-      fetchData();
+      fetchData(true);
       setLastUpdate(new Date());
     }, 30000);
 
@@ -222,7 +223,8 @@ const Admin = () => {
     };
   }, [isAdmin, authLoading]);
 
-  const fetchData = async () => {
+  const fetchData = async (showSyncing = false) => {
+    if (showSyncing) setSyncing(true);
     try {
       await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats()]);
       setLastUpdate(new Date());
@@ -230,6 +232,7 @@ const Admin = () => {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+      if (showSyncing) setSyncing(false);
     }
   };
 
@@ -490,10 +493,19 @@ const Admin = () => {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-foreground">Painel Administrativo</h1>
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-              <span className="text-xs text-muted-foreground">
-                {isConnected ? 'Sincronizado' : 'Desconectado'}
-              </span>
+              {syncing ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-primary font-medium">Sincronizando...</span>
+                </>
+              ) : (
+                <>
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                  <span className="text-xs text-muted-foreground">
+                    {isConnected ? 'Sincronizado' : 'Desconectado'}
+                  </span>
+                </>
+              )}
             </div>
           </div>
           <div className="w-full md:w-auto md:max-w-sm">
