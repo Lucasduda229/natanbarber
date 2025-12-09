@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight, Trophy } from "lucide-react";
+import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight, Trophy, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { CustomerHistory } from "./CustomerHistory";
 import ClientLoyaltyManager from "./ClientLoyaltyManager";
 import {
@@ -16,6 +17,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 interface ClientProfile {
   user_id: string;
   full_name: string | null;
@@ -108,6 +120,77 @@ export function ClientsList() {
       console.error("Error fetching clients:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteClient = async (userId: string, clientName: string) => {
+    try {
+      // Delete loyalty progress
+      await supabase
+        .from("loyalty_progress")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete loyalty rewards history
+      await supabase
+        .from("loyalty_rewards_history")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete notifications
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete reviews
+      await supabase
+        .from("reviews")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete appointment_services for user's appointments
+      const { data: appointments } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("user_id", userId);
+
+      if (appointments && appointments.length > 0) {
+        const appointmentIds = appointments.map(a => a.id);
+        await supabase
+          .from("appointment_services")
+          .delete()
+          .in("appointment_id", appointmentIds);
+      }
+
+      // Delete appointments
+      await supabase
+        .from("appointments")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete user_roles
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      // Delete profile
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (error) {
+        toast.error("Erro ao excluir cliente");
+        return;
+      }
+
+      toast.success(`Cliente ${clientName} excluído com sucesso`);
+      fetchClients();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Erro ao excluir cliente");
     }
   };
 
@@ -261,6 +344,42 @@ export function ClientsList() {
                             <Trophy className="w-4 h-4 mr-1" />
                             Fidelidade
                           </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-card border-destructive/20">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-foreground">Excluir Cliente</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir <strong>{client.full_name || "este cliente"}</strong>?
+                                  <br /><br />
+                                  Isso irá remover permanentemente:
+                                  <br />• Todos os agendamentos
+                                  <br />• Histórico de fidelidade
+                                  <br />• Avaliações
+                                  <br />• Notificações
+                                  <br /><br />
+                                  <strong className="text-destructive">Esta ação não pode ser desfeita!</strong>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteClient(client.user_id, client.full_name || "Cliente")}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <Button 
                             variant="ghost" 
                             size="icon" 
