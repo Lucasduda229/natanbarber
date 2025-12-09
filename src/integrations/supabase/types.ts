@@ -185,6 +185,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_notes: string | null
           avatar_url: string | null
           created_at: string
           full_name: string | null
@@ -194,6 +195,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
@@ -203,6 +205,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           avatar_url?: string | null
           created_at?: string
           full_name?: string | null
