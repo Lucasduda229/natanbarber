@@ -25,7 +25,15 @@ const Register = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    
+    tl.fromTo(".auth-logo", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.6 })
+      .fromTo(".auth-title", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.3")
+      .fromTo(".auth-subtitle", { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.4 }, "-=0.2")
+      .fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6 }, "-=0.2")
+      .fromTo(".form-field", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.1 }, "-=0.3")
+      .fromTo(".form-submit", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.1")
+      .fromTo(".form-footer", { opacity: 0 }, { opacity: 1, duration: 0.4 }, "-=0.2");
   }, []);
 
   const validateForm = () => {
@@ -75,24 +83,36 @@ const Register = () => {
       </header>
       <main className="relative z-10 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-6 auth-logo" style={{ opacity: 0 }}>
             <img src={logoImage} alt="Logo" className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" />
           </div>
           <div className="text-center mb-8 space-y-2">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground">Seja Bem-vindo</h1>
-            <p className="text-muted-foreground text-base">Agende seu horário de forma rápida e exclusiva</p>
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground auth-title" style={{ opacity: 0 }}>Seja Bem-vindo</h1>
+            <p className="text-muted-foreground text-base auth-subtitle" style={{ opacity: 0 }}>Agende seu horário de forma rápida e exclusiva</p>
           </div>
-          <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-8 border border-primary/20 shadow-gold-glow">
+          <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-8 border border-primary/20 shadow-gold-glow" style={{ opacity: 0 }}>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <GhostInput icon={User} name="name" type="text" placeholder="Seu nome completo" value={formData.name} onChange={handleChange} error={errors.name} autoFocus />
-              <GhostInput icon={Mail} name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} error={errors.email} />
-              <GhostInput icon={Lock} name="password" type="password" placeholder="Mínimo 8 caracteres" value={formData.password} onChange={handleChange} error={errors.password} />
-              <GhostInput icon={Lock} name="confirmPassword" type="password" placeholder="Confirme sua senha" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} />
-              <GhostInput icon={Phone} name="phone" type="tel" placeholder="(00) 00000-0000" value={formData.phone} onChange={handleChange} />
-              <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow">
-                {loading ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />Criando...</span> : "Finalizar Cadastro"}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">Já tem conta? <Link to="/login" className="text-primary hover:underline font-semibold">Entrar</Link></p>
+              <div className="form-field" style={{ opacity: 0 }}>
+                <GhostInput icon={User} name="name" type="text" placeholder="Seu nome completo" value={formData.name} onChange={handleChange} error={errors.name} autoFocus />
+              </div>
+              <div className="form-field" style={{ opacity: 0 }}>
+                <GhostInput icon={Mail} name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} error={errors.email} />
+              </div>
+              <div className="form-field" style={{ opacity: 0 }}>
+                <GhostInput icon={Lock} name="password" type="password" placeholder="Mínimo 8 caracteres" value={formData.password} onChange={handleChange} error={errors.password} />
+              </div>
+              <div className="form-field" style={{ opacity: 0 }}>
+                <GhostInput icon={Lock} name="confirmPassword" type="password" placeholder="Confirme sua senha" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} />
+              </div>
+              <div className="form-field" style={{ opacity: 0 }}>
+                <GhostInput icon={Phone} name="phone" type="tel" placeholder="(00) 00000-0000" value={formData.phone} onChange={handleChange} />
+              </div>
+              <div className="form-submit" style={{ opacity: 0 }}>
+                <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow">
+                  {loading ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />Criando...</span> : "Finalizar Cadastro"}
+                </Button>
+              </div>
+              <p className="text-center text-sm text-muted-foreground form-footer" style={{ opacity: 0 }}>Já tem conta? <Link to="/login" className="text-primary hover:underline font-semibold">Entrar</Link></p>
             </form>
           </div>
         </div>
