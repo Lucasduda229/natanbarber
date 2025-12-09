@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight } from "lucide-react";
+import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerHistory } from "./CustomerHistory";
-
+import ClientLoyaltyManager from "./ClientLoyaltyManager";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 interface ClientProfile {
   user_id: string;
   full_name: string | null;
@@ -25,6 +31,8 @@ export function ClientsList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [loyaltyClientId, setLoyaltyClientId] = useState<string | null>(null);
+  const [loyaltyClientName, setLoyaltyClientName] = useState<string>("");
 
   useEffect(() => {
     fetchClients();
@@ -189,12 +197,11 @@ export function ClientsList() {
                 {filteredClients.map((client) => (
                   <Card
                     key={client.user_id}
-                    className="bg-background/30 border-primary/10 hover:border-primary/30 transition-colors cursor-pointer"
-                    onClick={() => setSelectedClientId(client.user_id)}
+                    className="bg-background/30 border-primary/10 hover:border-primary/30 transition-colors"
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
+                        <div className="flex-1 cursor-pointer" onClick={() => setSelectedClientId(client.user_id)}>
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-foreground">
                               {client.full_name || "Cliente sem nome"}
@@ -241,9 +248,28 @@ export function ClientsList() {
                           </div>
                         </div>
 
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                          <ChevronRight className="w-5 h-5" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setLoyaltyClientId(client.user_id);
+                              setLoyaltyClientName(client.full_name || "Cliente");
+                            }}
+                            className="border-primary/30 text-primary hover:bg-primary/10"
+                          >
+                            <Trophy className="w-4 h-4 mr-1" />
+                            Fidelidade
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setSelectedClientId(client.user_id)}
+                            className="text-muted-foreground hover:text-primary"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -262,6 +288,23 @@ export function ClientsList() {
           onClose={() => setSelectedClientId(null)}
         />
       )}
+
+      {/* Loyalty Management Sheet */}
+      <Sheet open={!!loyaltyClientId} onOpenChange={(open) => !open && setLoyaltyClientId(null)}>
+        <SheetContent className="bg-card border-primary/20 w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-foreground">Gerenciar Fidelidade</SheetTitle>
+          </SheetHeader>
+          {loyaltyClientId && (
+            <div className="mt-6">
+              <ClientLoyaltyManager 
+                clientId={loyaltyClientId} 
+                clientName={loyaltyClientName} 
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

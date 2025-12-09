@@ -2,16 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast, subHours, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import CancellationPolicy from "@/components/CancellationPolicy";
+import CustomerLoyaltyCard from "@/components/CustomerLoyaltyCard";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -147,14 +149,25 @@ const MyAppointments = () => {
 
       {/* Main Content */}
       <main className="appointments-container relative z-10 px-4 py-6 max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground mb-8 text-center">Meus Agendamentos</h1>
+        <Tabs defaultValue="appointments" className="space-y-6">
+          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 w-full grid grid-cols-2">
+            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background">
+              <Calendar className="w-4 h-4 mr-2" />
+              Agendamentos
+            </TabsTrigger>
+            <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background">
+              <Trophy className="w-4 h-4 mr-2" />
+              Fidelidade
+            </TabsTrigger>
+          </TabsList>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <div className="space-y-8">
+          <TabsContent value="appointments" className="space-y-8">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-8">
             {/* Upcoming Appointments */}
             <section>
               <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -301,8 +314,14 @@ const MyAppointments = () => {
                 </div>
               </section>
             )}
-          </div>
-        )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="loyalty">
+            <CustomerLoyaltyCard />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
