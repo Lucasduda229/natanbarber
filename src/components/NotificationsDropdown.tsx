@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Check, X } from "lucide-react";
+import { Bell, Check, X, CalendarPlus } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,14 @@ const typeColors: Record<string, string> = {
   confirmed: "text-blue-500",
   cancelled: "text-red-500",
   info: "text-primary",
+  new_booking: "text-amber-500",
 };
 
 const typeIcons: Record<string, React.ReactNode> = {
   confirmed: <Check className="w-4 h-4 text-blue-500" />,
   cancelled: <X className="w-4 h-4 text-red-500" />,
   info: <Bell className="w-4 h-4 text-primary" />,
+  new_booking: <CalendarPlus className="w-4 h-4 text-amber-500" />,
 };
 
 // Create notification sound using Web Audio API
