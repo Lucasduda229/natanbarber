@@ -32,6 +32,7 @@ interface Appointment {
   appointment_time: string;
   status: string;
   payment_status: string;
+  notes: string | null;
   profiles: {
     full_name: string | null;
     phone: string | null;
@@ -61,6 +62,30 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmado",
   completed: "Concluído",
   cancelled: "Cancelado",
+};
+
+// Helper function to extract client name and phone from AI-generated notes
+const extractClientInfoFromNotes = (notes: string | null): { name: string | null; phone: string | null } => {
+  if (!notes) return { name: null, phone: null };
+  
+  // Pattern: "Cliente: Nome do Cliente | Tel: 123456789 | observações"
+  const clientMatch = notes.match(/^Cliente:\s*([^|]+)/i);
+  const phoneMatch = notes.match(/Tel:\s*([^|]+)/i);
+  
+  return {
+    name: clientMatch ? clientMatch[1].trim() : null,
+    phone: phoneMatch ? phoneMatch[1].trim() : null
+  };
+};
+
+// Helper function to get client display info - prioritizes AI notes over profile
+const getClientDisplayInfo = (appointment: Appointment): { name: string; phone: string } => {
+  const notesInfo = extractClientInfoFromNotes(appointment.notes);
+  
+  return {
+    name: notesInfo.name || appointment.profiles?.full_name || "Cliente",
+    phone: notesInfo.phone || appointment.profiles?.phone || "Sem telefone"
+  };
 };
 
 // Notification sound using Web Audio API
@@ -249,6 +274,7 @@ const Admin = () => {
         status,
         payment_status,
         user_id,
+        notes,
         services (
           name,
           price
@@ -792,9 +818,9 @@ const Admin = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />
-                            <span className="truncate">{appointment.profiles?.full_name || "Cliente"}</span>
+                            <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
                           </h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{appointment.profiles?.phone || "Sem telefone"}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{getClientDisplayInfo(appointment).phone}</p>
                           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -824,7 +850,7 @@ const Admin = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle className="text-base sm:text-lg">Confirmar Agendamento</AlertDialogTitle>
                               <AlertDialogDescription className="text-sm">
-                                Deseja confirmar o agendamento de {appointment.profiles?.full_name || "Cliente"} para {format(parseISO(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.appointment_time.slice(0, 5)}?
+                                Deseja confirmar o agendamento de {getClientDisplayInfo(appointment).name} para {format(parseISO(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.appointment_time.slice(0, 5)}?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -854,7 +880,7 @@ const Admin = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle className="text-base sm:text-lg">Recusar Agendamento</AlertDialogTitle>
                               <AlertDialogDescription className="text-sm">
-                                Tem certeza que deseja recusar o agendamento de {appointment.profiles?.full_name || "Cliente"}? Esta ação não pode ser desfeita.
+                                Tem certeza que deseja recusar o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -870,14 +896,14 @@ const Admin = () => {
                         </AlertDialog>
 
                         <WhatsAppButton
-                          phone={appointment.profiles?.phone || ""}
+                          phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
                           message={getConfirmationMessage(
-                            appointment.profiles?.full_name || "Cliente",
+                            getClientDisplayInfo(appointment).name,
                             appointment.services?.name || "Serviço",
                             format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                             appointment.appointment_time.slice(0, 5)
                           )}
-                          disabled={!appointment.profiles?.phone}
+                          disabled={getClientDisplayInfo(appointment).phone === "Sem telefone"}
                         />
                       </div>
                     </div>
@@ -935,7 +961,7 @@ const Admin = () => {
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                              <span className="truncate">{appointment.profiles?.full_name || "Cliente"}</span>
+                              <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -946,7 +972,7 @@ const Admin = () => {
                                 <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </Button>
                             </h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{appointment.profiles?.phone || "Sem telefone"}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{getClientDisplayInfo(appointment).phone}</p>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -997,14 +1023,14 @@ const Admin = () => {
                           </Select>
 
                           <WhatsAppButton
-                            phone={appointment.profiles?.phone || ""}
+                            phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
                             message={getConfirmationMessage(
-                              appointment.profiles?.full_name || "Cliente",
+                              getClientDisplayInfo(appointment).name,
                               appointment.services?.name || "Serviço",
                               format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                               appointment.appointment_time.slice(0, 5)
                             )}
-                            disabled={!appointment.profiles?.phone}
+                            disabled={getClientDisplayInfo(appointment).phone === "Sem telefone"}
                           />
                         </div>
                       </div>
