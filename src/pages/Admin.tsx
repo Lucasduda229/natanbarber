@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -22,6 +22,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { ClientsList } from "@/components/ClientsList";
 import { getConfirmationMessage } from "@/lib/whatsapp";
+import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 
 interface Appointment {
   id: string;
@@ -741,6 +742,10 @@ const Admin = () => {
                 <UserCheck className="w-4 h-4 mr-2" />
                 Clientes
               </TabsTrigger>
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap">
+                <Trophy className="w-4 h-4 mr-2" />
+                Fidelidade
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -1130,6 +1135,11 @@ const Admin = () => {
           {/* Clients Tab */}
           <TabsContent value="clients">
             <ClientsList />
+          </TabsContent>
+
+          {/* Loyalty Tab */}
+          <TabsContent value="loyalty">
+            <LoyaltyProgramManager />
           </TabsContent>
         </Tabs>
       </main>
