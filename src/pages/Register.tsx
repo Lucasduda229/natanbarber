@@ -44,8 +44,8 @@ const Register = () => {
       toast.error("Erro ao criar conta", { description: error.message });
       return;
     }
-    toast.success("Conta criada!", { description: "Redirecionando..." });
-    navigate("/booking");
+    toast.success("Conta criada com sucesso!", { description: "Faça login para continuar." });
+    navigate("/login");
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
