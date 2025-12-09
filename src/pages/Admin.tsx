@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -19,10 +19,12 @@ import logoImage from "@/assets/logo-barbershop.png";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { GalleryManager } from "@/components/GalleryManager";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { CustomerHistory } from "@/components/CustomerHistory";
 import { getConfirmationMessage } from "@/lib/whatsapp";
 
 interface Appointment {
   id: string;
+  user_id: string;
   appointment_date: string;
   appointment_time: string;
   status: string;
@@ -105,6 +107,7 @@ const Admin = () => {
   const [stats, setStats] = useState({ today: 0, pending: 0, confirmed: 0, revenue: 0 });
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isConnected, setIsConnected] = useState(true);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Manual refresh function
   const handleManualRefresh = useCallback(async () => {
@@ -811,6 +814,15 @@ const Admin = () => {
                             <h3 className="font-semibold text-foreground flex items-center gap-2">
                               <Users className="w-4 h-4 text-primary" />
                               {appointment.profiles?.full_name || "Cliente"}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                                onClick={() => setSelectedCustomerId(appointment.user_id)}
+                                title="Ver histórico do cliente"
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
                             </h3>
                             <p className="text-sm text-muted-foreground">{appointment.profiles?.phone || "Sem telefone"}</p>
                             <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -972,6 +984,13 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Customer History Modal */}
+      <CustomerHistory
+        userId={selectedCustomerId || ""}
+        isOpen={!!selectedCustomerId}
+        onClose={() => setSelectedCustomerId(null)}
+      />
     </div>
   );
 };
