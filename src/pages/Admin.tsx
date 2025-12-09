@@ -101,7 +101,7 @@ const Admin = () => {
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterDate, setFilterDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [filterDate, setFilterDate] = useState<string>("");
   const [stats, setStats] = useState({ today: 0, pending: 0, confirmed: 0, revenue: 0 });
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isConnected, setIsConnected] = useState(true);
