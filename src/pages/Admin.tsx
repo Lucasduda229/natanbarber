@@ -436,6 +436,22 @@ const Admin = () => {
     fetchBlockedDates();
   };
 
+  const unblockAllDates = async () => {
+    const { error } = await supabase
+      .from("blocked_dates")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+
+    if (error) {
+      toast.error("Erro ao desbloquear horários");
+      console.error("Error unblocking all:", error);
+      return;
+    }
+
+    toast.success("Todos os horários foram desbloqueados!");
+    fetchBlockedDates();
+  };
+
   const resetStats = async () => {
     setLoading(true);
     
@@ -952,11 +968,48 @@ const Admin = () => {
             </Card>
 
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-foreground">
                   <Unlock className="w-5 h-5 text-primary" />
                   Datas/Horários Bloqueados
                 </CardTitle>
+                {blockedDates.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                      >
+                        <Unlock className="w-4 h-4 mr-2" />
+                        Desbloquear Todos
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-card border-destructive/20">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive">Desbloquear Todos os Horários</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Isso vai desbloquear <strong>{blockedDates.length} horário(s)</strong>, incluindo:
+                          <br /><br />
+                          • Horários bloqueados manualmente
+                          <br />
+                          • Horários bloqueados automaticamente por agendamentos confirmados
+                          <br /><br />
+                          <strong>Atenção:</strong> Os horários de agendamentos confirmados ficarão disponíveis novamente para novos agendamentos.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={unblockAllDates}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Desbloquear Todos
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </CardHeader>
               <CardContent>
                 {blockedDates.length === 0 ? (
