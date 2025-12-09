@@ -13,7 +13,7 @@ const Index = () => {
       {/* Hero Section */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] text-center px-4 py-12">
         <div className="space-y-4">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-6 rounded-md">
             <img src={logoImage} alt="Natan Barbershop Logo" className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" />
           </div>
           
