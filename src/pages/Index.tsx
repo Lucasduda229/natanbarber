@@ -66,7 +66,7 @@ const Index = () => {
             <Button 
               size="lg" 
               variant="outline" 
-              className="border-primary/50 text-foreground hover:bg-primary/10 px-8 py-6 text-lg rounded-xl transition-all"
+              className="border-primary bg-card/50 text-primary hover:bg-primary hover:text-background px-8 py-6 text-lg rounded-xl transition-all shadow-md"
             >
               Já tenho conta
             </Button>
