@@ -748,31 +748,31 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
-          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
-            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 inline-flex w-auto min-w-max gap-0.5 p-1">
-              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Agendamentos</span>
+          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-6 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Agendamentos">
+                <Scissors className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Agenda</span>
               </TabsTrigger>
-              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Assistente IA</span>
+              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Assistente IA">
+                <Bot className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">IA</span>
               </TabsTrigger>
-              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Horários</span>
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Horários">
+                <Lock className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Horários</span>
               </TabsTrigger>
-              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Galeria</span>
+              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Galeria">
+                <Image className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Galeria</span>
               </TabsTrigger>
-              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Clientes</span>
+              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Clientes">
+                <UserCheck className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Clientes</span>
               </TabsTrigger>
-              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background whitespace-nowrap px-2 sm:px-3 py-1.5 text-xs sm:text-sm">
-                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Fidelidade</span>
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Fidelidade">
+                <Trophy className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Fidelidade</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1042,25 +1042,25 @@ const Admin = () => {
           </TabsContent>
 
           {/* Schedule Tab */}
-          <TabsContent value="schedule" className="space-y-6">
+          <TabsContent value="schedule" className="space-y-4 sm:space-y-6">
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Lock className="w-5 h-5 text-primary" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   Bloquear Data/Horário
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-4">
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="date"
                     id="blockDate"
-                    className="bg-card/40 border border-primary/20 rounded-lg px-4 py-2 text-foreground"
+                    className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2.5 text-foreground text-sm w-full"
                   />
                   <input
                     type="time"
                     id="blockTime"
-                    className="bg-card/40 border border-primary/20 rounded-lg px-4 py-2 text-foreground"
+                    className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2.5 text-foreground text-sm w-full"
                     placeholder="Opcional"
                   />
                   <Button
@@ -1071,23 +1071,23 @@ const Admin = () => {
                         blockDate(dateInput.value, timeInput.value || undefined);
                       }
                     }}
-                    className="bg-gold-gradient text-background"
+                    className="bg-gold-gradient text-background w-full h-10 sm:h-auto"
                   >
                     <Lock className="w-4 h-4 mr-2" />
                     Bloquear
                   </Button>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Deixe o horário em branco para bloquear o dia inteiro
                 </p>
               </CardContent>
             </Card>
 
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Unlock className="w-5 h-5 text-primary" />
-                  Datas/Horários Bloqueados
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
+                  <Unlock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  Bloqueados ({blockedDates.length})
                 </CardTitle>
                 {blockedDates.length > 0 && (
                   <AlertDialog>
@@ -1095,30 +1095,30 @@ const Admin = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                        className="border-destructive/50 text-destructive hover:bg-destructive/10 w-full sm:w-auto h-9"
                       >
                         <Unlock className="w-4 h-4 mr-2" />
                         Desbloquear Todos
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-card border-destructive/20">
+                    <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-destructive">Desbloquear Todos os Horários</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogTitle className="text-destructive text-base sm:text-lg">Desbloquear Todos</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm">
                           Isso vai desbloquear <strong>{blockedDates.length} horário(s)</strong>, incluindo:
                           <br /><br />
                           • Horários bloqueados manualmente
                           <br />
-                          • Horários bloqueados automaticamente por agendamentos confirmados
+                          • Horários bloqueados automaticamente
                           <br /><br />
-                          <strong>Atenção:</strong> Os horários de agendamentos confirmados ficarão disponíveis novamente para novos agendamentos.
+                          <strong>Atenção:</strong> Os horários ficarão disponíveis novamente.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={unblockAllDates}
-                          className="bg-destructive hover:bg-destructive/90"
+                          className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                         >
                           Desbloquear Todos
                         </AlertDialogAction>
@@ -1129,29 +1129,31 @@ const Admin = () => {
               </CardHeader>
               <CardContent>
                 {blockedDates.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Nenhum bloqueio ativo</p>
+                  <p className="text-muted-foreground text-center py-6 text-sm">Nenhum bloqueio ativo</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                     {blockedDates.map((blocked) => (
                       <div
                         key={blocked.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20"
+                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-destructive/10 border border-destructive/20 gap-2"
                       >
-                        <div className="flex items-center gap-3">
-                          <Lock className="w-4 h-4 text-destructive" />
-                          <span className="text-foreground">
-                            {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
-                            {blocked.blocked_time && ` às ${blocked.blocked_time.slice(0, 5)}`}
-                          </span>
-                          {blocked.reason && (
-                            <span className="text-muted-foreground text-sm">- {blocked.reason}</span>
-                          )}
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                          <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-foreground text-sm block truncate">
+                              {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
+                              {blocked.blocked_time && ` às ${blocked.blocked_time.slice(0, 5)}`}
+                            </span>
+                            {blocked.reason && (
+                              <span className="text-muted-foreground text-xs truncate block">{blocked.reason}</span>
+                            )}
+                          </div>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => unblockDate(blocked.id)}
-                          className="text-destructive hover:bg-destructive/20"
+                          className="text-destructive hover:bg-destructive/20 h-8 w-8 p-0 flex-shrink-0"
                         >
                           <Unlock className="w-4 h-4" />
                         </Button>
