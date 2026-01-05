@@ -138,6 +138,8 @@ const Admin = () => {
   const [isConnected, setIsConnected] = useState(true);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [blockDateInput, setBlockDateInput] = useState<string>("");
+  const [blockTimeInput, setBlockTimeInput] = useState<string>("");
 
   // Manual refresh function
   const handleManualRefresh = useCallback(async () => {
@@ -454,16 +456,34 @@ const Admin = () => {
   };
 
   const blockDate = async (date: string, time?: string) => {
+    if (!date) {
+      toast.error("Selecione uma data para bloquear");
+      return;
+    }
+
+    // Verificar se já existe bloqueio para esta data/horário
+    const existingBlock = blockedDates.find(
+      b => b.blocked_date === date && b.blocked_time === (time ? `${time}:00` : null)
+    );
+
+    if (existingBlock) {
+      toast.error("Este horário já está bloqueado");
+      return;
+    }
+
     const { error } = await supabase
       .from("blocked_dates")
       .insert({ blocked_date: date, blocked_time: time || null });
 
     if (error) {
+      console.error("Erro ao bloquear:", error);
       toast.error("Erro ao bloquear data/horário");
       return;
     }
 
     toast.success(time ? "Horário bloqueado" : "Data bloqueada");
+    setBlockDateInput("");
+    setBlockTimeInput("");
     fetchBlockedDates();
   };
 
@@ -1057,24 +1077,21 @@ const Admin = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="date"
-                    id="blockDate"
+                    value={blockDateInput}
+                    onChange={(e) => setBlockDateInput(e.target.value)}
                     className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2.5 text-foreground text-sm w-full"
                   />
                   <input
                     type="time"
-                    id="blockTime"
+                    value={blockTimeInput}
+                    onChange={(e) => setBlockTimeInput(e.target.value)}
                     className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2.5 text-foreground text-sm w-full"
                     placeholder="Opcional"
                   />
                   <Button
-                    onClick={() => {
-                      const dateInput = document.getElementById("blockDate") as HTMLInputElement;
-                      const timeInput = document.getElementById("blockTime") as HTMLInputElement;
-                      if (dateInput.value) {
-                        blockDate(dateInput.value, timeInput.value || undefined);
-                      }
-                    }}
-                    className="bg-gold-gradient text-background w-full h-10 sm:h-auto"
+                    onClick={() => blockDate(blockDateInput, blockTimeInput || undefined)}
+                    disabled={!blockDateInput}
+                    className="bg-gold-gradient text-background w-full h-10 sm:h-auto disabled:opacity-50"
                   >
                     <Lock className="w-4 h-4 mr-2" />
                     Bloquear
