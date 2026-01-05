@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 
 const checklistData = {
@@ -195,9 +195,22 @@ export const SystemChecklistPDF = () => {
       const totalItems = checklistData.sections.reduce((acc, s) => acc + s.items.length, 0);
       doc.text("Total: " + totalItems + "+ funcionalidades implementadas!", margin, yPosition);
 
-      // Save the PDF
-      doc.save("checklist-barbearia-saas.pdf");
-      toast.success("PDF baixado com sucesso!");
+      // Download/open the PDF (more reliable inside iframes/mobile)
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "checklist-barbearia-saas.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // Fallback: open in new tab if download is blocked
+      window.open(url, "_blank", "noopener,noreferrer");
+
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast.success("PDF gerado!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF");
