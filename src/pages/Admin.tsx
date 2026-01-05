@@ -24,6 +24,7 @@ import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
+import { SystemChecklistPDF } from "@/components/SystemChecklistPDF";
 
 interface Appointment {
   id: string;
@@ -629,7 +630,8 @@ const Admin = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-base sm:text-lg font-semibold text-foreground">Estatísticas</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SystemChecklistPDF />
             <Button
               variant="outline"
               size="sm"
