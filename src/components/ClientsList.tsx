@@ -125,29 +125,35 @@ export function ClientsList() {
 
   const deleteClient = async (userId: string, clientName: string) => {
     try {
+      console.log("Deleting client:", userId, clientName);
+      
       // Delete loyalty progress
-      await supabase
+      const { error: loyaltyError } = await supabase
         .from("loyalty_progress")
         .delete()
         .eq("user_id", userId);
+      if (loyaltyError) console.error("Error deleting loyalty_progress:", loyaltyError);
 
       // Delete loyalty rewards history
-      await supabase
+      const { error: rewardsError } = await supabase
         .from("loyalty_rewards_history")
         .delete()
         .eq("user_id", userId);
+      if (rewardsError) console.error("Error deleting loyalty_rewards_history:", rewardsError);
 
       // Delete notifications
-      await supabase
+      const { error: notifError } = await supabase
         .from("notifications")
         .delete()
         .eq("user_id", userId);
+      if (notifError) console.error("Error deleting notifications:", notifError);
 
       // Delete reviews
-      await supabase
+      const { error: reviewsError } = await supabase
         .from("reviews")
         .delete()
         .eq("user_id", userId);
+      if (reviewsError) console.error("Error deleting reviews:", reviewsError);
 
       // Delete appointment_services for user's appointments
       const { data: appointments } = await supabase
@@ -157,37 +163,47 @@ export function ClientsList() {
 
       if (appointments && appointments.length > 0) {
         const appointmentIds = appointments.map(a => a.id);
-        await supabase
+        const { error: appServError } = await supabase
           .from("appointment_services")
           .delete()
           .in("appointment_id", appointmentIds);
+        if (appServError) console.error("Error deleting appointment_services:", appServError);
       }
 
       // Delete appointments
-      await supabase
+      const { error: appError } = await supabase
         .from("appointments")
         .delete()
         .eq("user_id", userId);
+      if (appError) console.error("Error deleting appointments:", appError);
 
       // Delete user_roles
-      await supabase
+      const { error: rolesError } = await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", userId);
+      if (rolesError) console.error("Error deleting user_roles:", rolesError);
 
-      // Delete profile
-      const { error } = await supabase
+      // Delete profile - force delete all profiles with this user_id
+      const { error: profileError, count } = await supabase
         .from("profiles")
         .delete()
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .select();
 
-      if (error) {
-        toast.error("Erro ao excluir cliente");
+      console.log("Delete profile result - error:", profileError, "deleted count:", count);
+
+      if (profileError) {
+        console.error("Error deleting profile:", profileError);
+        toast.error(`Erro ao excluir cliente: ${profileError.message}`);
         return;
       }
 
       toast.success(`Cliente ${clientName} excluído com sucesso`);
-      fetchClients();
+      
+      // Remove from local state immediately for better UX
+      setClients(prev => prev.filter(c => c.user_id !== userId));
+      
     } catch (error) {
       console.error("Error deleting client:", error);
       toast.error("Erro ao excluir cliente");
