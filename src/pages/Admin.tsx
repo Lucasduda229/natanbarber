@@ -580,12 +580,12 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden safe-bottom">
       <AnimatedBackground />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4">
+      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto safe-top">
+        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4 touch-target">
           <ChevronLeft className="w-5 h-5 sm:mr-2" />
           <span className="hidden sm:inline">Voltar</span>
         </Button>
@@ -597,11 +597,11 @@ const Admin = () => {
       </header>
 
       {/* Main Content */}
-      <main className="admin-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-7xl mx-auto">
-        <div className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Painel Administrativo</h1>
-            <div className="flex items-center gap-2">
+      <main className="admin-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-7xl mx-auto pb-8">
+        <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 sm:gap-3">
+            <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Painel Admin</h1>
+            <div className="flex items-center gap-2 self-start xs:self-auto">
               {syncing ? (
                 <>
                   <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -617,19 +617,18 @@ const Admin = () => {
               )}
             </div>
           </div>
-          <div className="w-full md:w-auto md:max-w-sm">
+          <div className="w-full">
             <AdminStatusToggle />
           </div>
         </div>
         
         {/* Last update indicator */}
-        <div className="text-xs text-muted-foreground mb-4 flex items-center gap-2">
+        <div className="text-xs text-muted-foreground mb-3 sm:mb-4 flex items-center gap-2">
           <Clock className="w-3 h-3" />
-          Última atualização: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
+          Atualizado: {format(lastUpdate, "HH:mm:ss", { locale: ptBR })}
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h2 className="text-base sm:text-lg font-semibold text-foreground">Estatísticas</h2>
+        <div className="flex flex-col gap-3 mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <SystemChecklistPDF />
             <Button
@@ -637,113 +636,98 @@ const Admin = () => {
               size="sm"
               onClick={handleManualRefresh}
               disabled={refreshing}
-              className="border-primary/30 hover:bg-primary/10 h-8 text-xs sm:text-sm"
+              className="border-primary/30 hover:bg-primary/10 h-9 text-xs sm:text-sm touch-target flex-1 xs:flex-none"
             >
-              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Atualizar</span>
+              <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+              Atualizar
             </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-destructive/50 text-destructive hover:bg-destructive/10 h-8 text-xs sm:text-sm"
-                disabled={appointments.filter(a => a.status !== "archived").length === 0}
-              >
-                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Resetar Painel</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-destructive text-base sm:text-lg">⚠️ Resetar Sistema Completo</AlertDialogTitle>
-                <AlertDialogDescription className="text-sm max-h-[60vh] overflow-y-auto">
-                  Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os dados:
-                  <br /><br />
-                  <strong>Agendamentos:</strong>
-                  <br />
-                  • {stats.pending} pendentes
-                  <br />
-                  • {appointments.filter(a => a.status === "confirmed").length} confirmados
-                  <br />
-                  • {appointments.filter(a => a.status === "completed").length} concluídos
-                  <br />
-                  • {appointments.filter(a => a.status === "cancelled").length} cancelados
-                  <br />
-                  • Receita perdida: R$ {stats.revenue.toFixed(2)}
-                  <br /><br />
-                  <strong>Também serão deletados:</strong>
-                  <br />
-                  • Todos os clientes cadastrados (exceto admin)
-                  <br />
-                  • Todas as notificações
-                  <br />
-                  • Todas as avaliações
-                  <br />
-                  • Todos os horários bloqueados
-                  <br /><br />
-                  <strong className="text-destructive">⚠️ ATENÇÃO: Esta ação NÃO pode ser desfeita!</strong>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={resetStats}
-                  className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-destructive/50 text-destructive hover:bg-destructive/10 h-9 text-xs sm:text-sm touch-target"
+                  disabled={appointments.filter(a => a.status !== "archived").length === 0}
                 >
-                  Confirmar Reset Total
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <RotateCcw className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Reset</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-card border-destructive/20 mx-3 max-w-[calc(100vw-1.5rem)] sm:max-w-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-destructive text-base sm:text-lg">⚠️ Resetar Sistema</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm max-h-[50vh] overflow-y-auto">
+                    Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os dados:
+                    <br /><br />
+                    • {stats.pending} pendentes, {appointments.filter(a => a.status === "confirmed").length} confirmados
+                    <br />
+                    • Receita perdida: R$ {stats.revenue.toFixed(2)}
+                    <br />
+                    • Clientes, notificações, avaliações
+                    <br /><br />
+                    <strong className="text-destructive">Esta ação NÃO pode ser desfeita!</strong>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                  <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={resetStats}
+                    className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
+                  >
+                    Confirmar Reset
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
-        
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
+
+        <h2 className="text-sm sm:text-base font-semibold text-foreground mb-3">Estatísticas</h2>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.today}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Hoje</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.today}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Hoje</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-yellow-500/20">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.pending}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pendentes</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.pending}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Pendentes</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-blue-500/20">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.confirmed}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Confirmados</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.confirmed}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Confirmados</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold text-primary">R$ {stats.revenue.toFixed(0)}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
+                <p className="text-base sm:text-xl font-bold text-primary">R$ {stats.revenue.toFixed(0)}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
               </div>
             </CardContent>
           </Card>

@@ -391,16 +391,16 @@ const Booking = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden safe-bottom">
       <AnimatedBackground />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
+      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto safe-top">
+        <div className="flex items-center gap-2 sm:gap-3">
           <img 
             src={logoImage} 
             alt="Natan Barbershop" 
-            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
           />
           <OpenClosedBadge />
         </div>
@@ -412,7 +412,7 @@ const Booking = () => {
               variant="ghost" 
               size="sm" 
               onClick={() => navigate("/admin")} 
-              className="text-foreground hover:text-primary text-xs sm:text-sm"
+              className="text-foreground hover:text-primary text-xs sm:text-sm touch-target"
             >
               Admin
             </Button>
@@ -422,35 +422,36 @@ const Booking = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 text-center py-8 px-4">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-2">
+      <section className="relative z-10 text-center py-6 sm:py-8 px-4">
+        <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2 leading-tight">
           <span className="text-foreground">Natan </span>
           <span className="text-transparent bg-clip-text bg-gold-gradient">BarberShop</span>
         </h1>
-        <p className="text-muted-foreground text-sm sm:text-base mb-4">
+        <p className="text-muted-foreground text-xs sm:text-base mb-3 sm:mb-4">
           Experiência premium em cortes masculinos
         </p>
         
         {/* Contact Info */}
-        <div className="flex items-center justify-center gap-4 sm:gap-6 text-muted-foreground text-sm">
-          <a href={`tel:${PHONE.replace(/\D/g, "")}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
-            <Phone className="w-4 h-4" />
-            <span>{PHONE}</span>
+        <div className="flex items-center justify-center gap-3 sm:gap-6 text-muted-foreground text-xs sm:text-sm">
+          <a href={`tel:${PHONE.replace(/\D/g, "")}`} className="flex items-center gap-1 sm:gap-1.5 hover:text-primary transition-colors touch-target">
+            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">{PHONE}</span>
+            <span className="xs:hidden">Ligar</span>
           </a>
           <a 
             href="https://www.instagram.com/_natan_barber_/" 
-            target="_blank" 
+            target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 hover:text-primary transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 hover:text-primary transition-colors touch-target"
           >
-            <Instagram className="w-4 h-4" />
+            <Instagram className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>{INSTAGRAM}</span>
           </a>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="booking-container relative z-10 px-4 pb-12 max-w-5xl mx-auto">
+      <main className="booking-container relative z-10 px-3 sm:px-4 pb-8 sm:pb-12 max-w-5xl mx-auto">
         {/* Step Progress Indicator - Only show for steps 2-4 */}
         {step > 1 && step < 5 && (
           <StepIndicator currentStep={step} totalSteps={5} />
@@ -459,14 +460,14 @@ const Booking = () => {
         <div ref={stepContentRef}>
         {/* Step 1: Services and Location */}
         {step === 1 && (
-          <div className="step-content space-y-8">
+          <div className="step-content space-y-6 sm:space-y-8">
             {/* CTA Button */}
             <div className="flex justify-center">
               <Button 
                 onClick={() => document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-8 py-6 text-lg rounded-xl shadow-gold-glow"
+                className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-gold-glow touch-target"
               >
-                <CalendarIcon className="w-5 h-5 mr-2" />
+                <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Agendar Horário
               </Button>
             </div>

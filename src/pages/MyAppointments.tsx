@@ -132,12 +132,12 @@ const MyAppointments = () => {
   );
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden safe-bottom">
       <AnimatedBackground />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4">
+      <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto safe-top">
+        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4 touch-target">
           <ChevronLeft className="w-5 h-5 sm:mr-2" />
           <span className="hidden sm:inline">Voltar</span>
         </Button>
@@ -148,16 +148,15 @@ const MyAppointments = () => {
       </header>
 
       {/* Main Content */}
-      <main className="appointments-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-4xl mx-auto">
+      <main className="appointments-container relative z-10 px-3 sm:px-4 py-4 sm:py-6 max-w-4xl mx-auto pb-8">
         <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
-          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 w-full grid grid-cols-2 h-auto">
-            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background py-2.5 sm:py-2 text-xs sm:text-sm">
-              <Calendar className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Agendamentos</span>
-              <span className="xs:hidden">Agenda</span>
+          <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 w-full grid grid-cols-2 h-12 sm:h-10">
+            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background py-3 sm:py-2 text-sm sm:text-sm font-medium">
+              <Calendar className="w-4 h-4 mr-1.5 sm:mr-2" />
+              Agendamentos
             </TabsTrigger>
-            <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background py-2.5 sm:py-2 text-xs sm:text-sm">
-              <Trophy className="w-4 h-4 mr-1 sm:mr-2" />
+            <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background py-3 sm:py-2 text-sm sm:text-sm font-medium">
+              <Trophy className="w-4 h-4 mr-1.5 sm:mr-2" />
               Fidelidade
             </TabsTrigger>
           </TabsList>
@@ -187,13 +186,13 @@ const MyAppointments = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {upcomingAppointments.map((appointment) => (
                     <Card key={appointment.id} className="bg-card/40 backdrop-blur-xl border-primary/20">
                       <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-start gap-4">
-                            <div className="w-14 h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className="w-14 h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
                               <span className="text-lg font-bold text-primary">
                                 {format(parseISO(appointment.appointment_date), "dd")}
                               </span>
@@ -201,53 +200,52 @@ const MyAppointments = () => {
                                 {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
                               </span>
                             </div>
-                            <div>
-                              <h3 className="font-semibold text-foreground flex items-center gap-2">
-                                <Scissors className="w-4 h-4 text-primary" />
-                                {appointment.services?.name || "Serviço"}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                                <Scissors className="w-4 h-4 text-primary flex-shrink-0" />
+                                <span className="truncate">{appointment.services?.name || "Serviço"}</span>
                               </h3>
-                              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
                                   {appointment.appointment_time.slice(0, 5)}
                                 </span>
+                                <span className="text-lg font-bold text-primary">
+                                  R$ {appointment.services?.price?.toFixed(2) || "0.00"}
+                                </span>
                               </div>
-                              <div className="flex items-center gap-2 mt-2">
+                              <div className="flex flex-wrap items-center gap-2 mt-2">
                                 <Badge variant="outline" className={statusColors[appointment.status]}>
                                   {statusLabels[appointment.status]}
                                 </Badge>
-                                <Badge variant="outline" className="bg-muted/50">
+                                <Badge variant="outline" className="bg-muted/50 text-xs">
                                   {paymentLabels[appointment.payment_status]} (PIX)
                                 </Badge>
                               </div>
-                              <CancellationPolicy variant="compact" />
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl font-bold text-primary">
-                              R$ {appointment.services?.price?.toFixed(2) || "0.00"}
-                            </span>
-
+                          <div className="flex items-center justify-between pt-3 border-t border-border">
+                            <CancellationPolicy variant="compact" />
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10">
-                                  <X className="w-4 h-4 mr-1" />
+                                <Button variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10 h-9 px-3 touch-target">
+                                  <X className="w-4 h-4 mr-1.5" />
                                   Cancelar
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-card border-border">
+                              <AlertDialogContent className="bg-card border-border mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle className="text-foreground">Cancelar Agendamento?</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Tem certeza que deseja cancelar este agendamento?
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="border-border">Voltar</AlertDialogCancel>
+                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                  <AlertDialogCancel className="border-border w-full sm:w-auto">Voltar</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleCancelAppointment(appointment.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
                                   >
                                     Sim, Cancelar
                                   </AlertDialogAction>
@@ -271,26 +269,26 @@ const MyAppointments = () => {
                   Histórico
                 </h2>
 
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {pastAppointments.map((appointment) => (
-                    <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-border/50 opacity-70">
-                      <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-muted/30 flex flex-col items-center justify-center">
-                              <span className="text-sm font-bold text-muted-foreground">
+                    <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-border/50 opacity-80">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-muted/30 flex flex-col items-center justify-center flex-shrink-0">
+                              <span className="text-xs sm:text-sm font-bold text-muted-foreground">
                                 {format(parseISO(appointment.appointment_date), "dd")}
                               </span>
-                              <span className="text-xs text-muted-foreground uppercase">
+                              <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">
                                 {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
                               </span>
                             </div>
-                            <div>
-                              <h3 className="font-medium text-muted-foreground">{appointment.services?.name || "Serviço"}</h3>
-                              <span className="text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-medium text-muted-foreground text-sm truncate">{appointment.services?.name || "Serviço"}</h3>
+                              <span className="text-xs sm:text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                             {appointment.status === "completed" && !reviewedAppointments.has(appointment.id) && (
                               <ReviewForm 
                                 appointmentId={appointment.id} 
@@ -299,12 +297,12 @@ const MyAppointments = () => {
                               />
                             )}
                             {reviewedAppointments.has(appointment.id) && (
-                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
                                 <Star className="w-3 h-3 mr-1 fill-primary" />
-                                Avaliado
+                                <span className="hidden xs:inline">Avaliado</span>
                               </Badge>
                             )}
-                            <Badge variant="outline" className={statusColors[appointment.status]}>
+                            <Badge variant="outline" className={`${statusColors[appointment.status]} text-xs`}>
                               {statusLabels[appointment.status]}
                             </Badge>
                           </div>
