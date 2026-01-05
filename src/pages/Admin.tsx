@@ -22,7 +22,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CustomerHistory } from "@/components/CustomerHistory";
 import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
-import { getConfirmationMessage } from "@/lib/whatsapp";
+import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import { SystemChecklistPDF } from "@/components/SystemChecklistPDF";
 
@@ -385,7 +385,7 @@ const Admin = () => {
       return;
     }
 
-    // Criar notificação push interna quando confirmar ou cancelar
+    // Criar notificação push interna e WhatsApp quando confirmar ou cancelar
     if ((status === "confirmed" || status === "cancelled") && appointment) {
       const { data: appointmentData } = await supabase
         .from("appointments")
@@ -398,6 +398,7 @@ const Admin = () => {
         const timeFormatted = appointmentData.appointment_time.slice(0, 5);
         const serviceName = appointmentData.services?.name || "Serviço";
         const servicePrice = appointmentData.services?.price || 0;
+        const clientInfo = getClientDisplayInfo(appointment);
 
         const title = status === "confirmed" 
           ? "Agendamento Confirmado! ✓" 
@@ -407,6 +408,7 @@ const Admin = () => {
           ? `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi confirmado! Valor: R$ ${servicePrice.toFixed(2)}`
           : `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi cancelado.`;
 
+        // Criar notificação interna
         await supabase.from("notifications").insert({
           user_id: appointmentData.user_id,
           title,
@@ -414,6 +416,21 @@ const Admin = () => {
           type: status,
           appointment_id: id
         });
+
+        // Enviar notificação WhatsApp automaticamente se tiver telefone
+        if (clientInfo.phone && clientInfo.phone !== "Sem telefone") {
+          const whatsappMessage = status === "confirmed"
+            ? getConfirmationMessage(clientInfo.name, serviceName, dateFormatted, timeFormatted)
+            : getCancellationMessage(clientInfo.name, serviceName, dateFormatted, timeFormatted);
+          
+          // Abrir WhatsApp com mensagem pré-preenchida
+          openWhatsApp(clientInfo.phone, whatsappMessage);
+          
+          toast.success(`WhatsApp aberto para notificar ${clientInfo.name}`, {
+            description: status === "confirmed" ? "Confirmação enviada!" : "Cancelamento notificado",
+            duration: 4000
+          });
+        }
       }
     }
 
