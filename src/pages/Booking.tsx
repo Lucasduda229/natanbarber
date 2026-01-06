@@ -1336,6 +1336,9 @@ const Booking = () => {
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
                     💡 Pague pelo menos 20% do valor para garantir seu horário!
+                    <span className="block mt-1 text-sm font-bold">
+                      Mínimo: R$ {(totalPrice * 0.2).toFixed(2).replace('.', ',')}
+                    </span>
                   </p>
                 </div>
 
