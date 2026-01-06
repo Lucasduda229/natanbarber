@@ -680,27 +680,27 @@ const Booking = () => {
                       Economize com nossos pacotes promocionais
                     </p>
                     
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                       {packages.filter(p => p.name.toLowerCase().includes('bronze')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         return (
                           <Card
                             key={pkg.id}
-                            className={`bg-gradient-to-br from-amber-600/10 via-card/80 to-amber-700/5 backdrop-blur-xl cursor-pointer transition-all group ${
+                            className={`bg-gradient-to-br from-amber-600/10 via-card/80 to-amber-700/5 backdrop-blur-xl cursor-pointer transition-all group h-full ${
                               isSelected 
                                 ? "border-amber-600 border-2 ring-2 ring-amber-600/20" 
                                 : "border-amber-600/20 hover:border-amber-600/50"
                             }`}
                             onClick={() => handlePackageSelect(pkg)}
                           >
-                            <CardContent className="p-4 sm:p-5 relative">
+                            <CardContent className="p-4 sm:p-5 relative h-full flex flex-col">
                               {isSelected && (
                                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-600 flex items-center justify-center">
                                   <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
                                 </div>
                               )}
                               
-                              <div className="inline-block px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-600 text-[10px] font-bold mb-3">
+                              <div className="inline-block px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-600 text-[10px] font-bold mb-3 self-start">
                                 BRONZE
                               </div>
                               
@@ -708,7 +708,7 @@ const Booking = () => {
                                 {pkg.name.replace('Pacote Bronze ', 'Opção ')}
                               </h4>
                               
-                              <div className="space-y-1.5 mb-4">
+                              <div className="space-y-1.5 mb-4 flex-grow">
                                 {pkg.items.map((item) => (
                                   <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                                     <Check className="w-3 h-3 text-amber-600 flex-shrink-0" />
@@ -717,7 +717,7 @@ const Booking = () => {
                                 ))}
                               </div>
                               
-                              <div className="flex items-end justify-between pt-3 border-t border-amber-600/10">
+                              <div className="flex items-end justify-between pt-3 border-t border-amber-600/10 mt-auto">
                                 <p className="text-xl sm:text-2xl font-bold text-amber-600">
                                   R$ {pkg.price.toFixed(2)}
                                 </p>
@@ -750,27 +750,27 @@ const Booking = () => {
                       Mais benefícios com preço especial
                     </p>
                     
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                       {packages.filter(p => p.name.toLowerCase().includes('prata')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         return (
                           <Card
                             key={pkg.id}
-                            className={`bg-gradient-to-br from-slate-400/10 via-card/80 to-slate-500/5 backdrop-blur-xl cursor-pointer transition-all group ${
+                            className={`bg-gradient-to-br from-slate-400/10 via-card/80 to-slate-500/5 backdrop-blur-xl cursor-pointer transition-all group h-full ${
                               isSelected 
                                 ? "border-slate-400 border-2 ring-2 ring-slate-400/20" 
                                 : "border-slate-400/20 hover:border-slate-400/50"
                             }`}
                             onClick={() => handlePackageSelect(pkg)}
                           >
-                            <CardContent className="p-4 sm:p-5 relative">
+                            <CardContent className="p-4 sm:p-5 relative h-full flex flex-col">
                               {isSelected && (
                                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-400 flex items-center justify-center">
                                   <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
                                 </div>
                               )}
                               
-                              <div className="inline-block px-2 py-0.5 rounded-full bg-slate-400/20 text-slate-400 text-[10px] font-bold mb-3">
+                              <div className="inline-block px-2 py-0.5 rounded-full bg-slate-400/20 text-slate-400 text-[10px] font-bold mb-3 self-start">
                                 PRATA
                               </div>
                               
@@ -778,7 +778,7 @@ const Booking = () => {
                                 {pkg.name.replace('Pacote Prata ', 'Opção ')}
                               </h4>
                               
-                              <div className="space-y-1.5 mb-4">
+                              <div className="space-y-1.5 mb-4 flex-grow">
                                 {pkg.items.map((item) => (
                                   <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                                     <Check className="w-3 h-3 text-slate-400 flex-shrink-0" />
@@ -787,7 +787,7 @@ const Booking = () => {
                                 ))}
                               </div>
                               
-                              <div className="flex items-end justify-between pt-3 border-t border-slate-400/10">
+                              <div className="flex items-end justify-between pt-3 border-t border-slate-400/10 mt-auto">
                                 <p className="text-xl sm:text-2xl font-bold text-slate-400">
                                   R$ {pkg.price.toFixed(2)}
                                 </p>
@@ -820,14 +820,14 @@ const Booking = () => {
                       Experiência premium com benefícios exclusivos
                     </p>
                     
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                       {packages.filter(p => p.name.toLowerCase().includes('ouro')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         const hasBenefits = pkg.description?.toLowerCase().includes('bônus') || pkg.description?.toLowerCase().includes('bonus');
                         return (
                           <Card
                             key={pkg.id}
-                            className={`bg-gradient-to-br from-yellow-500/15 via-card/80 to-yellow-600/10 backdrop-blur-xl cursor-pointer transition-all group relative overflow-hidden ${
+                            className={`bg-gradient-to-br from-yellow-500/15 via-card/80 to-yellow-600/10 backdrop-blur-xl cursor-pointer transition-all group relative overflow-hidden h-full ${
                               isSelected 
                                 ? "border-yellow-500 border-2 ring-2 ring-yellow-500/30" 
                                 : "border-yellow-500/30 hover:border-yellow-500/60"
@@ -837,7 +837,7 @@ const Booking = () => {
                             {/* Shimmer effect for premium feel */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             
-                            <CardContent className="p-4 sm:p-5 relative">
+                            <CardContent className="p-4 sm:p-5 relative h-full flex flex-col">
                               {isSelected && (
                                 <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-yellow-500 flex items-center justify-center">
                                   <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
@@ -859,7 +859,7 @@ const Booking = () => {
                                 {pkg.name.replace('Pacote Ouro ', 'Opção ')}
                               </h4>
                               
-                              <div className="space-y-1.5 mb-3">
+                              <div className="space-y-1.5 mb-3 flex-grow">
                                 {pkg.items.map((item) => (
                                   <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                                     <Check className="w-3 h-3 text-yellow-500 flex-shrink-0" />
@@ -878,7 +878,7 @@ const Booking = () => {
                                 </div>
                               )}
                               
-                              <div className="flex items-end justify-between pt-3 border-t border-yellow-500/20">
+                              <div className="flex items-end justify-between pt-3 border-t border-yellow-500/20 mt-auto">
                                 <div>
                                   {pkg.name.includes('1') && (
                                     <p className="text-xs text-muted-foreground line-through">R$ 220,00</p>
