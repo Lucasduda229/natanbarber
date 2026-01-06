@@ -666,86 +666,160 @@ const Booking = () => {
               )}
             </div>
 
-            {/* Pacotes Bronze Section */}
+            {/* Pacotes Section */}
             {packages.length > 0 && (
-              <div className="space-y-4 mt-8">
-                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  <div className="w-1 h-5 bg-amber-500 rounded-full" />
-                  Pacotes Bronze
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Economize com nossos pacotes promocionais
-                </p>
-                
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {packages.map((pkg) => {
-                    const isSelected = selectedPackage?.id === pkg.id;
-                    return (
-                      <Card
-                        key={pkg.id}
-                        className={`bg-gradient-to-br from-amber-500/10 via-card/80 to-amber-600/5 backdrop-blur-xl cursor-pointer transition-all group ${
-                          isSelected 
-                            ? "border-amber-500 border-2 ring-2 ring-amber-500/20" 
-                            : "border-amber-500/20 hover:border-amber-500/50"
-                        }`}
-                        onClick={() => handlePackageSelect(pkg)}
-                      >
-                        <CardContent className="p-4 sm:p-5 relative">
-                          {/* Selection indicator */}
-                          {isSelected && (
-                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500 flex items-center justify-center">
-                              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
-                            </div>
-                          )}
-                          
-                          {/* Badge */}
-                          <div className="inline-block px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 text-[10px] font-bold mb-3">
-                            PACOTE
-                          </div>
-                          
-                          {/* Package Name */}
-                          <h4 className={`font-semibold transition-colors mb-2 text-base sm:text-lg pr-6 ${isSelected ? "text-amber-500" : "text-foreground group-hover:text-amber-500"}`}>
-                            {pkg.name}
-                          </h4>
-                          
-                          {/* Package Items */}
-                          <div className="space-y-1.5 mb-4">
-                            {pkg.items.map((item) => (
-                              <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                                <Check className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                                <span>{item.quantity}x {item.service_name}</span>
+              <div className="space-y-8 mt-8">
+                {/* Pacotes Bronze */}
+                {packages.filter(p => p.name.toLowerCase().includes('bronze')).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <div className="w-1 h-5 bg-amber-600 rounded-full" />
+                      Pacotes Bronze
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Economize com nossos pacotes promocionais
+                    </p>
+                    
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {packages.filter(p => p.name.toLowerCase().includes('bronze')).map((pkg) => {
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        return (
+                          <Card
+                            key={pkg.id}
+                            className={`bg-gradient-to-br from-amber-600/10 via-card/80 to-amber-700/5 backdrop-blur-xl cursor-pointer transition-all group ${
+                              isSelected 
+                                ? "border-amber-600 border-2 ring-2 ring-amber-600/20" 
+                                : "border-amber-600/20 hover:border-amber-600/50"
+                            }`}
+                            onClick={() => handlePackageSelect(pkg)}
+                          >
+                            <CardContent className="p-4 sm:p-5 relative">
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-600 flex items-center justify-center">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
+                                </div>
+                              )}
+                              
+                              <div className="inline-block px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-600 text-[10px] font-bold mb-3">
+                                BRONZE
                               </div>
-                            ))}
-                          </div>
-                          
-                          {/* Price and Action */}
-                          <div className="flex items-end justify-between pt-3 border-t border-amber-500/10">
-                            <p className="text-xl sm:text-2xl font-bold text-amber-500">
-                              R$ {pkg.price.toFixed(2)}
-                            </p>
-                            <Button 
-                              size="sm" 
-                              className={`h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm ${isSelected 
-                                ? "bg-amber-500 text-background hover:bg-amber-600" 
-                                : "bg-card hover:bg-amber-500/10 text-foreground border border-amber-500/30 hover:border-amber-500"
-                              }`}
-                            >
-                              {isSelected ? "Selecionado" : "Selecionar"}
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+                              
+                              <h4 className={`font-semibold transition-colors mb-2 text-base sm:text-lg pr-6 ${isSelected ? "text-amber-600" : "text-foreground group-hover:text-amber-600"}`}>
+                                {pkg.name.replace('Pacote Bronze ', 'Opção ')}
+                              </h4>
+                              
+                              <div className="space-y-1.5 mb-4">
+                                {pkg.items.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                    <Check className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                                    <span>{item.quantity}x {item.service_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div className="flex items-end justify-between pt-3 border-t border-amber-600/10">
+                                <p className="text-xl sm:text-2xl font-bold text-amber-600">
+                                  R$ {pkg.price.toFixed(2)}
+                                </p>
+                                <Button 
+                                  size="sm" 
+                                  className={`h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm ${isSelected 
+                                    ? "bg-amber-600 text-background hover:bg-amber-700" 
+                                    : "bg-card hover:bg-amber-600/10 text-foreground border border-amber-600/30 hover:border-amber-600"
+                                  }`}
+                                >
+                                  {isSelected ? "Selecionado" : "Selecionar"}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pacotes Prata */}
+                {packages.filter(p => p.name.toLowerCase().includes('prata')).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <div className="w-1 h-5 bg-slate-400 rounded-full" />
+                      Pacotes Prata
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Mais benefícios com preço especial
+                    </p>
+                    
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {packages.filter(p => p.name.toLowerCase().includes('prata')).map((pkg) => {
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        return (
+                          <Card
+                            key={pkg.id}
+                            className={`bg-gradient-to-br from-slate-400/10 via-card/80 to-slate-500/5 backdrop-blur-xl cursor-pointer transition-all group ${
+                              isSelected 
+                                ? "border-slate-400 border-2 ring-2 ring-slate-400/20" 
+                                : "border-slate-400/20 hover:border-slate-400/50"
+                            }`}
+                            onClick={() => handlePackageSelect(pkg)}
+                          >
+                            <CardContent className="p-4 sm:p-5 relative">
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-400 flex items-center justify-center">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
+                                </div>
+                              )}
+                              
+                              <div className="inline-block px-2 py-0.5 rounded-full bg-slate-400/20 text-slate-400 text-[10px] font-bold mb-3">
+                                PRATA
+                              </div>
+                              
+                              <h4 className={`font-semibold transition-colors mb-2 text-base sm:text-lg pr-6 ${isSelected ? "text-slate-400" : "text-foreground group-hover:text-slate-400"}`}>
+                                {pkg.name.replace('Pacote Prata ', 'Opção ')}
+                              </h4>
+                              
+                              <div className="space-y-1.5 mb-4">
+                                {pkg.items.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                    <Check className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                    <span>{item.quantity}x {item.service_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div className="flex items-end justify-between pt-3 border-t border-slate-400/10">
+                                <p className="text-xl sm:text-2xl font-bold text-slate-400">
+                                  R$ {pkg.price.toFixed(2)}
+                                </p>
+                                <Button 
+                                  size="sm" 
+                                  className={`h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm ${isSelected 
+                                    ? "bg-slate-400 text-background hover:bg-slate-500" 
+                                    : "bg-card hover:bg-slate-400/10 text-foreground border border-slate-400/30 hover:border-slate-400"
+                                  }`}
+                                >
+                                  {isSelected ? "Selecionado" : "Selecionar"}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Resumo do pacote selecionado */}
                 {selectedPackage && (
-                  <Card className="bg-amber-500/5 border-amber-500/30 mt-4">
+                  <Card className={`mt-4 ${
+                    selectedPackage.name.toLowerCase().includes('prata') 
+                      ? "bg-slate-400/5 border-slate-400/30" 
+                      : "bg-amber-600/5 border-amber-600/30"
+                  }`}>
                     <CardContent className="p-3 sm:p-4 space-y-3">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Check className="w-4 h-4 text-amber-500" />
+                          <Check className={`w-4 h-4 ${selectedPackage.name.toLowerCase().includes('prata') ? "text-slate-400" : "text-amber-600"}`} />
                           {selectedPackage.name}
                         </div>
                         <div className="pl-6 space-y-1">
@@ -756,13 +830,17 @@ const Booking = () => {
                           ))}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-amber-500/20">
-                        <p className="text-base sm:text-lg font-bold text-amber-500">
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <p className={`text-base sm:text-lg font-bold ${selectedPackage.name.toLowerCase().includes('prata') ? "text-slate-400" : "text-amber-600"}`}>
                           Total: R$ {selectedPackage.price.toFixed(2)}
                         </p>
                         <Button 
                           onClick={handleContinueToDate}
-                          className="bg-amber-500 hover:bg-amber-600 text-background font-semibold h-9 sm:h-10 px-4 sm:px-6 text-sm"
+                          className={`font-semibold h-9 sm:h-10 px-4 sm:px-6 text-sm ${
+                            selectedPackage.name.toLowerCase().includes('prata')
+                              ? "bg-slate-400 hover:bg-slate-500 text-background"
+                              : "bg-amber-600 hover:bg-amber-700 text-background"
+                          }`}
                         >
                           Continuar
                         </Button>
