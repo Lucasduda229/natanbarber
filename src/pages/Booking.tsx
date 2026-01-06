@@ -1334,6 +1334,9 @@ const Booking = () => {
                   <p className="text-xs sm:text-sm text-muted-foreground text-center">
                     Escaneie o QR Code com seu app de banco
                   </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
+                    💡 Pague pelo menos 20% do valor para garantir seu horário!
+                  </p>
                 </div>
 
                 {/* Chave PIX manual */}
