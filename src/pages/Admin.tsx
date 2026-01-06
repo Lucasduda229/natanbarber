@@ -1035,12 +1035,13 @@ const Admin = () => {
                             value={appointment.payment_status}
                             onValueChange={(value) => updatePaymentStatus(appointment.id, value)}
                           >
-                            <SelectTrigger className="w-[100px] sm:w-28 h-7 sm:h-8 bg-card/60 text-xs sm:text-sm">
+                            <SelectTrigger className="w-[120px] sm:w-32 h-7 sm:h-8 bg-card/60 text-xs sm:text-sm">
                               <SelectValue placeholder="Pagamento" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="pending">Aguardando</SelectItem>
-                              <SelectItem value="paid">Pago</SelectItem>
+                              <SelectItem value="paid_pix">Pago PIX</SelectItem>
+                              <SelectItem value="paid_cash">Pago Dinheiro</SelectItem>
                               <SelectItem value="refunded">Reembolsado</SelectItem>
                             </SelectContent>
                           </Select>
