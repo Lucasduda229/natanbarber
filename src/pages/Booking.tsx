@@ -681,7 +681,7 @@ const Booking = () => {
                     </p>
                     
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {packages.filter(p => p.name.toLowerCase().includes('bronze')).map((pkg) => {
+                      {packages.filter(p => p.name.toLowerCase().includes('bronze')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         return (
                           <Card
@@ -751,7 +751,7 @@ const Booking = () => {
                     </p>
                     
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {packages.filter(p => p.name.toLowerCase().includes('prata')).map((pkg) => {
+                      {packages.filter(p => p.name.toLowerCase().includes('prata')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         return (
                           <Card
@@ -821,7 +821,7 @@ const Booking = () => {
                     </p>
                     
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {packages.filter(p => p.name.toLowerCase().includes('ouro')).map((pkg) => {
+                      {packages.filter(p => p.name.toLowerCase().includes('ouro')).sort((a, b) => b.price - a.price).map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
                         const hasBenefits = pkg.description?.toLowerCase().includes('bônus') || pkg.description?.toLowerCase().includes('bonus');
                         return (
