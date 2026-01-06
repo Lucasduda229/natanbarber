@@ -564,7 +564,7 @@ const Booking = () => {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {/* Filtrar serviços regulares (excluir assinaturas) e ordenar */}
                 {services
-                  .filter(s => !s.name.toLowerCase().includes('assinatura') && !s.name.toLowerCase().includes('premium'))
+                  .filter(s => !s.name.toLowerCase().includes('assinatura') && !s.name.toLowerCase().includes('premium') && !s.name.toLowerCase().includes('pezinho'))
                   .sort((a, b) => {
                     // Ordem personalizada: Cortes primeiro, depois outros
                     const order = ['Corte Tradicional', 'Corte Degradê', 'Sobrancelha', 'Barba'];
