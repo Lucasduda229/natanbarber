@@ -809,17 +809,121 @@ const Booking = () => {
                   </div>
                 )}
 
+                {/* Pacotes Ouro */}
+                {packages.filter(p => p.name.toLowerCase().includes('ouro')).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <div className="w-1 h-5 bg-yellow-500 rounded-full" />
+                      Pacotes Ouro
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Experiência premium com benefícios exclusivos
+                    </p>
+                    
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {packages.filter(p => p.name.toLowerCase().includes('ouro')).map((pkg) => {
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        const hasBenefits = pkg.description?.toLowerCase().includes('bônus') || pkg.description?.toLowerCase().includes('bonus');
+                        return (
+                          <Card
+                            key={pkg.id}
+                            className={`bg-gradient-to-br from-yellow-500/15 via-card/80 to-yellow-600/10 backdrop-blur-xl cursor-pointer transition-all group relative overflow-hidden ${
+                              isSelected 
+                                ? "border-yellow-500 border-2 ring-2 ring-yellow-500/30" 
+                                : "border-yellow-500/30 hover:border-yellow-500/60"
+                            }`}
+                            onClick={() => handlePackageSelect(pkg)}
+                          >
+                            {/* Shimmer effect for premium feel */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            
+                            <CardContent className="p-4 sm:p-5 relative">
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-yellow-500 flex items-center justify-center">
+                                  <Check className="w-3 h-3 sm:w-4 sm:h-4 text-background" />
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="inline-block px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-[10px] font-bold">
+                                  OURO
+                                </div>
+                                {hasBenefits && (
+                                  <div className="inline-block px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 text-[10px] font-bold">
+                                    +BÔNUS
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <h4 className={`font-semibold transition-colors mb-2 text-base sm:text-lg pr-6 ${isSelected ? "text-yellow-500" : "text-foreground group-hover:text-yellow-500"}`}>
+                                {pkg.name.replace('Pacote Ouro ', 'Opção ')}
+                              </h4>
+                              
+                              <div className="space-y-1.5 mb-3">
+                                {pkg.items.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                    <Check className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                                    <span>{item.quantity}x {item.service_name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Benefits section */}
+                              {hasBenefits && (
+                                <div className="mb-4 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                                  <p className="text-[10px] font-bold text-green-500 mb-1">BÔNUS INCLUSOS:</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {pkg.description?.split('|')[1]?.replace('Bônus:', '').trim() || 'Benefícios exclusivos'}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-end justify-between pt-3 border-t border-yellow-500/20">
+                                <div>
+                                  {pkg.name.includes('1') && (
+                                    <p className="text-xs text-muted-foreground line-through">R$ 220,00</p>
+                                  )}
+                                  <p className="text-xl sm:text-2xl font-bold text-yellow-500">
+                                    R$ {pkg.price.toFixed(2)}
+                                  </p>
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  className={`h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm ${isSelected 
+                                    ? "bg-yellow-500 text-background hover:bg-yellow-600" 
+                                    : "bg-card hover:bg-yellow-500/10 text-foreground border border-yellow-500/30 hover:border-yellow-500"
+                                  }`}
+                                >
+                                  {isSelected ? "Selecionado" : "Selecionar"}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Resumo do pacote selecionado */}
                 {selectedPackage && (
                   <Card className={`mt-4 ${
-                    selectedPackage.name.toLowerCase().includes('prata') 
-                      ? "bg-slate-400/5 border-slate-400/30" 
-                      : "bg-amber-600/5 border-amber-600/30"
+                    selectedPackage.name.toLowerCase().includes('ouro') 
+                      ? "bg-yellow-500/5 border-yellow-500/30"
+                      : selectedPackage.name.toLowerCase().includes('prata') 
+                        ? "bg-slate-400/5 border-slate-400/30" 
+                        : "bg-amber-600/5 border-amber-600/30"
                   }`}>
                     <CardContent className="p-3 sm:p-4 space-y-3">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Check className={`w-4 h-4 ${selectedPackage.name.toLowerCase().includes('prata') ? "text-slate-400" : "text-amber-600"}`} />
+                          <Check className={`w-4 h-4 ${
+                            selectedPackage.name.toLowerCase().includes('ouro') 
+                              ? "text-yellow-500"
+                              : selectedPackage.name.toLowerCase().includes('prata') 
+                                ? "text-slate-400" 
+                                : "text-amber-600"
+                          }`} />
                           {selectedPackage.name}
                         </div>
                         <div className="pl-6 space-y-1">
@@ -831,15 +935,23 @@ const Booking = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                        <p className={`text-base sm:text-lg font-bold ${selectedPackage.name.toLowerCase().includes('prata') ? "text-slate-400" : "text-amber-600"}`}>
+                        <p className={`text-base sm:text-lg font-bold ${
+                          selectedPackage.name.toLowerCase().includes('ouro') 
+                            ? "text-yellow-500"
+                            : selectedPackage.name.toLowerCase().includes('prata') 
+                              ? "text-slate-400" 
+                              : "text-amber-600"
+                        }`}>
                           Total: R$ {selectedPackage.price.toFixed(2)}
                         </p>
                         <Button 
                           onClick={handleContinueToDate}
                           className={`font-semibold h-9 sm:h-10 px-4 sm:px-6 text-sm ${
-                            selectedPackage.name.toLowerCase().includes('prata')
-                              ? "bg-slate-400 hover:bg-slate-500 text-background"
-                              : "bg-amber-600 hover:bg-amber-700 text-background"
+                            selectedPackage.name.toLowerCase().includes('ouro')
+                              ? "bg-yellow-500 hover:bg-yellow-600 text-background"
+                              : selectedPackage.name.toLowerCase().includes('prata')
+                                ? "bg-slate-400 hover:bg-slate-500 text-background"
+                                : "bg-amber-600 hover:bg-amber-700 text-background"
                           }`}
                         >
                           Continuar
