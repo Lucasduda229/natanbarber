@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -1035,14 +1036,19 @@ const Admin = () => {
                             value={appointment.payment_status}
                             onValueChange={(value) => updatePaymentStatus(appointment.id, value)}
                           >
-                            <SelectTrigger className="w-[120px] sm:w-32 h-7 sm:h-8 bg-card/60 text-xs sm:text-sm">
+                            <SelectTrigger className={cn(
+                              "w-[120px] sm:w-32 h-7 sm:h-8 text-xs sm:text-sm font-medium",
+                              appointment.payment_status === 'pending' && "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
+                              (appointment.payment_status === 'paid_pix' || appointment.payment_status === 'paid_cash' || appointment.payment_status === 'paid') && "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+                              appointment.payment_status === 'refunded' && "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30"
+                            )}>
                               <SelectValue placeholder="Pagamento" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pending">Aguardando</SelectItem>
-                              <SelectItem value="paid_pix">Pago PIX</SelectItem>
-                              <SelectItem value="paid_cash">Pago Dinheiro</SelectItem>
-                              <SelectItem value="refunded">Reembolsado</SelectItem>
+                              <SelectItem value="pending" className="text-yellow-700 dark:text-yellow-400">Aguardando</SelectItem>
+                              <SelectItem value="paid_pix" className="text-green-700 dark:text-green-400">Pago PIX</SelectItem>
+                              <SelectItem value="paid_cash" className="text-green-700 dark:text-green-400">Pago Dinheiro</SelectItem>
+                              <SelectItem value="refunded" className="text-red-700 dark:text-red-400">Reembolsado</SelectItem>
                             </SelectContent>
                           </Select>
 
