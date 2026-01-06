@@ -23,6 +23,14 @@ function formatField(id: string, value: string): string {
   return `${id}${length}${value}`;
 }
 
+// Remove acentos e caracteres especiais
+function removeAccents(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 ]/g, '');
+}
+
 interface PixPayloadOptions {
   pixKey: string;
   merchantName: string;
@@ -37,24 +45,28 @@ export function generatePixPayload({
   merchantName,
   merchantCity,
   amount,
-  description,
   txId = '***'
 }: PixPayloadOptions): string {
-  // Limita o nome do comerciante a 25 caracteres
-  const formattedMerchantName = merchantName.substring(0, 25).toUpperCase();
-  // Limita a cidade a 15 caracteres
-  const formattedMerchantCity = merchantCity.substring(0, 15).toUpperCase();
+  // Formata a chave PIX (se for telefone, adiciona +55)
+  let formattedPixKey = pixKey.replace(/\D/g, '');
+  if (formattedPixKey.length === 11 && !formattedPixKey.startsWith('55')) {
+    formattedPixKey = '+55' + formattedPixKey;
+  } else if (formattedPixKey.length === 13 && formattedPixKey.startsWith('55')) {
+    formattedPixKey = '+' + formattedPixKey;
+  }
+  
+  // Limita e formata o nome do comerciante (sem acentos, max 25 chars)
+  const formattedMerchantName = removeAccents(merchantName).substring(0, 25).toUpperCase();
+  // Limita e formata a cidade (sem acentos, max 15 chars)
+  const formattedMerchantCity = removeAccents(merchantCity).substring(0, 15).toUpperCase();
   
   // Campo 00: Payload Format Indicator
   let payload = formatField('00', '01');
   
-  // Campo 01: Point of Initiation Method (12 = dinâmico, pode ser usado várias vezes)
-  payload += formatField('01', '12');
-  
   // Campo 26: Merchant Account Information (GUI do PIX + chave)
   const gui = formatField('00', 'br.gov.bcb.pix');
-  const key = formatField('01', pixKey);
-  const merchantAccountInfo = gui + key + (description ? formatField('02', description.substring(0, 50)) : '');
+  const key = formatField('01', formattedPixKey);
+  const merchantAccountInfo = gui + key;
   payload += formatField('26', merchantAccountInfo);
   
   // Campo 52: Merchant Category Code
