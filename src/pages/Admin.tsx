@@ -28,6 +28,11 @@ import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import SubscriptionManager from "@/components/SubscriptionManager";
 
 
+interface AppointmentService {
+  name: string;
+  price: number;
+}
+
 interface Appointment {
   id: string;
   user_id: string;
@@ -40,10 +45,7 @@ interface Appointment {
     full_name: string | null;
     phone: string | null;
   } | null;
-  services: {
-    name: string;
-    price: number;
-  } | null;
+  services: AppointmentService[];
 }
 
 interface ActiveSubscription {
@@ -99,7 +101,17 @@ const getClientDisplayInfo = (appointment: Appointment): { name: string; phone: 
   };
 };
 
-// Notification sound using Web Audio API
+// Helper functions for services array
+const getServicesNames = (services: AppointmentService[]): string => {
+  if (!services || services.length === 0) return "Serviço";
+  return services.map(s => s.name).join(", ");
+};
+
+const getServicesTotal = (services: AppointmentService[]): number => {
+  if (!services || services.length === 0) return 0;
+  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+};
+
 const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -343,11 +355,7 @@ const Admin = () => {
         status,
         payment_status,
         user_id,
-        notes,
-        services (
-          name,
-          price
-        )
+        notes
       `)
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
@@ -362,8 +370,9 @@ const Admin = () => {
       return;
     }
 
-    // Get unique user_ids
+    // Get unique user_ids and appointment_ids
     const userIds = [...new Set(appointmentsData.map(a => a.user_id))];
+    const appointmentIds = appointmentsData.map(a => a.id);
 
     // Fetch profiles for these users
     const { data: profilesData, error: profilesError } = await supabase
@@ -375,18 +384,48 @@ const Admin = () => {
       console.error("Error fetching profiles:", profilesError);
     }
 
+    // Fetch all services for these appointments via appointment_services
+    const { data: appointmentServicesData, error: appointmentServicesError } = await supabase
+      .from("appointment_services")
+      .select(`
+        appointment_id,
+        services (
+          name,
+          price
+        )
+      `)
+      .in("appointment_id", appointmentIds);
+
+    if (appointmentServicesError) {
+      console.error("Error fetching appointment services:", appointmentServicesError);
+    }
+
+    // Create a map of appointment_id to services array
+    const servicesMap = new Map<string, AppointmentService[]>();
+    (appointmentServicesData || []).forEach(as => {
+      const existing = servicesMap.get(as.appointment_id) || [];
+      if (as.services) {
+        existing.push({
+          name: (as.services as any).name,
+          price: (as.services as any).price
+        });
+      }
+      servicesMap.set(as.appointment_id, existing);
+    });
+
     // Create a map of user_id to profile
     const profilesMap = new Map(
       (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
     );
 
-    // Combine appointments with profiles
-    const appointmentsWithProfiles = appointmentsData.map(appointment => ({
+    // Combine appointments with profiles and services
+    const appointmentsWithData = appointmentsData.map(appointment => ({
       ...appointment,
       profiles: profilesMap.get(appointment.user_id) || null,
+      services: servicesMap.get(appointment.id) || [],
     }));
 
-    setAppointments(appointmentsWithProfiles as unknown as Appointment[]);
+    setAppointments(appointmentsWithData as Appointment[]);
   };
 
   const fetchBlockedDates = async () => {
@@ -906,16 +945,16 @@ const Admin = () => {
                       );
                       const pixTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_pix')
-                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                       const cashTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_cash')
-                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                       const pendingTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'pending')
-                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                       const refundedTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'refunded')
-                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                       
                       const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
                                          reportPeriod === 'month' ? 'Este Mês' : 
@@ -937,7 +976,7 @@ const Admin = () => {
                         'DETALHAMENTO',
                         'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
                         ...paidAppointments.map(a => 
-                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${a.services?.name || 'N/A'},R$ ${(a.services?.price || 0).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
+                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${getServicesTotal(a.services).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
                         )
                       ].join('\n');
                       
@@ -967,7 +1006,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-blue-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix')
-                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido via PIX</p>
@@ -985,7 +1024,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-green-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_cash')
-                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido Dinheiro</p>
@@ -1003,7 +1042,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-yellow-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'pending')
-                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Aguardando</p>
@@ -1021,7 +1060,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-primary">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
-                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Recebido</p>
@@ -1041,10 +1080,10 @@ const Admin = () => {
                       {(() => {
                         const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const total = pixTotal + cashTotal;
                         
                         if (total === 0) {
@@ -1122,13 +1161,13 @@ const Admin = () => {
                       {(() => {
                         const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const pendingTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'pending')
-                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const maxValue = Math.max(pixTotal, cashTotal, pendingTotal, 1);
                         
                         return (
@@ -1214,12 +1253,12 @@ const Admin = () => {
                             <div>
                               <p className="text-sm font-medium">{appointment.profiles?.full_name || 'Cliente'}</p>
                               <p className="text-xs text-muted-foreground">
-                                {format(parseISO(appointment.appointment_date), "dd/MM", { locale: ptBR })} - {appointment.services?.name}
+                                {format(parseISO(appointment.appointment_date), "dd/MM", { locale: ptBR })} - {getServicesNames(appointment.services)}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-primary">R$ {(appointment.services?.price || 0).toFixed(2)}</p>
+                            <p className="text-sm font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</p>
                             <Badge variant="outline" className={cn(
                               "text-[10px]",
                               appointment.payment_status === 'paid_pix' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
@@ -1312,7 +1351,7 @@ const Admin = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              <span className="truncate max-w-[80px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
+                              <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
                             </span>
                             {(() => {
                               const subscription = getUserSubscription(appointment.user_id);
@@ -1325,7 +1364,7 @@ const Admin = () => {
                                 );
                               }
                               return (
-                                <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
                               );
                             })()}
                           </div>
@@ -1396,7 +1435,7 @@ const Admin = () => {
                           phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
                           message={getConfirmationMessage(
                             getClientDisplayInfo(appointment).name,
-                            appointment.services?.name || "Serviço",
+                            getServicesNames(appointment.services),
                             format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                             appointment.appointment_time.slice(0, 5)
                           )}
@@ -1500,7 +1539,7 @@ const Admin = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span className="truncate max-w-[100px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
+                                <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
                               </span>
                               {(() => {
                                 const subscription = getUserSubscription(appointment.user_id);
@@ -1513,7 +1552,7 @@ const Admin = () => {
                                   );
                                 }
                                 return (
-                                  <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
                                 );
                               })()}
                             </div>
@@ -1525,7 +1564,7 @@ const Admin = () => {
                             {statusLabels[appointment.status]}
                           </Badge>
 
-                          <span className="font-bold text-primary text-sm sm:text-base">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                          <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
 
                           <Select
                             value={appointment.status}
@@ -1566,7 +1605,7 @@ const Admin = () => {
                             phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
                             message={getConfirmationMessage(
                               getClientDisplayInfo(appointment).name,
-                              appointment.services?.name || "Serviço",
+                              getServicesNames(appointment.services),
                               format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
                               appointment.appointment_time.slice(0, 5)
                             )}
