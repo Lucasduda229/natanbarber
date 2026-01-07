@@ -60,11 +60,12 @@ ${servicesList}
 DATA DE HOJE: ${today}
 
 INSTRUÇÕES:
-1. Extraia da mensagem: nome do cliente, telefone (se houver), serviço, data e horário
+1. Extraia da mensagem: nome do cliente, telefone (se houver), TODOS os serviços mencionados, data e horário
 2. A data deve estar no formato YYYY-MM-DD
 3. O horário deve estar no formato HH:MM (24h)
-4. O service_id deve corresponder a um dos serviços listados acima
-5. Se não conseguir identificar algum campo obrigatório, retorne um erro explicativo
+4. IMPORTANTE: Extraia TODOS os serviços mencionados (ex: "corte e barba" = 2 serviços, "corte + sobrancelha" = 2 serviços)
+5. O primeiro serviço é o principal, os demais são adicionais
+6. Se não conseguir identificar algum campo obrigatório, retorne um erro explicativo
 
 RESPONDA SEMPRE em JSON válido com esta estrutura:
 {
@@ -72,8 +73,10 @@ RESPONDA SEMPRE em JSON válido com esta estrutura:
   "data": {
     "client_name": "Nome do Cliente",
     "client_phone": "Telefone ou null",
-    "service_id": "uuid do serviço",
-    "service_name": "nome do serviço",
+    "services": [
+      {"service_id": "uuid", "service_name": "nome", "price": valor},
+      {"service_id": "uuid", "service_name": "nome", "price": valor}
+    ],
     "appointment_date": "YYYY-MM-DD",
     "appointment_time": "HH:MM",
     "notes": "observações extraídas da mensagem"
@@ -82,9 +85,9 @@ RESPONDA SEMPRE em JSON válido com esta estrutura:
 }
 
 EXEMPLOS:
-- "Corte de cabelo para João amanhã às 14h" -> extrair cliente João, serviço corte, data de amanhã, horário 14:00
-- "Barba do Carlos dia 15/12 às 10:30" -> extrair cliente Carlos, serviço barba, data 2024-12-15, horário 10:30
-- "Agendamento Pedro Silva tel 11999887766 corte e barba sexta 16h" -> extrair todos os dados`;
+- "Corte e barba para João amanhã às 14h" -> 2 serviços: corte + barba
+- "Pedro dia 15 às 10h corte + sobrancelha + pezinho" -> 3 serviços
+- "Agendamento Carlos corte degradê e barba sexta 16h" -> 2 serviços: corte degradê + barba`;
 
     console.log('Sending message to Lovable AI:', message);
 
@@ -160,45 +163,84 @@ EXEMPLOS:
       );
     }
 
-    // Validate service_id - make sure it exists and get correct price
-    if (parsedData.success && parsedData.data?.service_id) {
-      const matchedService = services?.find(s => s.id === parsedData.data.service_id);
-      
-      if (!matchedService) {
-        // Try to find service by name match
-        const serviceName = parsedData.data.service_name?.toLowerCase() || '';
-        const fuzzyMatch = services?.find(s => 
-          s.name.toLowerCase().includes(serviceName) || 
-          serviceName.includes(s.name.toLowerCase())
-        );
+    // Validate services - make sure they exist and get correct prices
+    if (parsedData.success && parsedData.data) {
+      // Handle new format with services array
+      if (parsedData.data.services && Array.isArray(parsedData.data.services)) {
+        const validatedServices = [];
         
-        if (fuzzyMatch) {
-          console.log('Fuzzy matched service:', fuzzyMatch.name, 'ID:', fuzzyMatch.id);
-          parsedData.data.service_id = fuzzyMatch.id;
-          parsedData.data.service_name = fuzzyMatch.name;
-          parsedData.data.service_price = fuzzyMatch.price;
-        } else {
-          // Default to first available service if no match
-          const defaultService = services?.[0];
-          if (defaultService) {
-            console.log('Using default service:', defaultService.name);
-            parsedData.data.service_id = defaultService.id;
-            parsedData.data.service_name = defaultService.name;
-            parsedData.data.service_price = defaultService.price;
-          } else {
-            return new Response(
-              JSON.stringify({ 
-                success: false,
-                error: 'Nenhum serviço disponível encontrado.' 
-              }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        for (const svc of parsedData.data.services) {
+          let matchedService = services?.find(s => s.id === svc.service_id);
+          
+          if (!matchedService) {
+            // Try fuzzy match by name
+            const svcName = (svc.service_name || '').toLowerCase();
+            matchedService = services?.find(s => 
+              s.name.toLowerCase().includes(svcName) || 
+              svcName.includes(s.name.toLowerCase()) ||
+              s.name.toLowerCase().replace(/\s+/g, '').includes(svcName.replace(/\s+/g, '')) ||
+              svcName.replace(/\s+/g, '').includes(s.name.toLowerCase().replace(/\s+/g, ''))
             );
           }
+          
+          if (matchedService) {
+            validatedServices.push({
+              service_id: matchedService.id,
+              service_name: matchedService.name,
+              price: matchedService.price
+            });
+          }
         }
-      } else {
-        // Service exists, add price info
-        parsedData.data.service_price = matchedService.price;
-        parsedData.data.service_name = matchedService.name;
+        
+        if (validatedServices.length === 0) {
+          // Fallback to default service
+          const defaultService = services?.[0];
+          if (defaultService) {
+            validatedServices.push({
+              service_id: defaultService.id,
+              service_name: defaultService.name,
+              price: defaultService.price
+            });
+          }
+        }
+        
+        parsedData.data.services = validatedServices;
+        parsedData.data.total_price = validatedServices.reduce((sum, s) => sum + Number(s.price), 0);
+        
+        // Keep backward compatibility - set primary service
+        if (validatedServices.length > 0) {
+          parsedData.data.service_id = validatedServices[0].service_id;
+          parsedData.data.service_name = validatedServices[0].service_name;
+          parsedData.data.service_price = validatedServices[0].price;
+        }
+      } 
+      // Handle old format with single service_id
+      else if (parsedData.data.service_id) {
+        let matchedService = services?.find(s => s.id === parsedData.data.service_id);
+        
+        if (!matchedService) {
+          const serviceName = (parsedData.data.service_name || '').toLowerCase();
+          matchedService = services?.find(s => 
+            s.name.toLowerCase().includes(serviceName) || 
+            serviceName.includes(s.name.toLowerCase())
+          );
+        }
+        
+        if (!matchedService) {
+          matchedService = services?.[0];
+        }
+        
+        if (matchedService) {
+          parsedData.data.service_id = matchedService.id;
+          parsedData.data.service_name = matchedService.name;
+          parsedData.data.service_price = matchedService.price;
+          parsedData.data.services = [{
+            service_id: matchedService.id,
+            service_name: matchedService.name,
+            price: matchedService.price
+          }];
+          parsedData.data.total_price = matchedService.price;
+        }
       }
     }
 

@@ -7,12 +7,20 @@ import { Bot, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Sc
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface ServiceItem {
+  service_id: string;
+  service_name: string;
+  price: number;
+}
+
 interface ParsedAppointment {
   client_name: string;
   client_phone: string | null;
   service_id: string;
   service_name: string;
   service_price?: number;
+  services?: ServiceItem[];
+  total_price?: number;
   appointment_date: string;
   appointment_time: string;
   notes: string | null;
@@ -71,8 +79,6 @@ export const AIAssistantPanel = () => {
     setIsProcessing(true);
 
     try {
-      // First, check if there's an existing profile or create a temporary user
-      // For now, we'll create the appointment with the admin's user_id
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -93,20 +99,38 @@ export const AIAssistantPanel = () => {
         return;
       }
 
-      // Create the appointment
-      const { error: insertError } = await supabase
+      // Create the appointment with primary service
+      const { data: appointment, error: insertError } = await supabase
         .from('appointments')
         .insert({
           user_id: user.id,
           service_id: parsedData.service_id,
           appointment_date: parsedData.appointment_date,
           appointment_time: parsedData.appointment_time,
-          status: 'confirmed', // Auto-confirm since it's from the owner
+          status: 'confirmed',
           notes: `Cliente: ${parsedData.client_name}${parsedData.client_phone ? ` | Tel: ${parsedData.client_phone}` : ''}${parsedData.notes ? ` | ${parsedData.notes}` : ''}`
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) {
         throw insertError;
+      }
+
+      // Add additional services to appointment_services table
+      if (parsedData.services && parsedData.services.length > 1 && appointment) {
+        const additionalServices = parsedData.services.slice(1).map(svc => ({
+          appointment_id: appointment.id,
+          service_id: svc.service_id
+        }));
+
+        const { error: servicesError } = await supabase
+          .from('appointment_services')
+          .insert(additionalServices);
+
+        if (servicesError) {
+          console.error('Error adding additional services:', servicesError);
+        }
       }
 
       toast.success('Agendamento criado com sucesso!');
@@ -139,7 +163,7 @@ export const AIAssistantPanel = () => {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Textarea
-            placeholder="Ex: Corte de cabelo para João Silva amanhã às 14h&#10;Ex: Barba do Carlos dia 15/12 às 10:30&#10;Ex: Agendamento Pedro tel 11999887766 corte sexta 16h"
+            placeholder="Ex: Corte e barba para João amanhã às 14h&#10;Ex: Pedro corte + sobrancelha dia 15/12 às 10:30&#10;Ex: Carlos corte degradê + barba sexta 16h"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             className="min-h-[100px] bg-background/50 border-border/50 focus:border-primary"
@@ -188,18 +212,46 @@ export const AIAssistantPanel = () => {
                 )}
               </div>
               
-              <div className="flex items-center gap-2">
-                <Scissors className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Serviço:</span>
-                <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
-                  {parsedData.service_name}
-                </Badge>
-                {parsedData.service_price !== undefined && (
-                  <Badge variant="outline" className="text-green-500 border-green-500">
-                    R$ {Number(parsedData.service_price).toFixed(2)}
-                  </Badge>
-                )}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Scissors className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Serviços:</span>
+                </div>
+                <div className="ml-6 space-y-1">
+                  {parsedData.services && parsedData.services.length > 0 ? (
+                    parsedData.services.map((svc, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
+                          {svc.service_name}
+                        </Badge>
+                        <Badge variant="outline" className="text-green-500 border-green-500">
+                          R$ {Number(svc.price).toFixed(2)}
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
+                        {parsedData.service_name}
+                      </Badge>
+                      {parsedData.service_price !== undefined && (
+                        <Badge variant="outline" className="text-green-500 border-green-500">
+                          R$ {Number(parsedData.service_price).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {parsedData.total_price !== undefined && parsedData.services && parsedData.services.length > 1 && (
+                <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                  <span className="text-sm font-medium text-foreground">Total:</span>
+                  <Badge className="bg-green-600 text-white hover:bg-green-700">
+                    R$ {Number(parsedData.total_price).toFixed(2)}
+                  </Badge>
+                </div>
+              )}
               
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -243,8 +295,8 @@ export const AIAssistantPanel = () => {
 
         <div className="pt-2 border-t border-border/30">
           <p className="text-xs text-muted-foreground">
-            💡 Dica: Você pode copiar mensagens diretamente do WhatsApp e colar aqui. 
-            A IA vai extrair automaticamente: cliente, serviço, data e horário.
+            💡 Dica: Mencione múltiplos serviços como "corte + barba" ou "corte e sobrancelha". 
+            A IA vai calcular o valor total automaticamente.
           </p>
         </div>
       </CardContent>
