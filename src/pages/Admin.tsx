@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -141,6 +141,36 @@ const Admin = () => {
   const [syncing, setSyncing] = useState(false);
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
+  const [reportPeriod, setReportPeriod] = useState<string>("all");
+
+  // Filter appointments by period for reports
+  const getFilteredAppointmentsForReports = useCallback(() => {
+    if (reportPeriod === "all") return appointments;
+    
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (reportPeriod) {
+      case "week":
+        startDate = startOfWeek(now, { weekStartsOn: 0 });
+        break;
+      case "month":
+        startDate = startOfMonth(now);
+        break;
+      case "year":
+        startDate = startOfYear(now);
+        break;
+      default:
+        return appointments;
+    }
+    
+    return appointments.filter(a => {
+      const appointmentDate = parseISO(a.appointment_date);
+      return isAfter(appointmentDate, startDate) || appointmentDate.getTime() === startDate.getTime();
+    });
+  }, [appointments, reportPeriod]);
+
+  const filteredReportAppointments = getFilteredAppointmentsForReports();
 
   // Manual refresh function
   const handleManualRefresh = useCallback(async () => {
@@ -808,62 +838,83 @@ const Admin = () => {
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-primary" />
                   Resumo Financeiro
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const paidAppointments = appointments.filter(a => 
-                      a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid'
-                    );
-                    const pixTotal = appointments
-                      .filter(a => a.payment_status === 'paid_pix')
-                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                    const cashTotal = appointments
-                      .filter(a => a.payment_status === 'paid_cash')
-                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                    const pendingTotal = appointments
-                      .filter(a => a.payment_status === 'pending')
-                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                    const refundedTotal = appointments
-                      .filter(a => a.payment_status === 'refunded')
-                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                    
-                    const csvContent = [
-                      'Relatório Financeiro - Natan Barber',
-                      `Data de exportação: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
-                      '',
-                      'RESUMO POR MÉTODO DE PAGAMENTO',
-                      `PIX,R$ ${pixTotal.toFixed(2)}`,
-                      `Dinheiro,R$ ${cashTotal.toFixed(2)}`,
-                      `Total Recebido,R$ ${(pixTotal + cashTotal).toFixed(2)}`,
-                      '',
-                      `Aguardando Pagamento,R$ ${pendingTotal.toFixed(2)}`,
-                      `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
-                      '',
-                      'DETALHAMENTO',
-                      'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
-                      ...paidAppointments.map(a => 
-                        `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${a.services?.name || 'N/A'},R$ ${(a.services?.price || 0).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
-                      )
-                    ].join('\n');
-                    
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `relatorio-financeiro-${format(new Date(), "yyyy-MM-dd")}.csv`;
-                    link.click();
-                    toast.success("Relatório exportado com sucesso!");
-                  }}
-                  className="border-primary/30 hover:bg-primary/10"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-muted-foreground" />
+                    <Select value={reportPeriod} onValueChange={setReportPeriod}>
+                      <SelectTrigger className="w-[140px] border-primary/30 bg-card/60">
+                        <SelectValue placeholder="Período" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todo período</SelectItem>
+                        <SelectItem value="week">Esta semana</SelectItem>
+                        <SelectItem value="month">Este mês</SelectItem>
+                        <SelectItem value="year">Este ano</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const paidAppointments = filteredReportAppointments.filter(a => 
+                        a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid'
+                      );
+                      const pixTotal = filteredReportAppointments
+                        .filter(a => a.payment_status === 'paid_pix')
+                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                      const cashTotal = filteredReportAppointments
+                        .filter(a => a.payment_status === 'paid_cash')
+                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                      const pendingTotal = filteredReportAppointments
+                        .filter(a => a.payment_status === 'pending')
+                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                      const refundedTotal = filteredReportAppointments
+                        .filter(a => a.payment_status === 'refunded')
+                        .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                      
+                      const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
+                                         reportPeriod === 'month' ? 'Este Mês' : 
+                                         reportPeriod === 'year' ? 'Este Ano' : 'Todo Período';
+                      
+                      const csvContent = [
+                        'Relatório Financeiro - Natan Barber',
+                        `Data de exportação: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+                        `Período: ${periodLabel}`,
+                        '',
+                        'RESUMO POR MÉTODO DE PAGAMENTO',
+                        `PIX,R$ ${pixTotal.toFixed(2)}`,
+                        `Dinheiro,R$ ${cashTotal.toFixed(2)}`,
+                        `Total Recebido,R$ ${(pixTotal + cashTotal).toFixed(2)}`,
+                        '',
+                        `Aguardando Pagamento,R$ ${pendingTotal.toFixed(2)}`,
+                        `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
+                        '',
+                        'DETALHAMENTO',
+                        'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
+                        ...paidAppointments.map(a => 
+                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${a.services?.name || 'N/A'},R$ ${(a.services?.price || 0).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
+                        )
+                      ].join('\n');
+                      
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = `relatorio-financeiro-${reportPeriod}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+                      link.click();
+                      toast.success("Relatório exportado com sucesso!");
+                    }}
+                    className="border-primary/30 hover:bg-primary/10"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar CSV
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -875,7 +926,7 @@ const Admin = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-blue-500">
-                          R$ {appointments
+                          R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix')
                             .reduce((sum, a) => sum + (a.services?.price || 0), 0)
                             .toFixed(0)}
@@ -893,7 +944,7 @@ const Admin = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-green-500">
-                          R$ {appointments
+                          R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_cash')
                             .reduce((sum, a) => sum + (a.services?.price || 0), 0)
                             .toFixed(0)}
@@ -911,7 +962,7 @@ const Admin = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-yellow-500">
-                          R$ {appointments
+                          R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'pending')
                             .reduce((sum, a) => sum + (a.services?.price || 0), 0)
                             .toFixed(0)}
@@ -929,7 +980,7 @@ const Admin = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          R$ {appointments
+                          R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
                             .reduce((sum, a) => sum + (a.services?.price || 0), 0)
                             .toFixed(0)}
@@ -949,10 +1000,10 @@ const Admin = () => {
                     </CardHeader>
                     <CardContent>
                       {(() => {
-                        const pixTotal = appointments
+                        const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
                           .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                        const cashTotal = appointments
+                        const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
                           .reduce((sum, a) => sum + (a.services?.price || 0), 0);
                         const total = pixTotal + cashTotal;
@@ -1030,13 +1081,13 @@ const Admin = () => {
                     </CardHeader>
                     <CardContent>
                       {(() => {
-                        const pixTotal = appointments
+                        const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
                           .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                        const cashTotal = appointments
+                        const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
                           .reduce((sum, a) => sum + (a.services?.price || 0), 0);
-                        const pendingTotal = appointments
+                        const pendingTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'pending')
                           .reduce((sum, a) => sum + (a.services?.price || 0), 0);
                         const maxValue = Math.max(pixTotal, cashTotal, pendingTotal, 1);
@@ -1104,7 +1155,7 @@ const Admin = () => {
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos</h4>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {appointments
+                    {filteredReportAppointments
                       .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
                       .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
                       .slice(0, 10)
@@ -1139,8 +1190,8 @@ const Admin = () => {
                           </div>
                         </div>
                       ))}
-                    {appointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid').length === 0 && (
-                      <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado ainda</p>
+                    {filteredReportAppointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid').length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado no período</p>
                     )}
                   </div>
                 </div>
