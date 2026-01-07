@@ -41,6 +41,7 @@ interface Appointment {
   appointment_time: string;
   status: string;
   payment_status: string;
+  payment_method: string | null;
   notes: string | null;
   profiles: {
     full_name: string | null;
@@ -111,6 +112,22 @@ const getServicesNames = (services: AppointmentService[]): string => {
 const getServicesTotal = (services: AppointmentService[]): number => {
   if (!services || services.length === 0) return 0;
   return services.reduce((sum, s) => sum + (s.price || 0), 0);
+};
+
+// Helper function to get payment method display info
+const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card"; color: string } => {
+  switch (method) {
+    case "pix":
+      return { label: "PIX", icon: "pix", color: "text-[#00D4AA] bg-[#00D4AA]/10 border-[#00D4AA]/30" };
+    case "dinheiro":
+      return { label: "Dinheiro", icon: "cash", color: "text-green-500 bg-green-500/10 border-green-500/30" };
+    case "cartao":
+      return { label: "Cartão", icon: "card", color: "text-blue-500 bg-blue-500/10 border-blue-500/30" };
+    case "subscription":
+      return { label: "Assinatura", icon: "card", color: "text-amber-500 bg-amber-500/10 border-amber-500/30" };
+    default:
+      return { label: "PIX", icon: "pix", color: "text-[#00D4AA] bg-[#00D4AA]/10 border-[#00D4AA]/30" };
+  }
 };
 
 const playNotificationSound = () => {
@@ -355,6 +372,7 @@ const Admin = () => {
         appointment_time,
         status,
         payment_status,
+        payment_method,
         user_id,
         notes,
         service_id,
@@ -1387,6 +1405,21 @@ const Admin = () => {
                               <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
                             </span>
+                            {/* Payment Method Badge */}
+                            {(() => {
+                              const paymentInfo = getPaymentMethodInfo(appointment.payment_method);
+                              return (
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-[10px] px-1.5 py-0.5 flex items-center gap-1 ${paymentInfo.color}`}
+                                >
+                                  {paymentInfo.icon === "pix" && <img src={pixIcon} alt="PIX" className="w-3 h-3" />}
+                                  {paymentInfo.icon === "cash" && <Banknote className="w-3 h-3" />}
+                                  {paymentInfo.icon === "card" && <CreditCard className="w-3 h-3" />}
+                                  {paymentInfo.label}
+                                </Badge>
+                              );
+                            })()}
                             {(() => {
                               const subscription = getUserSubscription(appointment.user_id);
                               const hasCredits = hasRemainingCuts(subscription);
@@ -1604,6 +1637,21 @@ const Admin = () => {
                                 <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
                               </span>
+                              {/* Payment Method Badge */}
+                              {(() => {
+                                const paymentInfo = getPaymentMethodInfo(appointment.payment_method);
+                                return (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[10px] px-1.5 py-0.5 flex items-center gap-1 ${paymentInfo.color}`}
+                                  >
+                                    {paymentInfo.icon === "pix" && <img src={pixIcon} alt="PIX" className="w-3 h-3" />}
+                                    {paymentInfo.icon === "cash" && <Banknote className="w-3 h-3" />}
+                                    {paymentInfo.icon === "card" && <CreditCard className="w-3 h-3" />}
+                                    {paymentInfo.label}
+                                  </Badge>
+                                );
+                              })()}
                               {(() => {
                                 const subscription = getUserSubscription(appointment.user_id);
                                 const hasCredits = hasRemainingCuts(subscription);

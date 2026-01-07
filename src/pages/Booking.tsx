@@ -139,6 +139,7 @@ const Booking = () => {
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
   const stepContentRef = useRef<HTMLDivElement>(null);
   const prevStepRef = useRef(1);
@@ -472,7 +473,7 @@ const Booking = () => {
         appointment_time: selectedTime,
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
-        payment_method: usingSubscription ? "subscription" : "pix",
+        payment_method: usingSubscription ? "subscription" : selectedPaymentMethod,
         notes: usingSubscription ? "Agendamento via assinatura" : null,
       })
       .select()
@@ -1119,17 +1120,29 @@ const Booking = () => {
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
                 {/* PIX Option */}
-                <Collapsible>
+                <Collapsible open={selectedPaymentMethod === "pix"} onOpenChange={(open) => open && setSelectedPaymentMethod("pix")}>
                   <CollapsibleTrigger asChild>
-                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5 cursor-pointer hover:bg-[#00D4AA]/10 transition-colors">
+                    <div 
+                      onClick={() => setSelectedPaymentMethod("pix")}
+                      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
+                        selectedPaymentMethod === "pix" 
+                          ? "border-[#00D4AA] bg-[#00D4AA]/10 ring-2 ring-[#00D4AA]/30" 
+                          : "border-[#00D4AA]/30 bg-[#00D4AA]/5 hover:bg-[#00D4AA]/10"
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selectedPaymentMethod === "pix" ? "border-[#00D4AA] bg-[#00D4AA]" : "border-muted-foreground"
+                      }`}>
+                        {selectedPaymentMethod === "pix" && <Check className="w-3 h-3 text-white" />}
+                      </div>
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
                         <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm sm:text-base font-semibold text-foreground">PIX</h4>
-                        <p className="text-xs text-[#00D4AA]">Clique para gerar QR Code</p>
+                        <p className="text-xs text-[#00D4AA]">Clique para ver QR Code</p>
                       </div>
-                      <ChevronDown className="w-5 h-5 text-[#00D4AA]" />
+                      <ChevronDown className={`w-5 h-5 text-[#00D4AA] transition-transform ${selectedPaymentMethod === "pix" ? "rotate-180" : ""}`} />
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-3">
@@ -1182,7 +1195,19 @@ const Booking = () => {
                 </Collapsible>
 
                 {/* Dinheiro Option */}
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-green-500/30 bg-green-500/5">
+                <div 
+                  onClick={() => setSelectedPaymentMethod("dinheiro")}
+                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
+                    selectedPaymentMethod === "dinheiro" 
+                      ? "border-green-500 bg-green-500/10 ring-2 ring-green-500/30" 
+                      : "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    selectedPaymentMethod === "dinheiro" ? "border-green-500 bg-green-500" : "border-muted-foreground"
+                  }`}>
+                    {selectedPaymentMethod === "dinheiro" && <Check className="w-3 h-3 text-white" />}
+                  </div>
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
                     <Banknote className="w-6 h-6 text-green-500" />
                   </div>
@@ -1193,7 +1218,19 @@ const Booking = () => {
                 </div>
 
                 {/* Cartão Option */}
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-blue-500/30 bg-blue-500/5">
+                <div 
+                  onClick={() => setSelectedPaymentMethod("cartao")}
+                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
+                    selectedPaymentMethod === "cartao" 
+                      ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30" 
+                      : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    selectedPaymentMethod === "cartao" ? "border-blue-500 bg-blue-500" : "border-muted-foreground"
+                  }`}>
+                    {selectedPaymentMethod === "cartao" && <Check className="w-3 h-3 text-white" />}
+                  </div>
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                     <CreditCard className="w-6 h-6 text-blue-500" />
                   </div>
