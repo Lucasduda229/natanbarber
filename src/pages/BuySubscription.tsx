@@ -209,53 +209,95 @@ const BuySubscription = () => {
     return { bg: "bg-amber-600", text: "text-amber-600", border: "border-amber-600" };
   };
 
+  const getTierStyles = (tier: string) => {
+    if (tier === 'ouro') {
+      return {
+        cardBg: 'bg-gradient-to-br from-yellow-400/20 via-yellow-500/10 to-amber-600/20',
+        cardBorder: 'border-yellow-500/40',
+        cardBorderSelected: 'border-yellow-400 ring-yellow-400/40',
+        headerBg: 'bg-gradient-to-r from-yellow-500 to-amber-500',
+        badge: 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black',
+        text: 'text-yellow-400',
+        glow: 'shadow-[0_0_20px_rgba(234,179,8,0.3)]',
+        shimmer: 'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-yellow-300/20 before:to-transparent before:animate-[shimmer_2s_infinite]',
+      };
+    }
+    if (tier === 'prata') {
+      return {
+        cardBg: 'bg-gradient-to-br from-slate-300/20 via-gray-400/10 to-slate-500/20',
+        cardBorder: 'border-slate-400/40',
+        cardBorderSelected: 'border-slate-300 ring-slate-300/40',
+        headerBg: 'bg-gradient-to-r from-slate-400 to-gray-500',
+        badge: 'bg-gradient-to-r from-slate-300 to-gray-400 text-black',
+        text: 'text-slate-300',
+        glow: 'shadow-[0_0_20px_rgba(148,163,184,0.3)]',
+        shimmer: 'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-slate-300/20 before:to-transparent before:animate-[shimmer_2s_infinite]',
+      };
+    }
+    // Bronze
+    return {
+      cardBg: 'bg-gradient-to-br from-amber-700/20 via-orange-600/10 to-amber-800/20',
+      cardBorder: 'border-amber-600/40',
+      cardBorderSelected: 'border-amber-500 ring-amber-500/40',
+      headerBg: 'bg-gradient-to-r from-amber-600 to-orange-700',
+      badge: 'bg-gradient-to-r from-amber-600 to-orange-700 text-white',
+      text: 'text-amber-500',
+      glow: 'shadow-[0_0_20px_rgba(217,119,6,0.3)]',
+      shimmer: 'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-amber-400/20 before:to-transparent before:animate-[shimmer_2s_infinite]',
+    };
+  };
+
   const renderPackagesByTier = (tier: string, tierLabel: string, tierColor: string, tierBg: string) => {
     const tierPackages = packages.filter(p => p.name.toLowerCase().includes(tier));
     if (tierPackages.length === 0) return null;
 
+    const styles = getTierStyles(tier);
+
     return (
       <div key={tier} className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg ${tierBg} flex items-center justify-center`}>
-            <Package className={`w-4 h-4 ${tierColor}`} />
+          <div className={`w-8 h-8 rounded-lg ${styles.headerBg} flex items-center justify-center shadow-lg`}>
+            <Package className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-foreground">Pacotes {tierLabel}</h3>
+            <h3 className={`text-base font-bold ${styles.text}`}>Pacotes {tierLabel}</h3>
           </div>
         </div>
         
         <div className="grid gap-3">
           {tierPackages.sort((a, b) => b.price - a.price).map((pkg) => {
             const isSelected = selectedPackage?.id === pkg.id;
-            const colors = getPackageColor(pkg.name);
             
             return (
               <div
                 key={pkg.id}
-                className={`relative rounded-xl p-4 cursor-pointer transition-all active:scale-[0.98] ${
+                className={`relative rounded-xl p-4 cursor-pointer transition-all duration-300 active:scale-[0.98] overflow-hidden ${styles.cardBg} ${
                   isSelected 
-                    ? `${colors.bg}/20 border-2 ${colors.border} ring-2 ${colors.border}/30` 
-                    : `bg-gradient-to-br from-${tier === 'ouro' ? 'yellow-500' : tier === 'prata' ? 'slate-400' : 'amber-600'}/10 to-card/80 border border-${tier === 'ouro' ? 'yellow-500' : tier === 'prata' ? 'slate-400' : 'amber-600'}/20`
+                    ? `border-2 ${styles.cardBorderSelected} ring-2 ${styles.glow}` 
+                    : `border ${styles.cardBorder} hover:${styles.glow}`
                 }`}
                 onClick={() => handlePackageSelect(pkg)}
               >
+                {/* Metallic shimmer effect */}
+                <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-50 pointer-events-none`} />
+                
                 {isSelected && (
-                  <div className={`absolute top-3 right-3 w-6 h-6 rounded-full ${colors.bg} flex items-center justify-center`}>
-                    <Check className="w-4 h-4 text-background" />
+                  <div className={`absolute top-3 right-3 w-6 h-6 rounded-full ${styles.headerBg} flex items-center justify-center shadow-lg`}>
+                    <Check className="w-4 h-4 text-white" />
                   </div>
                 )}
                 
-                <div className="flex items-start justify-between gap-3">
+                <div className="relative flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <span className={`inline-block px-2 py-0.5 rounded-full ${colors.bg}/20 ${colors.text} text-[10px] font-bold mb-2`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-full ${styles.badge} text-[10px] font-bold mb-2 shadow-sm`}>
                       {tierLabel.toUpperCase()}
                     </span>
-                    <h4 className={`font-semibold text-sm mb-2 pr-8 ${isSelected ? colors.text : "text-foreground"}`}>
+                    <h4 className={`font-semibold text-sm mb-2 pr-8 ${isSelected ? styles.text : "text-foreground"}`}>
                       {pkg.name}
                     </h4>
                     <div className="flex flex-wrap gap-2 mb-2">
                       {pkg.items.map((item) => (
-                        <span key={item.id} className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                        <span key={item.id} className="text-xs text-muted-foreground bg-black/20 px-2 py-1 rounded backdrop-blur-sm">
                           {item.quantity}x {item.service_name}
                         </span>
                       ))}
@@ -265,7 +307,7 @@ const BuySubscription = () => {
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className={`text-xl font-bold ${colors.text}`}>
+                    <p className={`text-xl font-bold ${styles.text} drop-shadow-sm`}>
                       R$ {pkg.price.toFixed(2)}
                     </p>
                     <p className="text-[10px] text-muted-foreground">mensal</p>
