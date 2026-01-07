@@ -855,67 +855,8 @@ const Booking = () => {
                   </div>
                 )}
 
-                {/* Resumo do pacote selecionado - Fixed Floating bar */}
-                {selectedPackage && (
-                  <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl safe-bottom">
-                    <div className="max-w-5xl mx-auto">
-                      <div className={`rounded-xl border p-3 ${
-                        selectedPackage.name.toLowerCase().includes('ouro') 
-                          ? "bg-yellow-500/10 border-yellow-500/30"
-                          : selectedPackage.name.toLowerCase().includes('prata') 
-                            ? "bg-slate-400/10 border-slate-400/30" 
-                            : "bg-amber-600/10 border-amber-600/30"
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              selectedPackage.name.toLowerCase().includes('ouro') 
-                                ? "bg-yellow-500/20"
-                                : selectedPackage.name.toLowerCase().includes('prata') 
-                                  ? "bg-slate-400/20" 
-                                  : "bg-amber-600/20"
-                            }`}>
-                              <Package className={`w-5 h-5 ${
-                                selectedPackage.name.toLowerCase().includes('ouro') 
-                                  ? "text-yellow-500"
-                                  : selectedPackage.name.toLowerCase().includes('prata') 
-                                    ? "text-slate-400" 
-                                    : "text-amber-600"
-                              }`} />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-none">{selectedPackage.name}</p>
-                              <p className={`text-lg font-bold ${
-                                selectedPackage.name.toLowerCase().includes('ouro') 
-                                  ? "text-yellow-500"
-                                  : selectedPackage.name.toLowerCase().includes('prata') 
-                                    ? "text-slate-400" 
-                                    : "text-amber-600"
-                              }`}>
-                                R$ {selectedPackage.price.toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-                          <Button 
-                            onClick={handleContinueToDate}
-                            className={`h-12 px-6 text-sm rounded-xl font-semibold active:scale-[0.97] transition-transform shadow-lg ${
-                              selectedPackage.name.toLowerCase().includes('ouro')
-                                ? "bg-yellow-500 hover:bg-yellow-600 text-background"
-                                : selectedPackage.name.toLowerCase().includes('prata')
-                                  ? "bg-slate-400 hover:bg-slate-500 text-background"
-                                  : "bg-amber-600 hover:bg-amber-700 text-background"
-                            }`}
-                          >
-                            Continuar →
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
                 {/* Spacer para não cobrir conteúdo quando barra fixa aparece */}
-                {selectedPackage && <div className="h-24" />}
+                {selectedPackage && <div className="h-28" />}
               </div>
             )}
 
@@ -1412,6 +1353,65 @@ const Booking = () => {
         )}
         </div>
       </main>
+      {/* Fixed Package Continue Bar - Always visible at bottom when package selected */}
+      {step === 1 && selectedPackage && (
+        <div className="fixed bottom-0 left-0 right-0 z-[100] p-3 bg-background/98 backdrop-blur-xl border-t-2 border-primary/30 shadow-2xl safe-bottom">
+          <div className="max-w-5xl mx-auto">
+            <div className={`rounded-xl border-2 p-3 ${
+              selectedPackage.name.toLowerCase().includes('ouro') 
+                ? "bg-yellow-500/15 border-yellow-500/50"
+                : selectedPackage.name.toLowerCase().includes('prata') 
+                  ? "bg-slate-400/15 border-slate-400/50" 
+                  : "bg-amber-600/15 border-amber-600/50"
+            }`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    selectedPackage.name.toLowerCase().includes('ouro') 
+                      ? "bg-yellow-500/30"
+                      : selectedPackage.name.toLowerCase().includes('prata') 
+                        ? "bg-slate-400/30" 
+                        : "bg-amber-600/30"
+                  }`}>
+                    <Package className={`w-5 h-5 ${
+                      selectedPackage.name.toLowerCase().includes('ouro') 
+                        ? "text-yellow-500"
+                        : selectedPackage.name.toLowerCase().includes('prata') 
+                          ? "text-slate-400" 
+                          : "text-amber-600"
+                    }`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">{selectedPackage.name}</p>
+                    <p className={`text-lg font-bold ${
+                      selectedPackage.name.toLowerCase().includes('ouro') 
+                        ? "text-yellow-500"
+                        : selectedPackage.name.toLowerCase().includes('prata') 
+                          ? "text-slate-400" 
+                          : "text-amber-600"
+                    }`}>
+                      R$ {selectedPackage.price.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleContinueToDate}
+                  size="lg"
+                  className={`h-12 px-6 text-base rounded-xl font-bold active:scale-[0.97] transition-transform shadow-lg flex-shrink-0 ${
+                    selectedPackage.name.toLowerCase().includes('ouro')
+                      ? "bg-yellow-500 hover:bg-yellow-600 text-background"
+                      : selectedPackage.name.toLowerCase().includes('prata')
+                        ? "bg-slate-400 hover:bg-slate-500 text-background"
+                        : "bg-amber-600 hover:bg-amber-700 text-background"
+                  }`}
+                >
+                  Continuar →
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
