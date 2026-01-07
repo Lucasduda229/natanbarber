@@ -46,6 +46,14 @@ interface Appointment {
   } | null;
 }
 
+interface ActiveSubscription {
+  user_id: string;
+  package_name: string | null;
+  monthly_cuts_limit: number;
+  cuts_used_this_month: number;
+  is_active: boolean;
+}
+
 interface BlockedDate {
   id: string;
   blocked_date: string;
@@ -132,6 +140,7 @@ const Admin = () => {
   const { isAdmin, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+  const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterDate, setFilterDate] = useState<string>("");
@@ -143,6 +152,17 @@ const Admin = () => {
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
   const [reportPeriod, setReportPeriod] = useState<string>("all");
+
+  // Helper function to check if user has active subscription
+  const getUserSubscription = (userId: string): ActiveSubscription | null => {
+    return activeSubscriptions.find(s => s.user_id === userId && s.is_active) || null;
+  };
+
+  // Check if subscription has remaining cuts
+  const hasRemainingCuts = (subscription: ActiveSubscription | null): boolean => {
+    if (!subscription) return false;
+    return subscription.cuts_used_this_month < subscription.monthly_cuts_limit;
+  };
 
   // Filter appointments by period for reports
   const getFilteredAppointmentsForReports = useCallback(() => {
@@ -288,7 +308,7 @@ const Admin = () => {
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats()]);
+      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions()]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -296,6 +316,20 @@ const Admin = () => {
       setLoading(false);
       if (showSyncing) setSyncing(false);
     }
+  };
+
+  const fetchActiveSubscriptions = async () => {
+    const { data, error } = await supabase
+      .from("subscription_progress")
+      .select("user_id, package_name, monthly_cuts_limit, cuts_used_this_month, is_active")
+      .eq("is_active", true);
+
+    if (error) {
+      console.error("Error fetching subscriptions:", error);
+      return;
+    }
+
+    setActiveSubscriptions(data || []);
   };
 
   const fetchAppointments = async () => {
@@ -1243,9 +1277,32 @@ const Admin = () => {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
+                          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base flex-wrap">
                             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />
                             <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
+                            {(() => {
+                              const subscription = getUserSubscription(appointment.user_id);
+                              if (subscription) {
+                                const hasCredits = hasRemainingCuts(subscription);
+                                return (
+                                  <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                      "text-[10px] px-1.5 py-0.5 flex items-center gap-1",
+                                      hasCredits 
+                                        ? "border-amber-500/50 bg-amber-500/10 text-amber-400" 
+                                        : "border-red-500/50 bg-red-500/10 text-red-400"
+                                    )}
+                                  >
+                                    <Crown className="w-3 h-3" />
+                                    {hasCredits 
+                                      ? `Assinante (${subscription.cuts_used_this_month}/${subscription.monthly_cuts_limit})` 
+                                      : "Limite atingido"}
+                                  </Badge>
+                                );
+                              }
+                              return null;
+                            })()}
                           </h3>
                           <p className="text-xs sm:text-sm text-muted-foreground truncate">{getClientDisplayInfo(appointment).phone}</p>
                           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
@@ -1257,7 +1314,20 @@ const Admin = () => {
                               <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span className="truncate max-w-[80px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
                             </span>
-                            <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                            {(() => {
+                              const subscription = getUserSubscription(appointment.user_id);
+                              const hasCredits = hasRemainingCuts(subscription);
+                              if (subscription && hasCredits) {
+                                return (
+                                  <span className="font-bold text-green-500 flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> Incluso
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1386,7 +1456,7 @@ const Admin = () => {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                            <h3 className="font-semibold text-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base flex-wrap">
                               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                               <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
                               <Button
@@ -1398,6 +1468,29 @@ const Admin = () => {
                               >
                                 <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </Button>
+                              {(() => {
+                                const subscription = getUserSubscription(appointment.user_id);
+                                if (subscription) {
+                                  const hasCredits = hasRemainingCuts(subscription);
+                                  return (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={cn(
+                                        "text-[10px] px-1.5 py-0.5 flex items-center gap-1",
+                                        hasCredits 
+                                          ? "border-amber-500/50 bg-amber-500/10 text-amber-400" 
+                                          : "border-red-500/50 bg-red-500/10 text-red-400"
+                                      )}
+                                    >
+                                      <Crown className="w-3 h-3" />
+                                      {hasCredits 
+                                        ? `${subscription.cuts_used_this_month}/${subscription.monthly_cuts_limit}` 
+                                        : "Limite"}
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </h3>
                             <p className="text-xs sm:text-sm text-muted-foreground truncate">{getClientDisplayInfo(appointment).phone}</p>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
@@ -1409,6 +1502,20 @@ const Admin = () => {
                                 <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span className="truncate max-w-[100px] sm:max-w-none">{appointment.services?.name || "Serviço"}</span>
                               </span>
+                              {(() => {
+                                const subscription = getUserSubscription(appointment.user_id);
+                                const hasCredits = hasRemainingCuts(subscription);
+                                if (subscription && hasCredits) {
+                                  return (
+                                    <span className="font-bold text-green-500 flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Incluso
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="font-bold text-primary">R$ {appointment.services?.price?.toFixed(2) || "0.00"}</span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
