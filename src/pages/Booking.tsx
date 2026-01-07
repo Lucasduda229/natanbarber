@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, User, Phone, Copy, Navigation, Instagram, Package, Crown } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import CancellationPolicy from "@/components/CancellationPolicy";
@@ -1110,61 +1111,96 @@ const Booking = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
                   <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  Pagamento via PIX
+                  Formas de Pagamento
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Garanta seu horário! Realize o pagamento e confirme sua reserva.
+                  Escolha como deseja pagar seu serviço
                 </p>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
-                {/* QR Code PIX */}
-                <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl border border-primary/30 bg-card/50">
-                  <div className="p-2 sm:p-3 bg-white rounded-xl">
-                    <QRCodeSVG
-                      value={generatePixPayload({
-                        pixKey: PIX_KEY,
-                        merchantName: "NATAN BARBER",
-                        merchantCity: "LAURO MULLER",
-                        amount: totalPrice,
-                        description: selectedServices.map(s => s.name).join(", ").substring(0, 25),
-                      })}
-                      size={140}
-                      level="M"
-                      includeMargin={false}
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                    />
+                {/* PIX Option */}
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5 cursor-pointer hover:bg-[#00D4AA]/10 transition-colors">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
+                        <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm sm:text-base font-semibold text-foreground">PIX</h4>
+                        <p className="text-xs text-[#00D4AA]">Clique para gerar QR Code</p>
+                      </div>
+                      <ChevronDown className="w-5 h-5 text-[#00D4AA]" />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3">
+                    <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5">
+                      <div className="p-2 sm:p-3 bg-white rounded-xl">
+                        <QRCodeSVG
+                          value={generatePixPayload({
+                            pixKey: PIX_KEY,
+                            merchantName: "NATAN BARBER",
+                            merchantCity: "LAURO MULLER",
+                            amount: totalPrice,
+                            description: selectedServices.map(s => s.name).join(", ").substring(0, 25),
+                          })}
+                          size={140}
+                          level="M"
+                          includeMargin={false}
+                          bgColor="#ffffff"
+                          fgColor="#000000"
+                        />
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                        Escaneie o QR Code com seu app de banco
+                      </p>
+                      <div className="bg-gradient-to-r from-[#00D4AA]/20 via-[#00D4AA]/30 to-[#00D4AA]/20 border-2 border-[#00D4AA] rounded-xl px-4 py-3 text-center w-full">
+                        <p className="text-[#00D4AA] font-bold text-base">
+                          💰 Pague agora para garantir seu horário!
+                        </p>
+                        <p className="text-[#00D4AA]/80 text-sm mt-1 font-semibold">
+                          Total: R$ {totalPrice.toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                      
+                      {/* Chave PIX manual */}
+                      <div className="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-border bg-card/50 w-full">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-medium text-muted-foreground">Ou copie a chave</h4>
+                          <p className="text-sm font-mono text-foreground truncate">{PIX_KEY}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={copyPixKey}
+                          className="border-[#00D4AA]/30 hover:bg-[#00D4AA]/10 flex-shrink-0 h-8 w-8"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-[#00D4AA]" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Dinheiro Option */}
+                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-green-500/30 bg-green-500/5">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <Banknote className="w-6 h-6 text-green-500" />
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                    Escaneie o QR Code com seu app de banco
-                  </p>
-                  <div className="bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary rounded-xl px-4 py-3 text-center">
-                    <p className="text-primary font-bold text-base">
-                      💰 Pague o valor total para garantir seu horário!
-                    </p>
-                    <p className="text-primary/80 text-sm mt-1 font-semibold">
-                      Total: R$ {totalPrice.toFixed(2).replace('.', ',')}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">Dinheiro</h4>
+                    <p className="text-xs text-green-500">💵 Pague após o corte na barbearia</p>
                   </div>
                 </div>
 
-                {/* Chave PIX manual */}
-                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border bg-card/50">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                    <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
+                {/* Cartão Option */}
+                <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-blue-500/30 bg-blue-500/5">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-6 h-6 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs sm:text-sm font-medium text-muted-foreground">Ou copie a chave</h4>
-                    <p className="text-sm sm:text-base font-mono text-foreground truncate">{PIX_KEY}</p>
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">Cartão</h4>
+                    <p className="text-xs text-blue-500">💳 Pague após o corte na barbearia</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copyPixKey}
-                    className="border-primary/30 hover:bg-primary/10 flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-                  >
-                    <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
