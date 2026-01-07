@@ -1136,12 +1136,14 @@ const Booking = () => {
                   <p className="text-xs sm:text-sm text-muted-foreground text-center">
                     Escaneie o QR Code com seu app de banco
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
-                    💡 Pague pelo menos 20% do valor para garantir seu horário!
-                    <span className="block mt-1 text-sm font-bold">
-                      Mínimo: R$ {(totalPrice * 0.2).toFixed(2).replace('.', ',')}
-                    </span>
-                  </p>
+                  <div className="bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary rounded-xl px-4 py-3 text-center">
+                    <p className="text-primary font-bold text-base">
+                      💰 Pague o valor total para garantir seu horário!
+                    </p>
+                    <p className="text-primary/80 text-sm mt-1 font-semibold">
+                      Total: R$ {totalPrice.toFixed(2).replace('.', ',')}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Chave PIX manual */}
