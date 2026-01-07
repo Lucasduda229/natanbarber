@@ -940,6 +940,166 @@ const Admin = () => {
                   </Card>
                 </div>
                 
+                {/* Charts Section */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Pie Chart */}
+                  <Card className="bg-card/60 border-border/50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Distribuição por Método</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        const pixTotal = appointments
+                          .filter(a => a.payment_status === 'paid_pix')
+                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        const cashTotal = appointments
+                          .filter(a => a.payment_status === 'paid_cash')
+                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        const total = pixTotal + cashTotal;
+                        
+                        if (total === 0) {
+                          return (
+                            <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
+                              Nenhum pagamento registrado
+                            </div>
+                          );
+                        }
+                        
+                        const pixPercent = Math.round((pixTotal / total) * 100);
+                        const cashPercent = 100 - pixPercent;
+                        
+                        return (
+                          <div className="flex items-center gap-6">
+                            {/* Donut Chart */}
+                            <div className="relative w-32 h-32 flex-shrink-0">
+                              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                                <circle
+                                  cx="18"
+                                  cy="18"
+                                  r="15.915"
+                                  fill="transparent"
+                                  stroke="hsl(142, 76%, 36%)"
+                                  strokeWidth="3"
+                                  strokeDasharray={`${cashPercent} ${100 - cashPercent}`}
+                                  strokeDashoffset="0"
+                                />
+                                <circle
+                                  cx="18"
+                                  cy="18"
+                                  r="15.915"
+                                  fill="transparent"
+                                  stroke="hsl(217, 91%, 60%)"
+                                  strokeWidth="3"
+                                  strokeDasharray={`${pixPercent} ${100 - pixPercent}`}
+                                  strokeDashoffset={`-${cashPercent}`}
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <p className="text-lg font-bold text-foreground">R$ {total.toFixed(0)}</p>
+                                <p className="text-[10px] text-muted-foreground">Total</p>
+                              </div>
+                            </div>
+                            
+                            {/* Legend */}
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                <div>
+                                  <p className="text-sm font-medium">PIX</p>
+                                  <p className="text-xs text-muted-foreground">R$ {pixTotal.toFixed(2)} ({pixPercent}%)</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-green-500" />
+                                <div>
+                                  <p className="text-sm font-medium">Dinheiro</p>
+                                  <p className="text-xs text-muted-foreground">R$ {cashTotal.toFixed(2)} ({cashPercent}%)</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Bar Chart */}
+                  <Card className="bg-card/60 border-border/50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">Comparativo de Valores</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        const pixTotal = appointments
+                          .filter(a => a.payment_status === 'paid_pix')
+                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        const cashTotal = appointments
+                          .filter(a => a.payment_status === 'paid_cash')
+                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        const pendingTotal = appointments
+                          .filter(a => a.payment_status === 'pending')
+                          .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                        const maxValue = Math.max(pixTotal, cashTotal, pendingTotal, 1);
+                        
+                        return (
+                          <div className="space-y-4">
+                            {/* PIX Bar */}
+                            <div>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="flex items-center gap-2">
+                                  <CreditCard className="w-4 h-4 text-blue-500" />
+                                  PIX
+                                </span>
+                                <span className="font-medium">R$ {pixTotal.toFixed(2)}</span>
+                              </div>
+                              <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(pixTotal / maxValue) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Dinheiro Bar */}
+                            <div>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="flex items-center gap-2">
+                                  <Banknote className="w-4 h-4 text-green-500" />
+                                  Dinheiro
+                                </span>
+                                <span className="font-medium">R$ {cashTotal.toFixed(2)}</span>
+                              </div>
+                              <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(cashTotal / maxValue) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Pending Bar */}
+                            <div>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-yellow-500" />
+                                  Aguardando
+                                </span>
+                                <span className="font-medium">R$ {pendingTotal.toFixed(2)}</span>
+                              </div>
+                              <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-yellow-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(pendingTotal / maxValue) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                </div>
+                
                 {/* Transactions List */}
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos</h4>
