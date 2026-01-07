@@ -327,9 +327,22 @@ const Booking = () => {
     const bookedTimesArray = appointments?.map((a) => a.appointment_time) || [];
     setBookedTimes(bookedTimesArray);
 
-    const availableSlots = slots?.filter(
-      (slot) => !blockedTimes.includes(slot.slot_time) && !bookedTimesArray.includes(slot.slot_time)
-    ) || [];
+    // Filtrar horários que já passaram (para o dia atual)
+    const now = new Date();
+    const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+    const currentTime = format(now, "HH:mm:ss");
+
+    const availableSlots = slots?.filter((slot) => {
+      // Excluir horários bloqueados ou já reservados
+      if (blockedTimes.includes(slot.slot_time) || bookedTimesArray.includes(slot.slot_time)) {
+        return false;
+      }
+      // Se for hoje, excluir horários que já passaram
+      if (isToday && slot.slot_time <= currentTime) {
+        return false;
+      }
+      return true;
+    }) || [];
 
     setAvailableSlots(availableSlots);
   };
