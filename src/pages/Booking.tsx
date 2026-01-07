@@ -6,6 +6,7 @@ import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, C
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import CancellationPolicy from "@/components/CancellationPolicy";
+import PackageBenefits from "@/components/PackageBenefits";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -1060,6 +1061,9 @@ const Booking = () => {
                       </Card>
                     ))}
                 </div>
+
+                {/* Package Benefits - Subscriber Rewards */}
+                <PackageBenefits />
               </div>
             )}
           </div>
