@@ -1001,6 +1001,9 @@ const Admin = () => {
                       const cashTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_cash')
                         .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                      const cardTotal = filteredReportAppointments
+                        .filter(a => a.payment_status === 'paid_card')
+                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                       const pendingTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'pending')
                         .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
@@ -1020,7 +1023,8 @@ const Admin = () => {
                         'RESUMO POR MÉTODO DE PAGAMENTO',
                         `PIX,R$ ${pixTotal.toFixed(2)}`,
                         `Dinheiro,R$ ${cashTotal.toFixed(2)}`,
-                        `Total Recebido,R$ ${(pixTotal + cashTotal).toFixed(2)}`,
+                        `Cartão,R$ ${cardTotal.toFixed(2)}`,
+                        `Total Recebido,R$ ${(pixTotal + cashTotal + cardTotal).toFixed(2)}`,
                         '',
                         `Aguardando Pagamento,R$ ${pendingTotal.toFixed(2)}`,
                         `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
@@ -1028,7 +1032,7 @@ const Admin = () => {
                         'DETALHAMENTO',
                         'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
                         ...paidAppointments.map(a => 
-                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${getServicesTotal(a.services).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
+                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${getServicesTotal(a.services).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'}`
                         )
                       ].join('\n');
                       
@@ -1047,7 +1051,7 @@ const Admin = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {/* PIX Total */}
                   <Card className="bg-[#00D4AA]/10 border-[#00D4AA]/30">
                     <CardContent className="p-4 flex items-center gap-3">
@@ -1084,6 +1088,24 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                   
+                  {/* Cartão Total */}
+                  <Card className="bg-blue-500/10 border-blue-500/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <CreditCard className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-blue-500">
+                          R$ {filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_card')
+                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Recebido Cartão</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
                   {/* Aguardando */}
                   <Card className="bg-yellow-500/10 border-yellow-500/30">
                     <CardContent className="p-4 flex items-center gap-3">
@@ -1111,7 +1133,7 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-primary">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
+                            .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
                             .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
                             .toFixed(0)}
                         </p>
@@ -1136,7 +1158,10 @@ const Admin = () => {
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
                           .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
-                        const total = pixTotal + cashTotal;
+                        const cardTotal = filteredReportAppointments
+                          .filter(a => a.payment_status === 'paid_card')
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        const total = pixTotal + cashTotal + cardTotal;
                         
                         if (total === 0) {
                           return (
@@ -1147,7 +1172,8 @@ const Admin = () => {
                         }
                         
                         const pixPercent = Math.round((pixTotal / total) * 100);
-                        const cashPercent = 100 - pixPercent;
+                        const cashPercent = Math.round((cashTotal / total) * 100);
+                        const cardPercent = 100 - pixPercent - cashPercent;
                         
                         return (
                           <div className="flex items-center gap-6">
@@ -1171,8 +1197,18 @@ const Admin = () => {
                                   fill="transparent"
                                   stroke="hsl(217, 91%, 60%)"
                                   strokeWidth="3"
-                                  strokeDasharray={`${pixPercent} ${100 - pixPercent}`}
+                                  strokeDasharray={`${cardPercent} ${100 - cardPercent}`}
                                   strokeDashoffset={`-${cashPercent}`}
+                                />
+                                <circle
+                                  cx="18"
+                                  cy="18"
+                                  r="15.915"
+                                  fill="transparent"
+                                  stroke="hsl(166, 100%, 42%)"
+                                  strokeWidth="3"
+                                  strokeDasharray={`${pixPercent} ${100 - pixPercent}`}
+                                  strokeDashoffset={`-${cashPercent + cardPercent}`}
                                 />
                               </svg>
                               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -1182,9 +1218,9 @@ const Admin = () => {
                             </div>
                             
                             {/* Legend */}
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                <div className="w-3 h-3 rounded-full bg-[#00D4AA]" />
                                 <div>
                                   <p className="text-sm font-medium">PIX</p>
                                   <p className="text-xs text-muted-foreground">R$ {pixTotal.toFixed(2)} ({pixPercent}%)</p>
@@ -1195,6 +1231,13 @@ const Admin = () => {
                                 <div>
                                   <p className="text-sm font-medium">Dinheiro</p>
                                   <p className="text-xs text-muted-foreground">R$ {cashTotal.toFixed(2)} ({cashPercent}%)</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                <div>
+                                  <p className="text-sm font-medium">Cartão</p>
+                                  <p className="text-xs text-muted-foreground">R$ {cardTotal.toFixed(2)} ({cardPercent}%)</p>
                                 </div>
                               </div>
                             </div>
@@ -1217,13 +1260,16 @@ const Admin = () => {
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
                           .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        const cardTotal = filteredReportAppointments
+                          .filter(a => a.payment_status === 'paid_card')
+                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
                         const pendingTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'pending')
                           .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
-                        const maxValue = Math.max(pixTotal, cashTotal, pendingTotal, 1);
+                        const maxValue = Math.max(pixTotal, cashTotal, cardTotal, pendingTotal, 1);
                         
                         return (
-                          <div className="space-y-4">
+                          <div className="space-y-3">
                             {/* PIX Bar */}
                             <div>
                               <div className="flex justify-between text-sm mb-1">
@@ -1258,6 +1304,23 @@ const Admin = () => {
                               </div>
                             </div>
                             
+                            {/* Cartão Bar */}
+                            <div>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="flex items-center gap-2">
+                                  <CreditCard className="w-4 h-4 text-blue-500" />
+                                  Cartão
+                                </span>
+                                <span className="font-medium">R$ {cardTotal.toFixed(2)}</span>
+                              </div>
+                              <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${(cardTotal / maxValue) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                            
                             {/* Pending Bar */}
                             <div>
                               <div className="flex justify-between text-sm mb-1">
@@ -1286,7 +1349,7 @@ const Admin = () => {
                   <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos</h4>
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {filteredReportAppointments
-                      .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
+                      .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
                       .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
                       .slice(0, 10)
                       .map((appointment) => (
@@ -1294,10 +1357,13 @@ const Admin = () => {
                           <div className="flex items-center gap-3">
                             <div className={cn(
                               "w-8 h-8 rounded-full flex items-center justify-center",
-                              appointment.payment_status === 'paid_pix' ? "bg-[#00D4AA]/20" : "bg-green-500/20"
+                              appointment.payment_status === 'paid_pix' ? "bg-[#00D4AA]/20" : 
+                              appointment.payment_status === 'paid_card' ? "bg-blue-500/20" : "bg-green-500/20"
                             )}>
                               {appointment.payment_status === 'paid_pix' ? (
                                 <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                              ) : appointment.payment_status === 'paid_card' ? (
+                                <CreditCard className="w-4 h-4 text-blue-500" />
                               ) : (
                                 <Banknote className="w-4 h-4 text-green-500" />
                               )}
@@ -1313,14 +1379,15 @@ const Admin = () => {
                             <p className="text-sm font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</p>
                             <Badge variant="outline" className={cn(
                               "text-[10px]",
-                              appointment.payment_status === 'paid_pix' ? "border-[#00D4AA]/30 text-[#00D4AA]" : "border-green-500/30 text-green-500"
+                              appointment.payment_status === 'paid_pix' ? "border-[#00D4AA]/30 text-[#00D4AA]" : 
+                              appointment.payment_status === 'paid_card' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
                             )}>
-                              {appointment.payment_status === 'paid_pix' ? 'PIX' : 'Dinheiro'}
+                              {appointment.payment_status === 'paid_pix' ? 'PIX' : appointment.payment_status === 'paid_card' ? 'Cartão' : 'Dinheiro'}
                             </Badge>
                           </div>
                         </div>
                       ))}
-                    {filteredReportAppointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid').length === 0 && (
+                    {filteredReportAppointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid').length === 0 && (
                       <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado no período</p>
                     )}
                   </div>
