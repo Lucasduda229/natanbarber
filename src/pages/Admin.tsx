@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -25,6 +25,7 @@ import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
+import SubscriptionManager from "@/components/SubscriptionManager";
 
 
 interface Appointment {
@@ -803,7 +804,7 @@ const Admin = () => {
 
         <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-7 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
+            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-8 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
               <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Agendamentos">
                 <Scissors className="w-4 h-4 sm:w-4 sm:h-4" />
                 <span className="truncate">Agenda</span>
@@ -831,6 +832,10 @@ const Admin = () => {
               <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Fidelidade">
                 <Trophy className="w-4 h-4 sm:w-4 sm:h-4" />
                 <span className="truncate">Fidelidade</span>
+              </TabsTrigger>
+              <TabsTrigger value="subscriptions" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Assinaturas">
+                <Crown className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Assinat.</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1603,6 +1608,11 @@ const Admin = () => {
           {/* Loyalty Tab */}
           <TabsContent value="loyalty">
             <LoyaltyProgramManager />
+          </TabsContent>
+
+          {/* Subscriptions Tab */}
+          <TabsContent value="subscriptions">
+            <SubscriptionManager />
           </TabsContent>
         </Tabs>
       </main>
