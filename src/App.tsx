@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Booking from "./pages/Booking";
+import BuySubscription from "./pages/BuySubscription";
 import MyAppointments from "./pages/MyAppointments";
 import Admin from "./pages/Admin";
 import AppointmentHistory from "./pages/AppointmentHistory";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/booking" element={<Booking />} />
+            <Route path="/buy-subscription" element={<BuySubscription />} />
             <Route path="/my-appointments" element={<MyAppointments />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/history" element={<AppointmentHistory />} />

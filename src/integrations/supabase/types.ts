@@ -489,9 +489,14 @@ export type Database = {
         Row: {
           consecutive_months: number
           created_at: string
+          current_month_start: string | null
+          cuts_used_this_month: number
           id: string
           is_active: boolean
           last_payment_date: string | null
+          monthly_cuts_limit: number
+          package_id: string | null
+          package_name: string | null
           reward_12_months_claimed: boolean
           reward_6_months_claimed: boolean
           subscription_start_date: string
@@ -501,9 +506,14 @@ export type Database = {
         Insert: {
           consecutive_months?: number
           created_at?: string
+          current_month_start?: string | null
+          cuts_used_this_month?: number
           id?: string
           is_active?: boolean
           last_payment_date?: string | null
+          monthly_cuts_limit?: number
+          package_id?: string | null
+          package_name?: string | null
           reward_12_months_claimed?: boolean
           reward_6_months_claimed?: boolean
           subscription_start_date?: string
@@ -513,16 +523,29 @@ export type Database = {
         Update: {
           consecutive_months?: number
           created_at?: string
+          current_month_start?: string | null
+          cuts_used_this_month?: number
           id?: string
           is_active?: boolean
           last_payment_date?: string | null
+          monthly_cuts_limit?: number
+          package_id?: string | null
+          package_name?: string | null
           reward_12_months_claimed?: boolean
           reward_6_months_claimed?: boolean
           subscription_start_date?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscription_progress_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_slots: {
         Row: {
@@ -586,6 +609,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      use_subscription_cut: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -127,6 +127,15 @@ const Booking = () => {
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
+  // Subscription state
+  const [activeSubscription, setActiveSubscription] = useState<{
+    id: string;
+    package_name: string;
+    monthly_cuts_limit: number;
+    cuts_used_this_month: number;
+  } | null>(null);
+  const [usingSubscription, setUsingSubscription] = useState(false);
+  
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
@@ -178,7 +187,14 @@ const Booking = () => {
     fetchServices();
     fetchPackages();
     loadUserProfile();
+    checkActiveSubscription();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      checkActiveSubscription();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -198,6 +214,44 @@ const Booking = () => {
     if (profile) {
       if (profile.full_name) setCustomerName(profile.full_name);
       if (profile.phone) setCustomerWhatsApp(profile.phone);
+    }
+  };
+
+  const checkActiveSubscription = async () => {
+    if (!user) {
+      setActiveSubscription(null);
+      return;
+    }
+
+    const currentMonth = new Date();
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+
+    const { data: subscription } = await supabase
+      .from("subscription_progress")
+      .select("id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (subscription) {
+      // Check if we need to reset monthly cuts (new month)
+      const subMonthStart = subscription.current_month_start ? new Date(subscription.current_month_start) : null;
+      let cutsUsed = subscription.cuts_used_this_month;
+      
+      if (!subMonthStart || 
+          subMonthStart.getMonth() !== currentMonth.getMonth() || 
+          subMonthStart.getFullYear() !== currentMonth.getFullYear()) {
+        cutsUsed = 0;
+      }
+
+      setActiveSubscription({
+        id: subscription.id,
+        package_name: subscription.package_name || "Assinatura",
+        monthly_cuts_limit: subscription.monthly_cuts_limit,
+        cuts_used_this_month: cutsUsed,
+      });
+    } else {
+      setActiveSubscription(null);
     }
   };
 
@@ -374,6 +428,19 @@ const Booking = () => {
 
     setLoading(true);
 
+    // If using subscription, use a cut
+    if (usingSubscription && activeSubscription) {
+      const { data: cutUsed, error: cutError } = await supabase.rpc('use_subscription_cut', {
+        p_user_id: user.id
+      });
+
+      if (cutError || !cutUsed) {
+        toast.error("Erro ao usar crédito da assinatura", { description: "Tente novamente." });
+        setLoading(false);
+        return;
+      }
+    }
+
     // Criar o agendamento com o primeiro serviço (para compatibilidade)
     const { data: appointment, error } = await supabase
       .from("appointments")
@@ -383,8 +450,9 @@ const Booking = () => {
         appointment_date: format(selectedDate, "yyyy-MM-dd"),
         appointment_time: selectedTime,
         status: "pending",
-        payment_status: "pending",
-        payment_method: "pix",
+        payment_status: usingSubscription ? "paid" : "pending",
+        payment_method: usingSubscription ? "subscription" : "pix",
+        notes: usingSubscription ? "Agendamento via assinatura" : null,
       })
       .select()
       .single();
@@ -651,293 +719,122 @@ const Booking = () => {
               )}
             </div>
 
-            {/* Pacotes Section - Mobile Optimized */}
-            {packages.length > 0 && (
-              <div className="space-y-6 mt-6">
-                {/* Pacotes Bronze */}
-                {packages.filter(p => p.name.toLowerCase().includes('bronze')).length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-amber-600/20 flex items-center justify-center">
-                        <Package className="w-4 h-4 text-amber-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-foreground">Pacotes Bronze</h3>
-                        <p className="text-xs text-muted-foreground">Economize com nossos pacotes</p>
-                      </div>
+            {/* Active Subscription Card */}
+            {activeSubscription && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                    <Crown className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Sua Assinatura Ativa</h3>
+                    <p className="text-xs text-muted-foreground">Use seus créditos para agendar</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-card/80 border-2 border-green-500/50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {activeSubscription.cuts_used_this_month} de {activeSubscription.monthly_cuts_limit} cortes usados este mês
+                      </p>
                     </div>
-                    
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {packages.filter(p => p.name.toLowerCase().includes('bronze')).sort((a, b) => b.price - a.price).map((pkg) => {
-                        const isSelected = selectedPackage?.id === pkg.id;
-                        return (
-                          <div
-                            key={pkg.id}
-                            className={`relative rounded-xl p-3 cursor-pointer transition-all active:scale-[0.98] ${
-                              isSelected 
-                                ? "bg-amber-600/15 border-2 border-amber-600 ring-2 ring-amber-600/20" 
-                                : "bg-gradient-to-br from-amber-600/10 to-card/80 border border-amber-600/20"
-                            }`}
-                            onClick={() => handlePackageSelect(pkg)}
-                          >
-                            {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-600 flex items-center justify-center">
-                                <Check className="w-3 h-3 text-background" />
-                              </div>
-                            )}
-                            
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <span className="inline-block px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-600 text-[10px] font-bold mb-1.5">
-                                  BRONZE
-                                </span>
-                                <h4 className={`font-semibold text-sm mb-1 pr-6 ${isSelected ? "text-amber-600" : "text-foreground"}`}>
-                                  {pkg.name.replace('Pacote Bronze ', 'Opção ')}
-                                </h4>
-                                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                  {pkg.items.map((item) => (
-                                    <span key={item.id} className="text-[11px] text-muted-foreground">
-                                      {item.quantity}x {item.service_name}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <p className="text-lg font-bold text-amber-600">
-                                  R$ {pkg.price.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-green-500">
+                        {activeSubscription.monthly_cuts_limit - activeSubscription.cuts_used_this_month}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">disponíveis</p>
                     </div>
                   </div>
-                )}
-
-                {/* Pacotes Prata */}
-                {packages.filter(p => p.name.toLowerCase().includes('prata')).length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-slate-400/20 flex items-center justify-center">
-                        <Package className="w-4 h-4 text-slate-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-foreground">Pacotes Prata</h3>
-                        <p className="text-xs text-muted-foreground">Mais benefícios com preço especial</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {packages.filter(p => p.name.toLowerCase().includes('prata')).sort((a, b) => b.price - a.price).map((pkg) => {
-                        const isSelected = selectedPackage?.id === pkg.id;
-                        return (
-                          <div
-                            key={pkg.id}
-                            className={`relative rounded-xl p-3 cursor-pointer transition-all active:scale-[0.98] ${
-                              isSelected 
-                                ? "bg-slate-400/15 border-2 border-slate-400 ring-2 ring-slate-400/20" 
-                                : "bg-gradient-to-br from-slate-400/10 to-card/80 border border-slate-400/20"
-                            }`}
-                            onClick={() => handlePackageSelect(pkg)}
-                          >
-                            {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-slate-400 flex items-center justify-center">
-                                <Check className="w-3 h-3 text-background" />
-                              </div>
-                            )}
-                            
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <span className="inline-block px-2 py-0.5 rounded-full bg-slate-400/20 text-slate-400 text-[10px] font-bold mb-1.5">
-                                  PRATA
-                                </span>
-                                <h4 className={`font-semibold text-sm mb-1 pr-6 ${isSelected ? "text-slate-400" : "text-foreground"}`}>
-                                  {pkg.name.replace('Pacote Prata ', 'Opção ')}
-                                </h4>
-                                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                  {pkg.items.map((item) => (
-                                    <span key={item.id} className="text-[11px] text-muted-foreground">
-                                      {item.quantity}x {item.service_name}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <p className="text-lg font-bold text-slate-400">
-                                  R$ {pkg.price.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  
+                  {/* Progress bar */}
+                  <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+                    <div 
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ 
+                        width: `${(activeSubscription.cuts_used_this_month / activeSubscription.monthly_cuts_limit) * 100}%` 
+                      }}
+                    />
                   </div>
-                )}
 
-                {/* Pacotes Ouro */}
-                {packages.filter(p => p.name.toLowerCase().includes('ouro')).length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                        <Package className="w-4 h-4 text-yellow-500" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-foreground">Pacotes Ouro</h3>
-                        <p className="text-xs text-muted-foreground">Experiência premium exclusiva</p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {packages.filter(p => p.name.toLowerCase().includes('ouro')).sort((a, b) => b.price - a.price).map((pkg) => {
-                        const isSelected = selectedPackage?.id === pkg.id;
-                        const hasBenefits = pkg.description?.toLowerCase().includes('bônus') || pkg.description?.toLowerCase().includes('bonus');
-                        return (
-                          <div
-                            key={pkg.id}
-                            className={`relative rounded-xl p-3 cursor-pointer transition-all active:scale-[0.98] overflow-hidden ${
-                              isSelected 
-                                ? "bg-yellow-500/15 border-2 border-yellow-500 ring-2 ring-yellow-500/20" 
-                                : "bg-gradient-to-br from-yellow-500/15 to-card/80 border border-yellow-500/30"
-                            }`}
-                            onClick={() => handlePackageSelect(pkg)}
-                          >
-                            {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center z-10">
-                                <Check className="w-3 h-3 text-background" />
-                              </div>
-                            )}
-                            
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <span className="inline-block px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-[10px] font-bold">
-                                    OURO
-                                  </span>
-                                  {hasBenefits && (
-                                    <span className="inline-block px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 text-[10px] font-bold">
-                                      +BÔNUS
-                                    </span>
-                                  )}
-                                </div>
-                                <h4 className={`font-semibold text-sm mb-1 pr-6 ${isSelected ? "text-yellow-500" : "text-foreground"}`}>
-                                  {pkg.name.replace('Pacote Ouro ', 'Opção ')}
-                                </h4>
-                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mb-2">
-                                  {pkg.items.map((item) => (
-                                    <span key={item.id} className="text-[11px] text-muted-foreground">
-                                      {item.quantity}x {item.service_name}
-                                    </span>
-                                  ))}
-                                </div>
-                                {hasBenefits && (
-                                  <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                                    <p className="text-[10px] text-green-500 font-medium">
-                                      {pkg.description?.split('|')[1]?.replace('Bônus:', '').trim() || 'Benefícios exclusivos'}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                {pkg.name.includes('1') && (
-                                  <p className="text-[10px] text-muted-foreground line-through">R$ 220,00</p>
-                                )}
-                                <p className="text-lg font-bold text-yellow-500">
-                                  R$ {pkg.price.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
+                  {activeSubscription.cuts_used_this_month < activeSubscription.monthly_cuts_limit ? (
+                    <Button
+                      onClick={() => {
+                        setUsingSubscription(true);
+                        // Pre-select a service (first non-subscription service for booking)
+                        const regularServices = services.filter(s => 
+                          !s.name.toLowerCase().includes('assinatura') && 
+                          !s.name.toLowerCase().includes('premium')
                         );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Spacer para não cobrir conteúdo quando barra fixa aparece */}
-                {selectedPackage && <div className="h-28" />}
+                        if (regularServices.length > 0) {
+                          setSelectedServices([regularServices[0]]);
+                        }
+                        animateStepTransition("forward");
+                        setTimeout(() => setStep(2), 200);
+                      }}
+                      className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
+                    >
+                      <CalendarIcon className="w-5 h-5 mr-2" />
+                      Agendar com Assinatura (Grátis)
+                    </Button>
+                  ) : (
+                    <p className="text-center text-amber-500 text-sm font-medium bg-amber-500/10 p-3 rounded-lg">
+                      Você atingiu o limite de cortes deste mês. Renova no próximo mês!
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Assinaturas Section - Mobile Optimized */}
-            {services.some(s => s.name.toLowerCase().includes('assinatura') || s.name.toLowerCase().includes('premium')) && (
-              <div className="space-y-3 mt-6">
+            {/* Subscribe CTA - Only show if no active subscription */}
+            {!activeSubscription && packages.length > 0 && (
+              <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
                     <Crown className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">Assinaturas Natan</h3>
-                    <p className="text-xs text-muted-foreground">Acesso premium exclusivo</p>
+                    <h3 className="text-base font-bold text-foreground">Pacotes Mensais</h3>
+                    <p className="text-xs text-muted-foreground">Economize com nossas assinaturas</p>
                   </div>
                 </div>
-                
-                <div className="space-y-3">
-                  {services
-                    .filter(s => s.name.toLowerCase().includes('assinatura') || s.name.toLowerCase().includes('premium'))
-                    .map((subscription) => (
-                      <div
-                        key={subscription.id}
-                        className="relative rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border border-primary/30 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
-                        onClick={() => handleServiceSelect(subscription)}
-                      >
-                        {/* Premium badge */}
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-gold-gradient text-background text-[10px] font-bold z-10">
-                          PREMIUM
-                        </div>
-                        
-                        <div className="p-4">
-                          {/* Header */}
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-11 h-11 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow overflow-hidden p-0.5 flex-shrink-0">
-                              <img src={logoImage} alt="Natan Barber" className="w-full h-full object-cover rounded-lg" />
-                            </div>
-                            <div className="flex-1 min-w-0 pr-16">
-                              <h4 className="text-sm font-bold text-foreground truncate">
-                                {subscription.name}
-                              </h4>
-                              <p className="text-[11px] text-muted-foreground truncate">
-                                {subscription.description || "Acesso premium"}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Benefits Grid - Compact */}
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mb-3">
-                            {[
-                              "Cortes ilimitados",
-                              "Prioridade",
-                              "Barba inclusa",
-                              "Sobrancelha grátis",
-                              "Hidratação mensal",
-                              "Descontos"
-                            ].map((benefit, i) => (
-                              <div key={i} className="flex items-center gap-1.5 text-[11px]">
-                                <Check className="w-3 h-3 text-primary flex-shrink-0" />
-                                <span className="text-foreground truncate">{benefit}</span>
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {/* Price and CTA */}
-                          <div className="flex items-center justify-between pt-3 border-t border-primary/20">
-                            <div>
-                              <p className="text-[10px] text-muted-foreground">Por apenas</p>
-                              <p className="text-xl font-bold text-primary">
-                                R$ {subscription.price.toFixed(2)}
-                                <span className="text-xs font-normal text-muted-foreground">/mês</span>
-                              </p>
-                            </div>
-                            <Button 
-                              className="bg-gold-gradient hover:opacity-90 text-background font-semibold h-10 px-4 text-sm rounded-xl active:scale-[0.97] transition-transform"
-                            >
-                              Assinar
-                            </Button>
-                          </div>
-                        </div>
+
+                <div 
+                  className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                  onClick={() => navigate("/buy-subscription")}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
+                      <Crown className="w-7 h-7 text-background" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-foreground mb-1">Assine um Pacote</h4>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Pague mensalmente e agende seus cortes sem custo adicional
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-[10px] bg-amber-600/20 text-amber-600 px-2 py-0.5 rounded-full font-medium">
+                          Bronze a partir de R$ 65
+                        </span>
+                        <span className="text-[10px] bg-slate-400/20 text-slate-400 px-2 py-0.5 rounded-full font-medium">
+                          Prata
+                        </span>
+                        <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
+                          Ouro
+                        </span>
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full mt-4 bg-gold-gradient hover:opacity-90 text-background font-semibold h-12 rounded-xl"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate("/buy-subscription");
+                    }}
+                  >
+                    Ver Pacotes e Assinar
+                  </Button>
                 </div>
               </div>
             )}
