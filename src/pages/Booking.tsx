@@ -483,18 +483,20 @@ const Booking = () => {
       return;
     }
 
-    // Inserir todos os serviços na tabela de junção
-    const appointmentServices = selectedServices.map(service => ({
-      appointment_id: appointment.id,
-      service_id: service.id,
-    }));
+    // Inserir apenas serviços adicionais na tabela de junção (o primeiro já está em service_id)
+    if (selectedServices.length > 1) {
+      const additionalServices = selectedServices.slice(1).map(service => ({
+        appointment_id: appointment.id,
+        service_id: service.id,
+      }));
 
-    const { error: servicesError } = await supabase
-      .from("appointment_services")
-      .insert(appointmentServices);
+      const { error: servicesError } = await supabase
+        .from("appointment_services")
+        .insert(additionalServices);
 
-    if (servicesError) {
-      console.error("Error inserting appointment services:", servicesError);
+      if (servicesError) {
+        console.error("Error inserting appointment services:", servicesError);
+      }
     }
 
     setLoading(false);
