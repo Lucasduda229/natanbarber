@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -773,10 +773,14 @@ const Admin = () => {
 
         <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
           <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-6 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
+            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-7 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
               <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Agendamentos">
                 <Scissors className="w-4 h-4 sm:w-4 sm:h-4" />
                 <span className="truncate">Agenda</span>
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Relatórios">
+                <BarChart3 className="w-4 h-4 sm:w-4 sm:h-4" />
+                <span className="truncate">Relatórios</span>
               </TabsTrigger>
               <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Assistente IA">
                 <Bot className="w-4 h-4 sm:w-4 sm:h-4" />
@@ -800,6 +804,189 @@ const Admin = () => {
               </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-6">
+            <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  Resumo Financeiro
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const paidAppointments = appointments.filter(a => 
+                      a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid'
+                    );
+                    const pixTotal = appointments
+                      .filter(a => a.payment_status === 'paid_pix')
+                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                    const cashTotal = appointments
+                      .filter(a => a.payment_status === 'paid_cash')
+                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                    const pendingTotal = appointments
+                      .filter(a => a.payment_status === 'pending')
+                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                    const refundedTotal = appointments
+                      .filter(a => a.payment_status === 'refunded')
+                      .reduce((sum, a) => sum + (a.services?.price || 0), 0);
+                    
+                    const csvContent = [
+                      'Relatório Financeiro - Natan Barber',
+                      `Data de exportação: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
+                      '',
+                      'RESUMO POR MÉTODO DE PAGAMENTO',
+                      `PIX,R$ ${pixTotal.toFixed(2)}`,
+                      `Dinheiro,R$ ${cashTotal.toFixed(2)}`,
+                      `Total Recebido,R$ ${(pixTotal + cashTotal).toFixed(2)}`,
+                      '',
+                      `Aguardando Pagamento,R$ ${pendingTotal.toFixed(2)}`,
+                      `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
+                      '',
+                      'DETALHAMENTO',
+                      'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
+                      ...paidAppointments.map(a => 
+                        `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${a.services?.name || 'N/A'},R$ ${(a.services?.price || 0).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : 'Pago'}`
+                      )
+                    ].join('\n');
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `relatorio-financeiro-${format(new Date(), "yyyy-MM-dd")}.csv`;
+                    link.click();
+                    toast.success("Relatório exportado com sucesso!");
+                  }}
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* PIX Total */}
+                  <Card className="bg-blue-500/10 border-blue-500/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <CreditCard className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-blue-500">
+                          R$ {appointments
+                            .filter(a => a.payment_status === 'paid_pix')
+                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Recebido via PIX</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Dinheiro Total */}
+                  <Card className="bg-green-500/10 border-green-500/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Banknote className="w-6 h-6 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-green-500">
+                          R$ {appointments
+                            .filter(a => a.payment_status === 'paid_cash')
+                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Recebido Dinheiro</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Aguardando */}
+                  <Card className="bg-yellow-500/10 border-yellow-500/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-500">
+                          R$ {appointments
+                            .filter(a => a.payment_status === 'pending')
+                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Aguardando</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Total Geral */}
+                  <Card className="bg-primary/10 border-primary/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <BarChart3 className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-primary">
+                          R$ {appointments
+                            .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
+                            .reduce((sum, a) => sum + (a.services?.price || 0), 0)
+                            .toFixed(0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Total Recebido</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {/* Transactions List */}
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos</h4>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {appointments
+                      .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid')
+                      .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
+                      .slice(0, 10)
+                      .map((appointment) => (
+                        <div key={appointment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-border/50">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              appointment.payment_status === 'paid_pix' ? "bg-blue-500/20" : "bg-green-500/20"
+                            )}>
+                              {appointment.payment_status === 'paid_pix' ? (
+                                <CreditCard className="w-4 h-4 text-blue-500" />
+                              ) : (
+                                <Banknote className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{appointment.profiles?.full_name || 'Cliente'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(parseISO(appointment.appointment_date), "dd/MM", { locale: ptBR })} - {appointment.services?.name}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-primary">R$ {(appointment.services?.price || 0).toFixed(2)}</p>
+                            <Badge variant="outline" className={cn(
+                              "text-[10px]",
+                              appointment.payment_status === 'paid_pix' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
+                            )}>
+                              {appointment.payment_status === 'paid_pix' ? 'PIX' : 'Dinheiro'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    {appointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid').length === 0 && (
+                      <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado ainda</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* AI Assistant Tab */}
           <TabsContent value="ai-assistant">
