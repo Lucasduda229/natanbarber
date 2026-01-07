@@ -7,6 +7,7 @@ import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import CancellationPolicy from "@/components/CancellationPolicy";
 import PackageBenefits from "@/components/PackageBenefits";
+import SubscriptionProgress from "@/components/SubscriptionProgress";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -989,8 +990,9 @@ const Booking = () => {
             )}
 
             {/* Package Benefits - Subscriber Rewards - Always visible */}
-            <div className="mt-6 mb-20 sm:mb-0">
+            <div className="mt-6 space-y-4 mb-20 sm:mb-0">
               <PackageBenefits />
+              <SubscriptionProgress />
             </div>
           </div>
         )}

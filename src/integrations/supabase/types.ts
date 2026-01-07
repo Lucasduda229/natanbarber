@@ -485,6 +485,45 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_progress: {
+        Row: {
+          consecutive_months: number
+          created_at: string
+          id: string
+          is_active: boolean
+          last_payment_date: string | null
+          reward_12_months_claimed: boolean
+          reward_6_months_claimed: boolean
+          subscription_start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consecutive_months?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_payment_date?: string | null
+          reward_12_months_claimed?: boolean
+          reward_6_months_claimed?: boolean
+          subscription_start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consecutive_months?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_payment_date?: string | null
+          reward_12_months_claimed?: boolean
+          reward_6_months_claimed?: boolean
+          subscription_start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       time_slots: {
         Row: {
           created_at: string
