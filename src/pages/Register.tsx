@@ -55,7 +55,19 @@ const Register = () => {
     const { error } = await signUp(formData.email, formData.password, { full_name: formData.name, phone: formData.phone });
     setLoading(false);
     if (error) {
-      toast.error("Erro ao criar conta", { description: error.message });
+      // Handle specific error cases with friendly messages
+      if (error.message?.includes("already registered") || error.message?.includes("already exists")) {
+        toast.error("Este email já está cadastrado!", { 
+          description: "Tente fazer login ou use outro email.",
+          duration: 5000
+        });
+      } else if (error.message?.includes("Invalid email")) {
+        toast.error("Email inválido", { description: "Por favor, verifique o email digitado." });
+      } else if (error.message?.includes("Password")) {
+        toast.error("Senha inválida", { description: "A senha deve ter pelo menos 8 caracteres." });
+      } else {
+        toast.error("Erro ao criar conta", { description: error.message || "Tente novamente." });
+      }
       return;
     }
     toast.success("Conta criada com sucesso!", { description: "Faça login para continuar." });
