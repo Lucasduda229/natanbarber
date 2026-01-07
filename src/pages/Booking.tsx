@@ -1061,11 +1061,13 @@ const Booking = () => {
                       </Card>
                     ))}
                 </div>
-
-                {/* Package Benefits - Subscriber Rewards */}
-                <PackageBenefits />
               </div>
             )}
+
+            {/* Package Benefits - Subscriber Rewards - Always visible */}
+            <div className="mt-8">
+              <PackageBenefits />
+            </div>
           </div>
         )}
 
