@@ -361,7 +361,16 @@ const Booking = () => {
   };
 
   const handleConfirmBooking = async () => {
-    if (selectedServices.length === 0 || !selectedDate || !selectedTime || !user) return;
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
+      toast.error("Dados incompletos", { description: "Selecione serviços, data e horário." });
+      return;
+    }
+    
+    if (!user) {
+      toast.error("Login necessário", { description: "Faça login para confirmar seu agendamento." });
+      navigate("/login");
+      return;
+    }
 
     setLoading(true);
 
