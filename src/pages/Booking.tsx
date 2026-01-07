@@ -855,9 +855,9 @@ const Booking = () => {
                   </div>
                 )}
 
-                {/* Resumo do pacote selecionado - Floating bar */}
+                {/* Resumo do pacote selecionado - Fixed Floating bar */}
                 {selectedPackage && (
-                  <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl sm:relative sm:mt-4 sm:p-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:shadow-none safe-bottom">
+                  <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl safe-bottom">
                     <div className="max-w-5xl mx-auto">
                       <div className={`rounded-xl border p-3 ${
                         selectedPackage.name.toLowerCase().includes('ouro') 
@@ -884,7 +884,7 @@ const Booking = () => {
                               }`} />
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">{selectedPackage.name}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[150px] sm:max-w-none">{selectedPackage.name}</p>
                               <p className={`text-lg font-bold ${
                                 selectedPackage.name.toLowerCase().includes('ouro') 
                                   ? "text-yellow-500"
@@ -898,7 +898,7 @@ const Booking = () => {
                           </div>
                           <Button 
                             onClick={handleContinueToDate}
-                            className={`h-11 px-5 text-sm rounded-xl font-semibold active:scale-[0.97] transition-transform ${
+                            className={`h-12 px-6 text-sm rounded-xl font-semibold active:scale-[0.97] transition-transform shadow-lg ${
                               selectedPackage.name.toLowerCase().includes('ouro')
                                 ? "bg-yellow-500 hover:bg-yellow-600 text-background"
                                 : selectedPackage.name.toLowerCase().includes('prata')
@@ -906,13 +906,16 @@ const Booking = () => {
                                   : "bg-amber-600 hover:bg-amber-700 text-background"
                             }`}
                           >
-                            Continuar
+                            Continuar →
                           </Button>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
+                
+                {/* Spacer para não cobrir conteúdo quando barra fixa aparece */}
+                {selectedPackage && <div className="h-24" />}
               </div>
             )}
 
