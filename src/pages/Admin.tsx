@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2 } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -564,6 +564,32 @@ const Admin = () => {
     }
 
     toast.success("Pagamento atualizado");
+    fetchData();
+  };
+
+  const deleteAppointment = async (id: string) => {
+    // First delete related appointment_services
+    const { error: servicesError } = await supabase
+      .from("appointment_services")
+      .delete()
+      .eq("appointment_id", id);
+
+    if (servicesError) {
+      console.error("Error deleting appointment services:", servicesError);
+    }
+
+    // Then delete the appointment itself
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao excluir agendamento");
+      return;
+    }
+
+    toast.success("Agendamento excluído com sucesso");
     fetchData();
   };
 
@@ -1438,6 +1464,35 @@ const Admin = () => {
                           </AlertDialogContent>
                         </AlertDialog>
 
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="border-destructive/50 text-destructive hover:bg-destructive/10 h-8 sm:h-9 px-2.5 sm:px-3 text-xs sm:text-sm"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-destructive text-base sm:text-lg">Excluir Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription className="text-sm">
+                                Tem certeza que deseja excluir permanentemente o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteAppointment(appointment.id)}
+                                className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                         <WhatsAppButton
                           phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
                           message={getConfirmationMessage(
@@ -1618,6 +1673,35 @@ const Admin = () => {
                             )}
                             disabled={getClientDisplayInfo(appointment).phone === "Sem telefone"}
                           />
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="border-destructive/50 text-destructive hover:bg-destructive/10 h-7 sm:h-8 px-2"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-destructive text-base sm:text-lg">Excluir Agendamento</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm">
+                                  Tem certeza que deseja excluir permanentemente o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteAppointment(appointment.id)}
+                                  className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>
