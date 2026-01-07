@@ -345,7 +345,7 @@ const Admin = () => {
   };
 
   const fetchAppointments = async () => {
-    // Fetch appointments
+    // Fetch appointments with primary service
     const { data: appointmentsData, error: appointmentsError } = await supabase
       .from("appointments")
       .select(`
@@ -355,7 +355,12 @@ const Admin = () => {
         status,
         payment_status,
         user_id,
-        notes
+        notes,
+        service_id,
+        services:service_id (
+          name,
+          price
+        )
       `)
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
@@ -384,7 +389,7 @@ const Admin = () => {
       console.error("Error fetching profiles:", profilesError);
     }
 
-    // Fetch all services for these appointments via appointment_services
+    // Fetch additional services for these appointments via appointment_services
     const { data: appointmentServicesData, error: appointmentServicesError } = await supabase
       .from("appointment_services")
       .select(`
@@ -400,17 +405,17 @@ const Admin = () => {
       console.error("Error fetching appointment services:", appointmentServicesError);
     }
 
-    // Create a map of appointment_id to services array
-    const servicesMap = new Map<string, AppointmentService[]>();
+    // Create a map of appointment_id to additional services array
+    const additionalServicesMap = new Map<string, AppointmentService[]>();
     (appointmentServicesData || []).forEach(as => {
-      const existing = servicesMap.get(as.appointment_id) || [];
+      const existing = additionalServicesMap.get(as.appointment_id) || [];
       if (as.services) {
         existing.push({
           name: (as.services as any).name,
           price: (as.services as any).price
         });
       }
-      servicesMap.set(as.appointment_id, existing);
+      additionalServicesMap.set(as.appointment_id, existing);
     });
 
     // Create a map of user_id to profile
@@ -418,12 +423,27 @@ const Admin = () => {
       (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
     );
 
-    // Combine appointments with profiles and services
-    const appointmentsWithData = appointmentsData.map(appointment => ({
-      ...appointment,
-      profiles: profilesMap.get(appointment.user_id) || null,
-      services: servicesMap.get(appointment.id) || [],
-    }));
+    // Combine appointments with profiles and all services (primary + additional)
+    const appointmentsWithData = appointmentsData.map(appointment => {
+      const primaryService = appointment.services as any;
+      const additionalServices = additionalServicesMap.get(appointment.id) || [];
+      
+      // Build full services array: primary service first, then additional
+      const allServices: AppointmentService[] = [];
+      if (primaryService && primaryService.name) {
+        allServices.push({
+          name: primaryService.name,
+          price: primaryService.price || 0
+        });
+      }
+      allServices.push(...additionalServices);
+
+      return {
+        ...appointment,
+        profiles: profilesMap.get(appointment.user_id) || null,
+        services: allServices,
+      };
+    });
 
     setAppointments(appointmentsWithData as Appointment[]);
   };
