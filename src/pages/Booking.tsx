@@ -426,7 +426,27 @@ const Booking = () => {
       return;
     }
 
+    // Validate customer info
+    if (!customerName.trim() || !customerWhatsApp.replace(/\D/g, "")) {
+      toast.error("Dados incompletos", { description: "Preencha seu nome e WhatsApp corretamente." });
+      return;
+    }
+
     setLoading(true);
+
+    // Always update profile with customer info before creating appointment
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ 
+        full_name: customerName.trim(), 
+        phone: customerWhatsApp.replace(/\D/g, "") 
+      })
+      .eq("user_id", user.id);
+
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+      // Continue anyway, but log the error
+    }
 
     // If using subscription, use a cut
     if (usingSubscription && activeSubscription) {
