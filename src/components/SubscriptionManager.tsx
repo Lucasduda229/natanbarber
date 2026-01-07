@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Crown, Search, Plus, Minus, Award, Gift, Check, User, Phone, Calendar, RefreshCw } from "lucide-react";
+import { Crown, Search, Plus, Minus, Award, Gift, Check, User, Phone, Calendar, RefreshCw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,6 +176,25 @@ const SubscriptionManager = () => {
       } else {
         toast.error("Erro ao criar assinatura");
       }
+    }
+  };
+
+  const deleteSubscription = async (subscriptionId: string, clientName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a assinatura de ${clientName}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .delete()
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+
+      setSubscriptions(prev => prev.filter(s => s.id !== subscriptionId));
+      toast.success("Assinatura excluída com sucesso");
+    } catch (error) {
+      console.error("Error deleting subscription:", error);
+      toast.error("Erro ao excluir assinatura");
     }
   };
 
@@ -377,13 +396,22 @@ const SubscriptionManager = () => {
                   </div>
 
                   {/* Actions */}
-                  <Button
-                    variant={sub.is_active ? "outline" : "default"}
-                    size="sm"
-                    onClick={() => toggleActive(sub.id, sub.is_active)}
-                  >
-                    {sub.is_active ? "Pausar" : "Reativar"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={sub.is_active ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleActive(sub.id, sub.is_active)}
+                    >
+                      {sub.is_active ? "Pausar" : "Reativar"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteSubscription(sub.id, sub.profile?.full_name || "Cliente")}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
