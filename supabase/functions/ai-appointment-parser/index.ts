@@ -160,6 +160,50 @@ EXEMPLOS:
       );
     }
 
+    // Validate service_id - make sure it exists and get correct price
+    if (parsedData.success && parsedData.data?.service_id) {
+      const matchedService = services?.find(s => s.id === parsedData.data.service_id);
+      
+      if (!matchedService) {
+        // Try to find service by name match
+        const serviceName = parsedData.data.service_name?.toLowerCase() || '';
+        const fuzzyMatch = services?.find(s => 
+          s.name.toLowerCase().includes(serviceName) || 
+          serviceName.includes(s.name.toLowerCase())
+        );
+        
+        if (fuzzyMatch) {
+          console.log('Fuzzy matched service:', fuzzyMatch.name, 'ID:', fuzzyMatch.id);
+          parsedData.data.service_id = fuzzyMatch.id;
+          parsedData.data.service_name = fuzzyMatch.name;
+          parsedData.data.service_price = fuzzyMatch.price;
+        } else {
+          // Default to first available service if no match
+          const defaultService = services?.[0];
+          if (defaultService) {
+            console.log('Using default service:', defaultService.name);
+            parsedData.data.service_id = defaultService.id;
+            parsedData.data.service_name = defaultService.name;
+            parsedData.data.service_price = defaultService.price;
+          } else {
+            return new Response(
+              JSON.stringify({ 
+                success: false,
+                error: 'Nenhum serviço disponível encontrado.' 
+              }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      } else {
+        // Service exists, add price info
+        parsedData.data.service_price = matchedService.price;
+        parsedData.data.service_name = matchedService.name;
+      }
+    }
+
+    console.log('Final parsed data:', JSON.stringify(parsedData));
+
     return new Response(
       JSON.stringify(parsedData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

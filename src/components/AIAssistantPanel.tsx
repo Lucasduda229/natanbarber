@@ -12,6 +12,7 @@ interface ParsedAppointment {
   client_phone: string | null;
   service_id: string;
   service_name: string;
+  service_price?: number;
   appointment_date: string;
   appointment_time: string;
   notes: string | null;
@@ -193,6 +194,11 @@ export const AIAssistantPanel = () => {
                 <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
                   {parsedData.service_name}
                 </Badge>
+                {parsedData.service_price !== undefined && (
+                  <Badge variant="outline" className="text-green-500 border-green-500">
+                    R$ {Number(parsedData.service_price).toFixed(2)}
+                  </Badge>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
