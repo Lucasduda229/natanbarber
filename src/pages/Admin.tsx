@@ -544,20 +544,7 @@ const Admin = () => {
           appointment_id: id
         });
 
-        // Enviar notificação WhatsApp automaticamente se tiver telefone
-        if (clientInfo.phone && clientInfo.phone !== "Sem telefone") {
-          const whatsappMessage = status === "confirmed"
-            ? getConfirmationMessage(clientInfo.name, serviceName, dateFormatted, timeFormatted)
-            : getCancellationMessage(clientInfo.name, serviceName, dateFormatted, timeFormatted);
-          
-          // Abrir WhatsApp com mensagem pré-preenchida
-          openWhatsApp(clientInfo.phone, whatsappMessage);
-          
-          toast.success(`WhatsApp aberto para notificar ${clientInfo.name}`, {
-            description: status === "confirmed" ? "Confirmação enviada!" : "Cancelamento notificado",
-            duration: 4000
-          });
-        }
+        // WhatsApp manual - usar botão ao lado do agendamento
       }
     }
 
