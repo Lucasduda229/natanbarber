@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
+import pixIcon from "@/assets/pix-icon.png";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { GalleryManager } from "@/components/GalleryManager";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -1030,13 +1031,13 @@ const Admin = () => {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* PIX Total */}
-                  <Card className="bg-blue-500/10 border-blue-500/30">
+                  <Card className="bg-[#00D4AA]/10 border-[#00D4AA]/30">
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <CreditCard className="w-6 h-6 text-blue-500" />
+                      <div className="w-12 h-12 rounded-full bg-[#00D4AA]/20 flex items-center justify-center">
+                        <img src={pixIcon} alt="PIX" className="w-7 h-7 object-contain" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-blue-500">
+                        <p className="text-2xl font-bold text-[#00D4AA]">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix')
                             .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
@@ -1209,14 +1210,14 @@ const Admin = () => {
                             <div>
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="flex items-center gap-2">
-                                  <CreditCard className="w-4 h-4 text-blue-500" />
+                                  <img src={pixIcon} alt="PIX" className="w-4 h-4 object-contain" />
                                   PIX
                                 </span>
                                 <span className="font-medium">R$ {pixTotal.toFixed(2)}</span>
                               </div>
                               <div className="h-4 bg-muted rounded-full overflow-hidden">
                                 <div 
-                                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                  className="h-full bg-[#00D4AA] rounded-full transition-all duration-500"
                                   style={{ width: `${(pixTotal / maxValue) * 100}%` }}
                                 />
                               </div>
@@ -1275,10 +1276,10 @@ const Admin = () => {
                           <div className="flex items-center gap-3">
                             <div className={cn(
                               "w-8 h-8 rounded-full flex items-center justify-center",
-                              appointment.payment_status === 'paid_pix' ? "bg-blue-500/20" : "bg-green-500/20"
+                              appointment.payment_status === 'paid_pix' ? "bg-[#00D4AA]/20" : "bg-green-500/20"
                             )}>
                               {appointment.payment_status === 'paid_pix' ? (
-                                <CreditCard className="w-4 h-4 text-blue-500" />
+                                <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
                               ) : (
                                 <Banknote className="w-4 h-4 text-green-500" />
                               )}
@@ -1294,7 +1295,7 @@ const Admin = () => {
                             <p className="text-sm font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</p>
                             <Badge variant="outline" className={cn(
                               "text-[10px]",
-                              appointment.payment_status === 'paid_pix' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
+                              appointment.payment_status === 'paid_pix' ? "border-[#00D4AA]/30 text-[#00D4AA]" : "border-green-500/30 text-green-500"
                             )}>
                               {appointment.payment_status === 'paid_pix' ? 'PIX' : 'Dinheiro'}
                             </Badge>
