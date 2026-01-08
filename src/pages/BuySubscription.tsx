@@ -23,10 +23,18 @@ interface Package {
   description: string;
   price: number;
   items: PackageItem[];
+  benefits: PackageBenefit[];
 }
 
 interface PackageItem {
   id: string;
+  service_name: string;
+  quantity: number;
+}
+
+interface PackageBenefit {
+  id: string;
+  service_id: string;
   service_name: string;
   quantity: number;
 }
@@ -59,11 +67,31 @@ const BuySubscription = () => {
     if (packagesData) {
       const packagesWithItems = await Promise.all(
         packagesData.map(async (pkg) => {
+          // Fetch package items
           const { data: items } = await supabase
             .from("package_items")
             .select("*")
             .eq("package_id", pkg.id);
-          return { ...pkg, items: items || [] };
+          
+          // Fetch package benefits with service names
+          const { data: benefitsData } = await supabase
+            .from("package_benefits")
+            .select(`
+              id,
+              service_id,
+              quantity,
+              services (name)
+            `)
+            .eq("package_id", pkg.id);
+          
+          const benefits = (benefitsData || []).map(b => ({
+            id: b.id,
+            service_id: b.service_id,
+            service_name: (b.services as any)?.name || 'Serviço',
+            quantity: b.quantity || 1
+          }));
+          
+          return { ...pkg, items: items || [], benefits };
         })
       );
       setPackages(packagesWithItems);
@@ -299,6 +327,12 @@ const BuySubscription = () => {
                       {pkg.items.map((item) => (
                         <span key={item.id} className="text-xs text-muted-foreground bg-black/20 px-2 py-1 rounded backdrop-blur-sm">
                           {item.quantity}x {item.service_name}
+                        </span>
+                      ))}
+                      {/* Extras/Benefits */}
+                      {pkg.benefits && pkg.benefits.length > 0 && pkg.benefits.map((benefit) => (
+                        <span key={benefit.id} className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded backdrop-blur-sm border border-green-500/30">
+                          + {benefit.quantity}x {benefit.service_name}
                         </span>
                       ))}
                     </div>
