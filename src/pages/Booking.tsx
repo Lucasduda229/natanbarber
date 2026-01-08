@@ -796,25 +796,41 @@ const Booking = () => {
                   </div>
 
                   {activeSubscription.cuts_used_this_month < activeSubscription.monthly_cuts_limit ? (
-                    <Button
-                      onClick={() => {
-                        setUsingSubscription(true);
-                        // Pre-select a service (first non-subscription service for booking)
-                        const regularServices = services.filter(s => 
-                          !s.name.toLowerCase().includes('assinatura') && 
-                          !s.name.toLowerCase().includes('premium')
-                        );
-                        if (regularServices.length > 0) {
-                          setSelectedServices([regularServices[0]]);
-                        }
-                        animateStepTransition("forward");
-                        setTimeout(() => setStep(2), 200);
-                      }}
-                      className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
-                    >
-                      <CalendarIcon className="w-5 h-5 mr-2" />
-                      Agendar com Assinatura (Grátis)
-                    </Button>
+                    <>
+                      {!usingSubscription ? (
+                        <Button
+                          onClick={() => {
+                            setUsingSubscription(true);
+                            toast.success("Modo assinatura ativado!", { 
+                              description: "Selecione os serviços desejados e clique em Continuar." 
+                            });
+                          }}
+                          className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
+                        >
+                          <CalendarIcon className="w-5 h-5 mr-2" />
+                          Usar Crédito da Assinatura
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-lg border border-green-500/50">
+                            <Check className="w-5 h-5 text-green-500" />
+                            <span className="text-sm font-medium text-green-500">
+                              Modo assinatura ativo! Selecione os serviços acima.
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setUsingSubscription(false);
+                              setSelectedServices([]);
+                            }}
+                            className="w-full border-muted-foreground/30 text-muted-foreground h-10"
+                          >
+                            Cancelar uso da assinatura
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <p className="text-center text-amber-500 text-sm font-medium bg-amber-500/10 p-3 rounded-lg">
                       Você atingiu o limite de cortes deste mês. Renova no próximo mês!
