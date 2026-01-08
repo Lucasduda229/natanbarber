@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,8 @@ interface SubscriberWithUsage {
   package_name: string | null;
   monthly_cuts_limit: number;
   cuts_used_this_month: number;
+  weekly_credits_available: number;
+  current_week_start: string | null;
   profile: {
     full_name: string | null;
     phone: string | null;
@@ -246,6 +248,31 @@ const VIPPackagesManager = () => {
     } catch (error) {
       console.error("Error deleting subscription:", error);
       toast.error("Erro ao excluir assinatura");
+    }
+  };
+
+  const resetWeeklyCredits = async (subId: string, monthlyLimit: number) => {
+    const weeklyCredits = Math.ceil(monthlyLimit / 4);
+    
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({ 
+          weekly_credits_available: weeklyCredits,
+          current_week_start: new Date().toISOString().split('T')[0]
+        })
+        .eq("id", subId);
+
+      if (error) throw error;
+
+      setSubscribers(prev => 
+        prev.map(s => s.id === subId ? { ...s, weekly_credits_available: weeklyCredits } : s)
+      );
+
+      toast.success(`Créditos resetados: ${weeklyCredits} crédito(s) disponível(is)`);
+    } catch (error) {
+      console.error("Error resetting credits:", error);
+      toast.error("Erro ao resetar créditos");
     }
   };
 
@@ -463,13 +490,37 @@ const VIPPackagesManager = () => {
                       <p className="text-sm text-primary font-medium mt-1">
                         {sub.package?.name || sub.package_name || "Sem pacote"} • R$ {sub.package?.price || 0}
                       </p>
+                      
+                      {/* Weekly Credits Display */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
+                          sub.weekly_credits_available > 0 
+                            ? "bg-green-500/20 text-green-500 border border-green-500/30" 
+                            : "bg-amber-500/20 text-amber-500 border border-amber-500/30"
+                        }`}>
+                          <Calendar className="w-3 h-3" />
+                          {sub.weekly_credits_available}/{Math.ceil(sub.monthly_cuts_limit / 4)} créditos/semana
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          ({sub.cuts_used_this_month}/{sub.monthly_cuts_limit} no mês)
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="flex flex-col items-end gap-2">
                       <span className="text-sm text-muted-foreground">
                         {format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })} - {calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30)}
                       </span>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => resetWeeklyCredits(sub.id, sub.monthly_cuts_limit)}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Resetar Créditos
+                        </Button>
                         <Button 
                           size="sm" 
                           variant="outline"

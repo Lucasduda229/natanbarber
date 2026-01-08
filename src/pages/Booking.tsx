@@ -976,9 +976,14 @@ const Booking = () => {
                       )}
                     </>
                   ) : (
-                    <p className="text-center text-amber-500 text-sm font-medium bg-amber-500/10 p-3 rounded-lg">
-                      Seus créditos semanais expiraram. Novos créditos na próxima semana!
-                    </p>
+                    <div className="text-center bg-amber-500/10 p-3 rounded-lg border border-amber-500/30">
+                      <p className="text-amber-500 text-sm font-medium mb-1">
+                        ⏰ Você já usou seu crédito desta semana!
+                      </p>
+                      <p className="text-amber-400/80 text-xs">
+                        Próximo crédito disponível na segunda-feira
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
