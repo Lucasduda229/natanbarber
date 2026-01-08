@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import PackageEditor from "./PackageEditor";
 
 interface Package {
   id: string;
@@ -81,6 +82,8 @@ const VIPPackagesManager = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPackageEditor, setShowPackageEditor] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
 
@@ -358,7 +361,35 @@ const VIPPackagesManager = () => {
 
         {/* Packages Tab */}
         <TabsContent value="packages" className="space-y-4 mt-4">
-          {packages.length === 0 ? (
+          {/* Add/Edit Package Button */}
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => {
+                setEditingPackage(null);
+                setShowPackageEditor(true);
+              }} 
+              className="gap-2 bg-primary hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar Pacote
+            </Button>
+          </div>
+
+          {/* Package Editor */}
+          {showPackageEditor && (
+            <PackageEditor
+              packageToEdit={editingPackage}
+              existingItems={packageItems}
+              onClose={() => {
+                setShowPackageEditor(false);
+                setEditingPackage(null);
+              }}
+              onSave={() => fetchData()}
+            />
+          )}
+
+          {/* Packages List */}
+          {packages.length === 0 && !showPackageEditor ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum pacote cadastrado
             </div>
@@ -368,16 +399,44 @@ const VIPPackagesManager = () => {
                 const items = packageItems.filter(i => i.package_id === pkg.id);
                 const benefits = packageBenefits.filter(b => b.package_id === pkg.id);
                 
+                // Calculate total cuts for info display
+                const totalCuts = items.reduce((sum, item) => {
+                  const name = item.service_name.toLowerCase();
+                  if (name.includes('corte') || name.includes('degradê') || name.includes('degrade')) {
+                    return sum + item.quantity;
+                  }
+                  return sum;
+                }, 0);
+                const weeklyCredits = Math.max(1, Math.ceil(totalCuts / 4));
+                
                 return (
-                  <div key={pkg.id} className="bg-card border border-border rounded-lg p-4">
+                  <div key={pkg.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
                     <div className="flex items-center justify-between mb-3">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-semibold text-foreground">{pkg.name}</h3>
                         <p className="text-sm text-muted-foreground">{pkg.description}</p>
+                        {totalCuts > 0 && (
+                          <p className="text-xs text-primary mt-1">
+                            📊 {totalCuts} cortes = {weeklyCredits} crédito(s)/semana
+                          </p>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <span className="text-lg font-bold text-primary">R$ {pkg.price}</span>
-                        <p className="text-xs text-muted-foreground">{pkg.duration_days || 30} dias</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-primary">R$ {pkg.price}</span>
+                          <p className="text-xs text-muted-foreground">{pkg.duration_days || 30} dias</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setEditingPackage(pkg);
+                            setShowPackageEditor(true);
+                          }}
+                          className="shrink-0"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
