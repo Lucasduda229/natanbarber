@@ -669,6 +669,7 @@ export type Database = {
           reward_6_months_claimed: boolean
           subscription_start_date: string
           updated_at: string
+          usage_reset_date: string | null
           user_id: string
           weekly_credits_available: number | null
         }
@@ -689,6 +690,7 @@ export type Database = {
           reward_6_months_claimed?: boolean
           subscription_start_date?: string
           updated_at?: string
+          usage_reset_date?: string | null
           user_id: string
           weekly_credits_available?: number | null
         }
@@ -709,6 +711,7 @@ export type Database = {
           reward_6_months_claimed?: boolean
           subscription_start_date?: string
           updated_at?: string
+          usage_reset_date?: string | null
           user_id?: string
           weekly_credits_available?: number | null
         }
