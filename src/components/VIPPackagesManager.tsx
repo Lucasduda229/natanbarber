@@ -155,15 +155,19 @@ const VIPPackagesManager = () => {
           return appointmentCreatedAt > cutoffTime;
         });
         
-        // Count usage per service (supports multi-service appointments via appointment_services)
+        // Count usage per service
+        // First, count from main service_id of each appointment
         const usageByService: Record<string, number> = {};
         userAppointments.forEach(apt => {
-          const servicesForAppointment = appointmentServices
-            .filter(as => as.appointment_id === apt.id)
+          // Always count the main service_id
+          usageByService[apt.service_id] = (usageByService[apt.service_id] || 0) + 1;
+          
+          // Also count any additional services from appointment_services
+          const additionalServices = appointmentServices
+            .filter(as => as.appointment_id === apt.id && as.service_id !== apt.service_id)
             .map(as => as.service_id);
-
-          const serviceIdsToCount = servicesForAppointment.length > 0 ? servicesForAppointment : [apt.service_id];
-          serviceIdsToCount.forEach(serviceId => {
+          
+          additionalServices.forEach(serviceId => {
             usageByService[serviceId] = (usageByService[serviceId] || 0) + 1;
           });
         });
