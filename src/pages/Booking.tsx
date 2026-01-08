@@ -257,16 +257,55 @@ const Booking = () => {
         cuts_used_this_month: cutsUsed,
       });
 
-      // Fetch package items for this subscription's package
+      // Fetch package items AND benefits for this subscription's package
       if (subscription.package_id) {
+        // Fetch package_items
         const { data: packageItems } = await supabase
           .from("package_items")
           .select("id, service_name, service_id, quantity")
           .eq("package_id", subscription.package_id);
 
+        // Fetch package_benefits (extras like Sobrancelha)
+        const { data: packageBenefits } = await supabase
+          .from("package_benefits")
+          .select(`
+            id,
+            service_id,
+            quantity,
+            services (name)
+          `)
+          .eq("package_id", subscription.package_id);
+
+        // Combine package_items and package_benefits
+        const allItems: PackageItem[] = [];
+        
+        // Add package items
         if (packageItems) {
-          setSubscriptionPackageItems(packageItems);
+          packageItems.forEach(item => {
+            // Avoid duplicates
+            if (!allItems.some(i => i.service_id === item.service_id)) {
+              allItems.push(item);
+            }
+          });
         }
+        
+        // Add package benefits (extras) that aren't already in items
+        if (packageBenefits) {
+          packageBenefits.forEach(benefit => {
+            const serviceName = (benefit.services as any)?.name || 'Serviço';
+            // Check if already exists
+            if (!allItems.some(i => i.service_id === benefit.service_id)) {
+              allItems.push({
+                id: benefit.id,
+                service_name: serviceName,
+                service_id: benefit.service_id,
+                quantity: benefit.quantity || 1
+              });
+            }
+          });
+        }
+
+        setSubscriptionPackageItems(allItems);
       }
     } else {
       setActiveSubscription(null);
