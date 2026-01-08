@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2 } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -27,6 +27,7 @@ import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import SubscriptionManager from "@/components/SubscriptionManager";
+import { Input } from "@/components/ui/input";
 
 
 interface AppointmentService {
@@ -63,6 +64,14 @@ interface BlockedDate {
   blocked_date: string;
   blocked_time: string | null;
   reason: string | null;
+}
+
+interface RevenueAdjustment {
+  id: string;
+  appointment_id: string;
+  original_value: number;
+  adjusted_value: number;
+  adjustment_reason: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -182,6 +191,9 @@ const Admin = () => {
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
   const [reportPeriod, setReportPeriod] = useState<string>("all");
+  const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -338,7 +350,7 @@ const Admin = () => {
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions()]);
+      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments()]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -515,6 +527,45 @@ const Admin = () => {
       confirmed: confirmedData?.length || 0,
       revenue: totalRevenue,
     });
+  };
+
+  const fetchRevenueAdjustments = async () => {
+    const { data, error } = await supabase
+      .from("revenue_adjustments")
+      .select("*");
+
+    if (!error && data) {
+      setRevenueAdjustments(data as RevenueAdjustment[]);
+    }
+  };
+
+  // Get adjusted value for an appointment
+  const getAdjustedValue = (appointmentId: string, originalValue: number): number => {
+    const adjustment = revenueAdjustments.find(a => a.appointment_id === appointmentId);
+    return adjustment ? adjustment.adjusted_value : originalValue;
+  };
+
+  // Save revenue adjustment
+  const saveRevenueAdjustment = async (appointmentId: string, originalValue: number, adjustedValue: number) => {
+    const { error } = await supabase
+      .from("revenue_adjustments")
+      .upsert({
+        appointment_id: appointmentId,
+        original_value: originalValue,
+        adjusted_value: adjustedValue,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'appointment_id' });
+
+    if (error) {
+      console.error("Error saving adjustment:", error);
+      toast.error("Erro ao salvar ajuste");
+      return;
+    }
+
+    toast.success("Valor atualizado com sucesso!");
+    setEditingAppointmentId(null);
+    setEditValue("");
+    fetchRevenueAdjustments();
   };
 
   const updateAppointmentStatus = async (id: string, status: string) => {
@@ -997,19 +1048,19 @@ const Admin = () => {
                       );
                       const pixTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_pix')
-                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                       const cashTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_cash')
-                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                       const cardTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'paid_card')
-                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                       const pendingTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'pending')
-                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                       const refundedTotal = filteredReportAppointments
                         .filter(a => a.payment_status === 'refunded')
-                        .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                       
                       const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
                                          reportPeriod === 'month' ? 'Este Mês' : 
@@ -1030,10 +1081,12 @@ const Admin = () => {
                         `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
                         '',
                         'DETALHAMENTO',
-                        'Data,Horário,Cliente,Serviço,Valor,Status Pagamento',
-                        ...paidAppointments.map(a => 
-                          `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${getServicesTotal(a.services).toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'}`
-                        )
+                        'Data,Horário,Cliente,Serviço,Valor Original,Valor Ajustado,Status Pagamento',
+                        ...paidAppointments.map(a => {
+                          const originalValue = getServicesTotal(a.services);
+                          const adjustedValue = getAdjustedValue(a.id, originalValue);
+                          return `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${originalValue.toFixed(2)},R$ ${adjustedValue.toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'}`;
+                        })
                       ].join('\n');
                       
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1062,7 +1115,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-[#00D4AA]">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix')
-                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido via PIX</p>
@@ -1080,7 +1133,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-green-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_cash')
-                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido Dinheiro</p>
@@ -1098,7 +1151,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-blue-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_card')
-                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido Cartão</p>
@@ -1116,7 +1169,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-yellow-500">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'pending')
-                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Aguardando</p>
@@ -1134,7 +1187,7 @@ const Admin = () => {
                         <p className="text-2xl font-bold text-primary">
                           R$ {filteredReportAppointments
                             .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
-                            .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Recebido</p>
@@ -1154,13 +1207,13 @@ const Admin = () => {
                       {(() => {
                         const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const cardTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_card')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const total = pixTotal + cashTotal + cardTotal;
                         
                         if (total === 0) {
@@ -1256,16 +1309,16 @@ const Admin = () => {
                       {(() => {
                         const pixTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const cashTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const cardTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'paid_card')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const pendingTotal = filteredReportAppointments
                           .filter(a => a.payment_status === 'pending')
-                          .reduce((sum, a) => sum + getServicesTotal(a.services), 0);
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
                         const maxValue = Math.max(pixTotal, cashTotal, cardTotal, pendingTotal, 1);
                         
                         return (
@@ -1346,47 +1399,111 @@ const Admin = () => {
                 
                 {/* Transactions List */}
                 <div className="mt-6">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos</h4>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">Últimos Pagamentos Recebidos (clique no valor para editar)</h4>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {filteredReportAppointments
                       .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
                       .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
-                      .slice(0, 10)
-                      .map((appointment) => (
-                        <div key={appointment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-border/50">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center",
-                              appointment.payment_status === 'paid_pix' ? "bg-[#00D4AA]/20" : 
-                              appointment.payment_status === 'paid_card' ? "bg-blue-500/20" : "bg-green-500/20"
-                            )}>
-                              {appointment.payment_status === 'paid_pix' ? (
-                                <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                              ) : appointment.payment_status === 'paid_card' ? (
-                                <CreditCard className="w-4 h-4 text-blue-500" />
+                      .slice(0, 20)
+                      .map((appointment) => {
+                        const originalValue = getServicesTotal(appointment.services);
+                        const adjustedValue = getAdjustedValue(appointment.id, originalValue);
+                        const hasAdjustment = revenueAdjustments.some(adj => adj.appointment_id === appointment.id);
+                        const isEditing = editingAppointmentId === appointment.id;
+                        
+                        return (
+                          <div key={appointment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-border/50">
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center",
+                                appointment.payment_status === 'paid_pix' ? "bg-[#00D4AA]/20" : 
+                                appointment.payment_status === 'paid_card' ? "bg-blue-500/20" : "bg-green-500/20"
+                              )}>
+                                {appointment.payment_status === 'paid_pix' ? (
+                                  <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                                ) : appointment.payment_status === 'paid_card' ? (
+                                  <CreditCard className="w-4 h-4 text-blue-500" />
+                                ) : (
+                                  <Banknote className="w-4 h-4 text-green-500" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{appointment.profiles?.full_name || 'Cliente'}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(parseISO(appointment.appointment_date), "dd/MM", { locale: ptBR })} - {getServicesNames(appointment.services)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground">R$</span>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    className="w-20 h-7 text-sm text-right"
+                                    autoFocus
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                                    onClick={() => {
+                                      const newValue = parseFloat(editValue);
+                                      if (!isNaN(newValue) && newValue >= 0) {
+                                        saveRevenueAdjustment(appointment.id, originalValue, newValue);
+                                      } else {
+                                        toast.error("Valor inválido");
+                                      }
+                                    }}
+                                  >
+                                    <Save className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                    onClick={() => {
+                                      setEditingAppointmentId(null);
+                                      setEditValue("");
+                                    }}
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               ) : (
-                                <Banknote className="w-4 h-4 text-green-500" />
+                                <div className="text-right">
+                                  <button
+                                    onClick={() => {
+                                      setEditingAppointmentId(appointment.id);
+                                      setEditValue(adjustedValue.toFixed(2));
+                                    }}
+                                    className="flex items-center gap-1 text-sm font-bold text-primary hover:underline group"
+                                    title="Clique para editar"
+                                  >
+                                    R$ {adjustedValue.toFixed(2)}
+                                    <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </button>
+                                  {hasAdjustment && originalValue !== adjustedValue && (
+                                    <p className="text-[10px] text-muted-foreground line-through">
+                                      Original: R$ {originalValue.toFixed(2)}
+                                    </p>
+                                  )}
+                                  <Badge variant="outline" className={cn(
+                                    "text-[10px]",
+                                    appointment.payment_status === 'paid_pix' ? "border-[#00D4AA]/30 text-[#00D4AA]" : 
+                                    appointment.payment_status === 'paid_card' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
+                                  )}>
+                                    {appointment.payment_status === 'paid_pix' ? 'PIX' : appointment.payment_status === 'paid_card' ? 'Cartão' : 'Dinheiro'}
+                                  </Badge>
+                                </div>
                               )}
                             </div>
-                            <div>
-                              <p className="text-sm font-medium">{appointment.profiles?.full_name || 'Cliente'}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(parseISO(appointment.appointment_date), "dd/MM", { locale: ptBR })} - {getServicesNames(appointment.services)}
-                              </p>
-                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</p>
-                            <Badge variant="outline" className={cn(
-                              "text-[10px]",
-                              appointment.payment_status === 'paid_pix' ? "border-[#00D4AA]/30 text-[#00D4AA]" : 
-                              appointment.payment_status === 'paid_card' ? "border-blue-500/30 text-blue-500" : "border-green-500/30 text-green-500"
-                            )}>
-                              {appointment.payment_status === 'paid_pix' ? 'PIX' : appointment.payment_status === 'paid_card' ? 'Cartão' : 'Dinheiro'}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     {filteredReportAppointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid').length === 0 && (
                       <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado no período</p>
                     )}
