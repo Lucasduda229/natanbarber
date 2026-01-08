@@ -329,13 +329,13 @@ const BuySubscription = () => {
                           {item.quantity}x {item.service_name}
                         </span>
                       ))}
-                      {/* Extras/Benefits */}
-                      {pkg.benefits && pkg.benefits.length > 0 && pkg.benefits.map((benefit) => (
-                        <span key={benefit.id} className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded backdrop-blur-sm border border-green-500/30">
-                          + {benefit.quantity}x {benefit.service_name}
-                        </span>
-                      ))}
                     </div>
+                    {/* Extras/Benefits */}
+                    {pkg.benefits && pkg.benefits.length > 0 && (
+                      <p className="text-xs text-green-400 mb-2">
+                        + {pkg.benefits.map(b => b.service_name).join(', ')} incluso
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {pkg.description}
                     </p>
