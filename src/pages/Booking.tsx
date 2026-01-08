@@ -136,6 +136,7 @@ const Booking = () => {
     package_name: string;
     monthly_cuts_limit: number;
     cuts_used_this_month: number;
+    weekly_credits_available: number;
   } | null>(null);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
@@ -233,7 +234,7 @@ const Booking = () => {
 
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start")
+      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
@@ -255,6 +256,7 @@ const Booking = () => {
         package_name: subscription.package_name || "Assinatura",
         monthly_cuts_limit: subscription.monthly_cuts_limit,
         cuts_used_this_month: cutsUsed,
+        weekly_credits_available: subscription.weekly_credits_available || Math.ceil(subscription.monthly_cuts_limit / 4),
       });
 
       // Fetch package items AND benefits for this subscription's package
@@ -900,7 +902,7 @@ const Booking = () => {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-foreground">Sua Assinatura Ativa</h3>
-                    <p className="text-xs text-muted-foreground">Use seus créditos para agendar</p>
+                    <p className="text-xs text-muted-foreground">Use seus créditos semanais para agendar</p>
                   </div>
                 </div>
 
@@ -909,28 +911,35 @@ const Booking = () => {
                     <div>
                       <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {activeSubscription.cuts_used_this_month} de {activeSubscription.monthly_cuts_limit} cortes usados este mês
+                        Créditos desta semana
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70">
+                        (créditos expiram semanalmente se não usados)
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-green-500">
-                        {activeSubscription.monthly_cuts_limit - activeSubscription.cuts_used_this_month}
+                        {activeSubscription.weekly_credits_available}
                       </p>
                       <p className="text-[10px] text-muted-foreground">disponíveis</p>
                     </div>
                   </div>
                   
-                  {/* Progress bar */}
-                  <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ 
-                        width: `${(activeSubscription.cuts_used_this_month / activeSubscription.monthly_cuts_limit) * 100}%` 
-                      }}
-                    />
+                  {/* Weekly credits indicator */}
+                  <div className="flex gap-1 mb-3">
+                    {Array.from({ length: Math.ceil(activeSubscription.monthly_cuts_limit / 4) }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className={`flex-1 h-2 rounded-full ${
+                          i < activeSubscription.weekly_credits_available 
+                            ? "bg-green-500" 
+                            : "bg-muted"
+                        }`}
+                      />
+                    ))}
                   </div>
 
-                  {activeSubscription.cuts_used_this_month < activeSubscription.monthly_cuts_limit ? (
+                  {activeSubscription.weekly_credits_available > 0 ? (
                     <>
                       {!usingSubscription ? (
                         <Button
@@ -968,7 +977,7 @@ const Booking = () => {
                     </>
                   ) : (
                     <p className="text-center text-amber-500 text-sm font-medium bg-amber-500/10 p-3 rounded-lg">
-                      Você atingiu o limite de cortes deste mês. Renova no próximo mês!
+                      Seus créditos semanais expiraram. Novos créditos na próxima semana!
                     </p>
                   )}
                 </div>
