@@ -655,7 +655,9 @@ export type Database = {
         Row: {
           consecutive_months: number
           created_at: string
+          credits_expired_this_month: number | null
           current_month_start: string | null
+          current_week_start: string | null
           cuts_used_this_month: number
           id: string
           is_active: boolean
@@ -668,11 +670,14 @@ export type Database = {
           subscription_start_date: string
           updated_at: string
           user_id: string
+          weekly_credits_available: number | null
         }
         Insert: {
           consecutive_months?: number
           created_at?: string
+          credits_expired_this_month?: number | null
           current_month_start?: string | null
+          current_week_start?: string | null
           cuts_used_this_month?: number
           id?: string
           is_active?: boolean
@@ -685,11 +690,14 @@ export type Database = {
           subscription_start_date?: string
           updated_at?: string
           user_id: string
+          weekly_credits_available?: number | null
         }
         Update: {
           consecutive_months?: number
           created_at?: string
+          credits_expired_this_month?: number | null
           current_month_start?: string | null
+          current_week_start?: string | null
           cuts_used_this_month?: number
           id?: string
           is_active?: boolean
@@ -702,6 +710,7 @@ export type Database = {
           subscription_start_date?: string
           updated_at?: string
           user_id?: string
+          weekly_credits_available?: number | null
         }
         Relationships: [
           {
