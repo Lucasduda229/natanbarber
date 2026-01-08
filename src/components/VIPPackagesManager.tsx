@@ -92,12 +92,13 @@ const VIPPackagesManager = () => {
     setLoading(true);
     try {
       // Fetch all in parallel
-      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult] = await Promise.all([
+      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult] = await Promise.all([
         supabase.from("subscription_progress").select("*").order("is_active", { ascending: false }),
         supabase.from("packages").select("*").eq("active", true).order("price"),
         supabase.from("profiles").select("user_id, full_name, phone"),
         supabase.from("package_items").select("*"),
-        supabase.from("package_benefits").select("*, services(name)")
+        supabase.from("package_benefits").select("*, services(name)"),
+        supabase.from("appointments").select("user_id, service_id, appointment_date, status").eq("status", "completed")
       ]);
 
       if (subsResult.error) throw subsResult.error;
@@ -117,6 +118,8 @@ const VIPPackagesManager = () => {
       }));
       setPackageBenefits(processedBenefits);
 
+      const completedAppointments = appointmentsResult.data || [];
+
       // Map subscribers with profiles and packages
       const subscribersWithData = (subsResult.data || []).map(sub => {
         const profile = profilesResult.data?.find(p => p.user_id === sub.user_id);
@@ -126,15 +129,28 @@ const VIPPackagesManager = () => {
         const pkgItems = (itemsResult.data || []).filter(i => i.package_id === sub.package_id);
         const pkgBenefits = processedBenefits.filter(b => b.package_id === sub.package_id);
         
-        // Combine into unified benefits list
+        // Get completed appointments for this subscriber within subscription period
+        const subStartDate = sub.subscription_start_date;
+        const userAppointments = completedAppointments.filter(
+          a => a.user_id === sub.user_id && a.appointment_date >= subStartDate
+        );
+        
+        // Count usage per service
+        const usageByService: Record<string, number> = {};
+        userAppointments.forEach(apt => {
+          usageByService[apt.service_id] = (usageByService[apt.service_id] || 0) + 1;
+        });
+
+        // Combine into unified benefits list with actual usage
         const benefits: BenefitUsage[] = [];
         
         pkgItems.forEach(item => {
+          const serviceId = item.service_id || item.id;
           benefits.push({
-            service_id: item.service_id || item.id,
+            service_id: serviceId,
             service_name: item.service_name,
             quantity: item.quantity,
-            used: 0 // TODO: Track actual usage from client_package_usage
+            used: usageByService[serviceId] || 0
           });
         });
         
@@ -146,7 +162,7 @@ const VIPPackagesManager = () => {
               service_id: benefit.service_id,
               service_name: benefit.service_name || "Serviço",
               quantity: benefit.quantity || 1,
-              used: 0
+              used: usageByService[benefit.service_id] || 0
             });
           }
         });
