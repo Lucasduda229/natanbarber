@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, Check } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, Check, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,18 +297,38 @@ const VIPPackagesManager = () => {
         .update({ 
           weekly_credits_available: weeklyCredits,
           current_week_start: today,
-          cuts_used_this_month: 0,
+          cuts_used_this_month: 0
+        })
+        .eq("id", subId);
+
+      if (error) throw error;
+
+      toast.success(`Créditos resetados: ${weeklyCredits} crédito(s) disponível(is)`);
+      fetchData();
+    } catch (error) {
+      console.error("Error resetting credits:", error);
+      toast.error("Erro ao resetar créditos");
+    }
+  };
+
+  const resetBenefitsUsage = async (subId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({ 
           usage_reset_date: today
         })
         .eq("id", subId);
 
       if (error) throw error;
 
-      toast.success(`Créditos e uso resetados: ${weeklyCredits} crédito(s) disponível(is)`);
-      fetchData(); // Refresh to update benefits usage bars
+      toast.success("Uso dos benefícios zerado!");
+      fetchData();
     } catch (error) {
-      console.error("Error resetting credits:", error);
-      toast.error("Erro ao resetar créditos");
+      console.error("Error resetting benefits:", error);
+      toast.error("Erro ao resetar benefícios");
     }
   };
 
@@ -677,6 +697,15 @@ const VIPPackagesManager = () => {
                         >
                           <Scissors className="w-3 h-3" />
                           Registrar Uso
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => resetBenefitsUsage(sub.id)}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Resetar Benefícios
                         </Button>
                         <Button 
                           size="sm" 
