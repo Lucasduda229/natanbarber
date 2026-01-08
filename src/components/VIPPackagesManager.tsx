@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -87,6 +88,8 @@ const VIPPackagesManager = () => {
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [showUsageModal, setShowUsageModal] = useState(false);
+  const [selectedSubscriber, setSelectedSubscriber] = useState<SubscriberWithUsage | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -351,13 +354,52 @@ const VIPPackagesManager = () => {
   };
 
   const openUsageModal = (subscriber: SubscriberWithUsage) => {
-    // Usage is now automatic based on bookings (confirmed/completed)
-    toast.info("O uso é registrado automaticamente quando o cliente agenda (confirmado/concluído). ");
+    setSelectedSubscriber(subscriber);
+    setShowUsageModal(true);
   };
 
-  // Manual usage registration is intentionally disabled to avoid creating fake appointments
-  const registerUsage = async (_benefit: BenefitUsage) => {
-    toast.info("Uso automático via agendamentos");
+  const registerUsage = async (benefit: BenefitUsage) => {
+    if (!selectedSubscriber) return;
+    
+    // Check if there are remaining credits for this benefit
+    if (benefit.used >= benefit.quantity) {
+      toast.error(`Limite de ${benefit.service_name} atingido`);
+      return;
+    }
+
+    try {
+      // Use a unique timestamp to avoid slot conflicts (use seconds as time)
+      const now = new Date();
+      const uniqueTime = `23:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      const today = now.toISOString().split('T')[0];
+      
+      const { error: appointmentError } = await supabase
+        .from("appointments")
+        .insert({
+          user_id: selectedSubscriber.user_id,
+          service_id: benefit.service_id,
+          appointment_date: today,
+          appointment_time: uniqueTime,
+          status: "completed",
+          payment_status: "paid",
+          payment_method: "subscription",
+          notes: `Uso manual de assinatura - ${selectedSubscriber.package_name || 'Pacote VIP'}`
+        });
+
+      if (appointmentError) throw appointmentError;
+
+      toast.success(`Uso de ${benefit.service_name} registrado!`);
+      setShowUsageModal(false);
+      setSelectedSubscriber(null);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error registering usage:", error);
+      if (error.code === '23505') {
+        toast.error("Aguarde 1 segundo e tente novamente");
+      } else {
+        toast.error("Erro ao registrar uso");
+      }
+    }
   };
 
   const filteredSubscribers = subscribers.filter(sub => {
@@ -658,12 +700,12 @@ const VIPPackagesManager = () => {
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="outline"
-                          className="gap-1 text-xs"
-                          disabled
+                          variant="default"
+                          className="gap-1 text-xs bg-primary hover:bg-primary/90"
+                          onClick={() => openUsageModal(sub)}
                         >
                           <Scissors className="w-3 h-3" />
-                          Uso automático
+                          Registrar Uso
                         </Button>
                         <Button 
                           size="sm" 
@@ -732,6 +774,82 @@ const VIPPackagesManager = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Usage Registration Modal */}
+      <Dialog open={showUsageModal} onOpenChange={setShowUsageModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scissors className="w-5 h-5 text-primary" />
+              Registrar Uso - {selectedSubscriber?.profile?.full_name || "Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Info */}
+            <div className="p-3 rounded-lg bg-muted/50 border border-border">
+              <p className="text-xs text-muted-foreground">
+                ⚡ O uso é contabilizado automaticamente pelos agendamentos confirmados/concluídos. 
+                Use este botão apenas para registros manuais.
+              </p>
+            </div>
+
+            {/* Benefits List */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Selecione o serviço utilizado:</p>
+              
+              {selectedSubscriber?.benefits.map((benefit, idx) => {
+                const isAvailable = benefit.used < benefit.quantity;
+                const percentage = (benefit.used / benefit.quantity) * 100;
+                
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => isAvailable && registerUsage(benefit)}
+                    disabled={!isAvailable}
+                    className={`w-full p-3 rounded-lg border transition-all text-left ${
+                      isAvailable 
+                        ? "border-border hover:border-primary hover:bg-primary/5 cursor-pointer" 
+                        : "border-muted bg-muted/20 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium flex items-center gap-2">
+                        <Scissors className="w-4 h-4" />
+                        {benefit.service_name}
+                      </span>
+                      <Badge variant={percentage >= 100 ? "destructive" : "secondary"}>
+                        {benefit.used}/{benefit.quantity}
+                      </Badge>
+                    </div>
+                    <Progress 
+                      value={percentage} 
+                      className={`h-1.5 ${percentage >= 100 ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`}
+                    />
+                    {isAvailable && (
+                      <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Clique para registrar uso
+                      </p>
+                    )}
+                    {percentage >= 100 && (
+                      <p className="text-xs text-destructive mt-2">
+                        Limite atingido
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+
+              {(!selectedSubscriber?.benefits || selectedSubscriber.benefits.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum benefício encontrado para este pacote
+                </p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
