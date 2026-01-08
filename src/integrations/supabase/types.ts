@@ -142,86 +142,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_package_usage: {
-        Row: {
-          appointment_id: string | null
-          client_package_id: string
-          id: string
-          service_id: string
-          used_at: string | null
-        }
-        Insert: {
-          appointment_id?: string | null
-          client_package_id: string
-          id?: string
-          service_id: string
-          used_at?: string | null
-        }
-        Update: {
-          appointment_id?: string | null
-          client_package_id?: string
-          id?: string
-          service_id?: string
-          used_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_package_usage_client_package_id_fkey"
-            columns: ["client_package_id"]
-            isOneToOne: false
-            referencedRelation: "client_packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_package_usage_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_packages: {
-        Row: {
-          created_at: string | null
-          end_date: string
-          id: string
-          package_id: string
-          start_date: string | null
-          status: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          end_date: string
-          id?: string
-          package_id: string
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          end_date?: string
-          id?: string
-          package_id?: string
-          start_date?: string | null
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_packages_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       loyalty_programs: {
         Row: {
           created_at: string
@@ -363,45 +283,6 @@ export type Database = {
           },
         ]
       }
-      package_benefits: {
-        Row: {
-          created_at: string | null
-          id: string
-          package_id: string
-          quantity: number | null
-          service_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          package_id: string
-          quantity?: number | null
-          service_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          package_id?: string
-          quantity?: number | null
-          service_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "package_benefits_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "package_benefits_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       package_items: {
         Row: {
           created_at: string
@@ -449,8 +330,6 @@ export type Database = {
           active: boolean
           created_at: string
           description: string | null
-          discount_percent: number | null
-          duration_days: number | null
           id: string
           name: string
           price: number
@@ -459,8 +338,6 @@ export type Database = {
           active?: boolean
           created_at?: string
           description?: string | null
-          discount_percent?: number | null
-          duration_days?: number | null
           id?: string
           name: string
           price: number
@@ -469,8 +346,6 @@ export type Database = {
           active?: boolean
           created_at?: string
           description?: string | null
-          discount_percent?: number | null
-          duration_days?: number | null
           id?: string
           name?: string
           price?: number
@@ -589,7 +464,6 @@ export type Database = {
           id: string
           name: string
           price: number
-          subscribers_only: boolean | null
         }
         Insert: {
           active?: boolean
@@ -599,7 +473,6 @@ export type Database = {
           id?: string
           name: string
           price: number
-          subscribers_only?: boolean | null
         }
         Update: {
           active?: boolean
@@ -609,7 +482,6 @@ export type Database = {
           id?: string
           name?: string
           price?: number
-          subscribers_only?: boolean | null
         }
         Relationships: []
       }
