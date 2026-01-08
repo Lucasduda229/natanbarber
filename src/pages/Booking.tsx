@@ -256,7 +256,8 @@ const Booking = () => {
         package_name: subscription.package_name || "Assinatura",
         monthly_cuts_limit: subscription.monthly_cuts_limit,
         cuts_used_this_month: cutsUsed,
-        weekly_credits_available: subscription.weekly_credits_available || Math.ceil(subscription.monthly_cuts_limit / 4),
+        // IMPORTANT: 0 é um valor válido (sem créditos). Use ?? para não mascarar 0.
+        weekly_credits_available: subscription.weekly_credits_available ?? Math.ceil(subscription.monthly_cuts_limit / 4),
       });
 
       // Fetch package items AND benefits for this subscription's package
