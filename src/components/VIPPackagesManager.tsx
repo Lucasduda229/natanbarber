@@ -41,6 +41,7 @@ interface SubscriberWithUsage {
   id: string;
   user_id: string;
   subscription_start_date: string;
+  usage_reset_date: string | null;
   is_active: boolean;
   package_id: string | null;
   package_name: string | null;
@@ -135,10 +136,10 @@ const VIPPackagesManager = () => {
         const pkgItems = (itemsResult.data || []).filter(i => i.package_id === sub.package_id);
         const pkgBenefits = processedBenefits.filter(b => b.package_id === sub.package_id);
         
-        // Get completed appointments for this subscriber within subscription period
-        const subStartDate = sub.subscription_start_date;
+        // Get completed appointments for this subscriber since last reset (or subscription start)
+        const usageStartDate = sub.usage_reset_date || sub.subscription_start_date;
         const userAppointments = completedAppointments.filter(
-          a => a.user_id === sub.user_id && a.appointment_date >= subStartDate
+          a => a.user_id === sub.user_id && a.appointment_date >= usageStartDate
         );
         
         // Count usage per service
@@ -288,23 +289,23 @@ const VIPPackagesManager = () => {
 
   const resetWeeklyCredits = async (subId: string, monthlyLimit: number) => {
     const weeklyCredits = Math.ceil(monthlyLimit / 4);
+    const today = new Date().toISOString().split('T')[0];
     
     try {
       const { error } = await supabase
         .from("subscription_progress")
         .update({ 
           weekly_credits_available: weeklyCredits,
-          current_week_start: new Date().toISOString().split('T')[0]
+          current_week_start: today,
+          cuts_used_this_month: 0,
+          usage_reset_date: today
         })
         .eq("id", subId);
 
       if (error) throw error;
 
-      setSubscribers(prev => 
-        prev.map(s => s.id === subId ? { ...s, weekly_credits_available: weeklyCredits } : s)
-      );
-
-      toast.success(`Créditos resetados: ${weeklyCredits} crédito(s) disponível(is)`);
+      toast.success(`Créditos e uso resetados: ${weeklyCredits} crédito(s) disponível(is)`);
+      fetchData(); // Refresh to update benefits usage bars
     } catch (error) {
       console.error("Error resetting credits:", error);
       toast.error("Erro ao resetar créditos");
