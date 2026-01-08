@@ -94,6 +94,7 @@ interface Package {
 interface PackageItem {
   id: string;
   service_name: string;
+  service_id: string | null;
   quantity: number;
 }
 
@@ -131,10 +132,12 @@ const Booking = () => {
   // Subscription state
   const [activeSubscription, setActiveSubscription] = useState<{
     id: string;
+    package_id: string | null;
     package_name: string;
     monthly_cuts_limit: number;
     cuts_used_this_month: number;
   } | null>(null);
+  const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
   
   const [customerName, setCustomerName] = useState("");
@@ -222,15 +225,15 @@ const Booking = () => {
   const checkActiveSubscription = async () => {
     if (!user) {
       setActiveSubscription(null);
+      setSubscriptionPackageItems([]);
       return;
     }
 
     const currentMonth = new Date();
-    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
 
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start")
+      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
@@ -248,12 +251,26 @@ const Booking = () => {
 
       setActiveSubscription({
         id: subscription.id,
+        package_id: subscription.package_id,
         package_name: subscription.package_name || "Assinatura",
         monthly_cuts_limit: subscription.monthly_cuts_limit,
         cuts_used_this_month: cutsUsed,
       });
+
+      // Fetch package items for this subscription's package
+      if (subscription.package_id) {
+        const { data: packageItems } = await supabase
+          .from("package_items")
+          .select("id, service_name, service_id, quantity")
+          .eq("package_id", subscription.package_id);
+
+        if (packageItems) {
+          setSubscriptionPackageItems(packageItems);
+        }
+      }
     } else {
       setActiveSubscription(null);
+      setSubscriptionPackageItems([]);
     }
   };
 
@@ -671,48 +688,100 @@ const Booking = () => {
             <div id="services-section" className="space-y-3">
               <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Scissors className="w-4 h-4 text-primary" />
-                Nossos Serviços
+                {usingSubscription ? `Serviços do ${activeSubscription?.package_name}` : "Nossos Serviços"}
               </h3>
+              
+              {usingSubscription && subscriptionPackageItems.length > 0 && (
+                <p className="text-xs text-muted-foreground bg-green-500/10 p-2 rounded-lg border border-green-500/30">
+                  💡 Selecione os serviços incluídos no seu pacote. Cada serviço tem uma quantidade mensal.
+                </p>
+              )}
               
               {/* Mobile: 2 columns, Desktop: 3 columns */}
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
-                {services
-                  .filter(s => !s.name.toLowerCase().includes('assinatura') && !s.name.toLowerCase().includes('premium') && !s.name.toLowerCase().includes('pezinho'))
-                  .sort((a, b) => {
-                    const order = ['Corte Tradicional', 'Corte Degradê', 'Sobrancelha', 'Barba'];
-                    const indexA = order.indexOf(a.name);
-                    const indexB = order.indexOf(b.name);
-                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                    if (indexA !== -1) return -1;
-                    if (indexB !== -1) return 1;
-                    return a.price - b.price;
-                  })
-                  .map((service) => {
+                {(() => {
+                  // Get the services to display based on subscription mode
+                  const getServicesToDisplay = () => {
+                    if (usingSubscription && subscriptionPackageItems.length > 0) {
+                      // Filter services that are in the package
+                      return services.filter(service => {
+                        return subscriptionPackageItems.some(item => 
+                          item.service_id === service.id || 
+                          item.service_name.toLowerCase() === service.name.toLowerCase()
+                        );
+                      });
+                    }
+                    // Normal mode - filter out subscription/premium/pezinho
+                    return services.filter(s => 
+                      !s.name.toLowerCase().includes('assinatura') && 
+                      !s.name.toLowerCase().includes('premium') && 
+                      !s.name.toLowerCase().includes('pezinho')
+                    );
+                  };
+
+                  const servicesToDisplay = getServicesToDisplay()
+                    .sort((a, b) => {
+                      const order = ['Corte Tradicional', 'Corte Degradê', 'Sobrancelha', 'Barba', 'Pezinho'];
+                      const indexA = order.indexOf(a.name);
+                      const indexB = order.indexOf(b.name);
+                      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                      if (indexA !== -1) return -1;
+                      if (indexB !== -1) return 1;
+                      return a.price - b.price;
+                    });
+
+                  return servicesToDisplay.map((service) => {
                     const isSelected = selectedServices.some(s => s.id === service.id);
+                    
+                    // Get package item info for this service (if using subscription)
+                    const packageItem = usingSubscription 
+                      ? subscriptionPackageItems.find(item => 
+                          item.service_id === service.id || 
+                          item.service_name.toLowerCase() === service.name.toLowerCase()
+                        )
+                      : null;
+
                     return (
                       <div
                         key={service.id}
                         className={`relative rounded-xl p-3 cursor-pointer transition-all active:scale-[0.97] ${
                           isSelected 
-                            ? "bg-primary/15 border-2 border-primary ring-2 ring-primary/20" 
+                            ? usingSubscription 
+                              ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20"
+                              : "bg-primary/15 border-2 border-primary ring-2 ring-primary/20" 
                             : "bg-card/60 backdrop-blur-xl border border-primary/10"
                         }`}
                         onClick={() => handleServiceSelect(service)}
                       >
                         {/* Selection indicator */}
                         {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <div className={`absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center ${
+                            usingSubscription ? "bg-green-500" : "bg-primary"
+                          }`}>
                             <Check className="w-3 h-3 text-background" />
+                          </div>
+                        )}
+
+                        {/* Package quantity badge */}
+                        {usingSubscription && packageItem && (
+                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/50">
+                            <span className="text-[10px] font-bold text-green-500">{packageItem.quantity}x/mês</span>
                           </div>
                         )}
                         
                         {/* Icon */}
-                        <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                          <Scissors className="w-4 h-4 text-primary" />
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${
+                          usingSubscription && packageItem ? "bg-green-500/10 mt-4" : "bg-primary/10"
+                        }`}>
+                          <Scissors className={`w-4 h-4 ${usingSubscription ? "text-green-500" : "text-primary"}`} />
                         </div>
                         
                         {/* Service Info */}
-                        <h4 className={`font-semibold text-sm mb-0.5 pr-5 leading-tight ${isSelected ? "text-primary" : "text-foreground"}`}>
+                        <h4 className={`font-semibold text-sm mb-0.5 pr-5 leading-tight ${
+                          isSelected 
+                            ? usingSubscription ? "text-green-500" : "text-primary" 
+                            : "text-foreground"
+                        }`}>
                           {service.name}
                         </h4>
                         <p className="text-[11px] text-muted-foreground mb-2 line-clamp-2 leading-relaxed">
@@ -720,32 +789,59 @@ const Booking = () => {
                         </p>
                         
                         {/* Price */}
-                        <p className="text-base font-bold text-primary">
-                          R$ {service.price.toFixed(2)}
-                        </p>
+                        {usingSubscription ? (
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-muted-foreground line-through">R$ {service.price.toFixed(2)}</p>
+                            <p className="text-base font-bold text-green-500">Grátis</p>
+                          </div>
+                        ) : (
+                          <p className="text-base font-bold text-primary">
+                            R$ {service.price.toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     );
-                  })}
+                  });
+                })()}
               </div>
 
               {/* Summary - Floating bottom bar style on mobile */}
               {selectedServices.length > 0 && (
                 <div className="fixed bottom-0 left-0 right-0 z-50 p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl sm:relative sm:mt-4 sm:p-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:shadow-none safe-bottom">
                   <div className="max-w-5xl mx-auto">
-                    <div className="bg-primary/10 rounded-xl border border-primary/30 p-3 sm:p-4">
+                    <div className={`rounded-xl border p-3 sm:p-4 ${
+                      usingSubscription 
+                        ? "bg-green-500/10 border-green-500/30" 
+                        : "bg-primary/10 border-primary/30"
+                    }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            <Check className="w-5 h-5 text-primary" />
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            usingSubscription ? "bg-green-500/20" : "bg-primary/20"
+                          }`}>
+                            <Check className={`w-5 h-5 ${usingSubscription ? "text-green-500" : "text-primary"}`} />
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground">{selectedServices.length} serviço(s)</p>
-                            <p className="text-lg font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedServices.length} serviço(s) {usingSubscription && "- Assinatura"}
+                            </p>
+                            {usingSubscription ? (
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-muted-foreground line-through">R$ {totalPrice.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-green-500">Grátis</p>
+                              </div>
+                            ) : (
+                              <p className="text-lg font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+                            )}
                           </div>
                         </div>
                         <Button 
                           onClick={handleContinueToDate}
-                          className="bg-gold-gradient hover:opacity-90 text-background font-semibold h-11 px-5 text-sm rounded-xl active:scale-[0.97] transition-transform"
+                          className={`font-semibold h-11 px-5 text-sm rounded-xl active:scale-[0.97] transition-transform ${
+                            usingSubscription 
+                              ? "bg-green-500 hover:bg-green-600 text-background" 
+                              : "bg-gold-gradient hover:opacity-90 text-background"
+                          }`}
                         >
                           Continuar
                         </Button>
