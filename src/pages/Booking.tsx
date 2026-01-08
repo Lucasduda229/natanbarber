@@ -522,6 +522,25 @@ const Booking = () => {
       // Continue anyway, but log the error
     }
 
+    // CRITICAL: Check if slot is still available before proceeding
+    const appointmentDate = format(selectedDate, "yyyy-MM-dd");
+    const { data: existingAppointment } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("appointment_date", appointmentDate)
+      .eq("appointment_time", selectedTime)
+      .neq("status", "cancelled")
+      .maybeSingle();
+
+    if (existingAppointment) {
+      setLoading(false);
+      toast.error("Horário indisponível", { 
+        description: "Este horário já foi reservado. Por favor, escolha outro." 
+      });
+      // Refresh available times
+      return;
+    }
+
     // If using subscription, use a cut
     if (usingSubscription && activeSubscription) {
       const { data: cutUsed, error: cutError } = await supabase.rpc('use_subscription_cut', {
@@ -541,7 +560,7 @@ const Booking = () => {
       .insert({
         user_id: user.id,
         service_id: selectedServices[0].id,
-        appointment_date: format(selectedDate, "yyyy-MM-dd"),
+        appointment_date: appointmentDate,
         appointment_time: selectedTime,
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
@@ -553,7 +572,14 @@ const Booking = () => {
 
     if (error || !appointment) {
       setLoading(false);
-      toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
+      // Check if it's a unique constraint violation
+      if (error?.code === '23505') {
+        toast.error("Horário indisponível", { 
+          description: "Este horário acabou de ser reservado. Por favor, escolha outro." 
+        });
+      } else {
+        toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
+      }
       return;
     }
 
