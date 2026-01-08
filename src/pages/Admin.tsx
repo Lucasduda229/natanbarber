@@ -26,7 +26,7 @@ import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
-import SubscriptionManager from "@/components/SubscriptionManager";
+import VIPPackagesManager from "@/components/VIPPackagesManager";
 import { Input } from "@/components/ui/input";
 
 
@@ -2083,7 +2083,7 @@ const Admin = () => {
 
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
-            <SubscriptionManager />
+            <VIPPackagesManager />
           </TabsContent>
         </Tabs>
       </main>
