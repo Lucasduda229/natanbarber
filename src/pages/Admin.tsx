@@ -623,9 +623,24 @@ const Admin = () => {
   };
 
   const updatePaymentStatus = async (id: string, payment_status: string) => {
+    // Sync payment_method with payment_status
+    let payment_method: string | undefined;
+    if (payment_status === 'paid_pix') {
+      payment_method = 'pix';
+    } else if (payment_status === 'paid_cash') {
+      payment_method = 'dinheiro';
+    } else if (payment_status === 'paid_card') {
+      payment_method = 'cartao';
+    }
+
+    const updateData: { payment_status: string; payment_method?: string } = { payment_status };
+    if (payment_method) {
+      updateData.payment_method = payment_method;
+    }
+
     const { error } = await supabase
       .from("appointments")
-      .update({ payment_status })
+      .update(updateData)
       .eq("id", id);
 
     if (error) {
