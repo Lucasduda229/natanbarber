@@ -180,7 +180,12 @@ const BuySubscription = () => {
       return sum;
     }, 0);
 
-    const monthlyCutsLimit = Math.max(totalCuts, 4); // Minimum 4 cuts
+    // Monthly cuts limit = total number of cuts in the package (no minimum)
+    const monthlyCutsLimit = totalCuts || 4; // fallback to 4 only if 0
+
+    // Calculate weekly credits based on total cuts
+    // 2 cuts = 1/week (2 weeks), 4 cuts = 1/week (4 weeks), etc.
+    const weeklyCredits = Math.ceil(monthlyCutsLimit / 4);
 
     // Create a pending subscription purchase (will be activated by admin)
     const { error } = await supabase
@@ -190,6 +195,8 @@ const BuySubscription = () => {
         package_id: selectedPackage.id,
         package_name: selectedPackage.name,
         monthly_cuts_limit: monthlyCutsLimit,
+        weekly_credits_available: weeklyCredits,
+        current_week_start: new Date().toISOString().split('T')[0],
         cuts_used_this_month: 0,
         is_active: false, // Admin will activate after payment confirmation
         consecutive_months: 0,

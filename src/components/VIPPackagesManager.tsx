@@ -193,9 +193,21 @@ const VIPPackagesManager = () => {
     const pkg = packages.find(p => p.id === selectedPackageId);
     if (!pkg) return;
 
+    // Get package items to count total cuts
+    const pkgItems = packageItems.filter(i => i.package_id === selectedPackageId);
+    const totalCuts = pkgItems.reduce((sum, item) => {
+      const serviceName = item.service_name.toLowerCase();
+      if (serviceName.includes('cabelo') || serviceName.includes('degradê') || serviceName.includes('degrade') || serviceName.includes('corte')) {
+        return sum + item.quantity;
+      }
+      return sum;
+    }, 0);
+
+    const monthlyCutsLimit = totalCuts || 4;
+    const weeklyCredits = Math.max(1, Math.ceil(monthlyCutsLimit / 4));
+
     const durationDays = pkg.duration_days || 30;
     const startDate = new Date();
-    const endDate = addDays(startDate, durationDays);
 
     try {
       const { error } = await supabase
@@ -205,8 +217,9 @@ const VIPPackagesManager = () => {
           subscription_start_date: startDate.toISOString().split('T')[0],
           package_id: selectedPackageId,
           package_name: pkg.name,
-          monthly_cuts_limit: 4,
-          weekly_credits_available: 1,
+          monthly_cuts_limit: monthlyCutsLimit,
+          weekly_credits_available: weeklyCredits,
+          current_week_start: startDate.toISOString().split('T')[0],
           consecutive_months: 1,
           is_active: true
         });
@@ -515,7 +528,7 @@ const VIPPackagesManager = () => {
                             : "bg-amber-500/20 text-amber-500 border border-amber-500/30"
                         }`}>
                           <Calendar className="w-3 h-3" />
-                          {sub.weekly_credits_available}/{Math.ceil(sub.monthly_cuts_limit / 4)} créditos/semana
+                          {sub.weekly_credits_available}/{Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4))} créditos/semana
                         </div>
                         <span className="text-[10px] text-muted-foreground">
                           ({sub.cuts_used_this_month}/{sub.monthly_cuts_limit} no mês)
