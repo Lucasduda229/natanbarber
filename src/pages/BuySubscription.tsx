@@ -15,7 +15,7 @@ import logoImage from "@/assets/logo-barbershop.png";
 import pixIcon from "@/assets/pix-icon.png";
 import CancellationPolicy from "@/components/CancellationPolicy";
 
-const PIX_KEY = "48 99918-2561";
+const PIX_KEY = "48992107035";
 
 interface Package {
   id: string;
