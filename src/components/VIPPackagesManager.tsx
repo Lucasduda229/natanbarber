@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, Check, RotateCcw } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -88,8 +87,6 @@ const VIPPackagesManager = () => {
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
-  const [showUsageModal, setShowUsageModal] = useState(false);
-  const [selectedSubscriber, setSelectedSubscriber] = useState<SubscriberWithUsage | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -99,13 +96,17 @@ const VIPPackagesManager = () => {
     setLoading(true);
     try {
       // Fetch all in parallel
-      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult] = await Promise.all([
+      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult, appointmentServicesResult] = await Promise.all([
         supabase.from("subscription_progress").select("*").order("is_active", { ascending: false }),
         supabase.from("packages").select("*").eq("active", true).order("price"),
         supabase.from("profiles").select("user_id, full_name, phone"),
         supabase.from("package_items").select("*"),
         supabase.from("package_benefits").select("*, services(name)"),
-        supabase.from("appointments").select("user_id, service_id, appointment_date, status, created_at").in("status", ["completed", "confirmed"])
+        supabase
+          .from("appointments")
+          .select("id, user_id, service_id, appointment_date, status, created_at")
+          .in("status", ["completed", "confirmed"]),
+        supabase.from("appointment_services").select("appointment_id, service_id")
       ]);
 
       if (subsResult.error) throw subsResult.error;
@@ -113,6 +114,8 @@ const VIPPackagesManager = () => {
       if (profilesResult.error) throw profilesResult.error;
       if (itemsResult.error) throw itemsResult.error;
       if (benefitsResult.error) throw benefitsResult.error;
+      if (appointmentsResult.error) throw appointmentsResult.error;
+      if (appointmentServicesResult.error) throw appointmentServicesResult.error;
 
       setPackages(packagesResult.data || []);
       setProfiles(profilesResult.data || []);
@@ -126,6 +129,7 @@ const VIPPackagesManager = () => {
       setPackageBenefits(processedBenefits);
 
       const completedAppointments = appointmentsResult.data || [];
+      const appointmentServices = appointmentServicesResult.data || [];
 
       // Map subscribers with profiles and packages
       const subscribersWithData = (subsResult.data || []).map(sub => {
@@ -148,32 +152,18 @@ const VIPPackagesManager = () => {
           return appointmentCreatedAt > cutoffTime;
         });
         
-        // Count usage per service - also match by name similarity
+        // Count usage per service (supports multi-service appointments via appointment_services)
         const usageByService: Record<string, number> = {};
         userAppointments.forEach(apt => {
-          usageByService[apt.service_id] = (usageByService[apt.service_id] || 0) + 1;
-        });
+          const servicesForAppointment = appointmentServices
+            .filter(as => as.appointment_id === apt.id)
+            .map(as => as.service_id);
 
-        // Helper to find usage count for a benefit (by service_id or name match)
-        const getUsageForBenefit = (benefitServiceId: string | null, benefitName: string): number => {
-          // First try exact service_id match
-          if (benefitServiceId && usageByService[benefitServiceId]) {
-            return usageByService[benefitServiceId];
-          }
-          
-          // If no service_id or no match, try name matching with services
-          const benefitNameLower = benefitName.toLowerCase();
-          let count = 0;
-          
-          userAppointments.forEach(apt => {
-            // Get service name from the services list (we need to fetch this)
-            const service = (appointmentsResult.data || []).find(a => a.service_id === apt.service_id);
-            // We'll match by checking if the appointment service_id matches any known pattern
-            // For now, use the service_id directly since package_items should have correct service_id
+          const serviceIdsToCount = servicesForAppointment.length > 0 ? servicesForAppointment : [apt.service_id];
+          serviceIdsToCount.forEach(serviceId => {
+            usageByService[serviceId] = (usageByService[serviceId] || 0) + 1;
           });
-          
-          return usageByService[benefitServiceId || ''] || 0;
-        };
+        });
 
         // Combine into unified benefits list with actual usage
         const benefits: BenefitUsage[] = [];
@@ -361,64 +351,13 @@ const VIPPackagesManager = () => {
   };
 
   const openUsageModal = (subscriber: SubscriberWithUsage) => {
-    setSelectedSubscriber(subscriber);
-    setShowUsageModal(true);
+    // Usage is now automatic based on bookings (confirmed/completed)
+    toast.info("O uso é registrado automaticamente quando o cliente agenda (confirmado/concluído). ");
   };
 
-  const registerUsage = async (benefit: BenefitUsage) => {
-    if (!selectedSubscriber) return;
-    
-    // Check if there are remaining credits for this benefit
-    if (benefit.used >= benefit.quantity) {
-      toast.error(`Limite de ${benefit.service_name} atingido`);
-      return;
-    }
-
-    // Check weekly credits
-    if (selectedSubscriber.weekly_credits_available <= 0) {
-      toast.error("Sem créditos semanais disponíveis");
-      return;
-    }
-
-    try {
-      // Create a fake appointment to track usage
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .insert({
-          user_id: selectedSubscriber.user_id,
-          service_id: benefit.service_id,
-          appointment_date: today,
-          appointment_time: format(new Date(), "HH:mm"),
-          status: "completed",
-          payment_status: "paid",
-          payment_method: "subscription",
-          notes: `Uso de assinatura - ${selectedSubscriber.package_name || 'Pacote VIP'}`
-        });
-
-      if (appointmentError) throw appointmentError;
-
-      // Update weekly credits and monthly usage
-      const { error: updateError } = await supabase
-        .from("subscription_progress")
-        .update({
-          weekly_credits_available: selectedSubscriber.weekly_credits_available - 1,
-          cuts_used_this_month: selectedSubscriber.cuts_used_this_month + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", selectedSubscriber.id);
-
-      if (updateError) throw updateError;
-
-      toast.success(`Uso de ${benefit.service_name} registrado!`);
-      setShowUsageModal(false);
-      setSelectedSubscriber(null);
-      fetchData();
-    } catch (error) {
-      console.error("Error registering usage:", error);
-      toast.error("Erro ao registrar uso");
-    }
+  // Manual usage registration is intentionally disabled to avoid creating fake appointments
+  const registerUsage = async (_benefit: BenefitUsage) => {
+    toast.info("Uso automático via agendamentos");
   };
 
   const filteredSubscribers = subscribers.filter(sub => {
@@ -719,12 +658,12 @@ const VIPPackagesManager = () => {
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="default"
-                          className="gap-1 text-xs bg-primary hover:bg-primary/90"
-                          onClick={() => openUsageModal(sub)}
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          disabled
                         >
                           <Scissors className="w-3 h-3" />
-                          Registrar Uso
+                          Uso automático
                         </Button>
                         <Button 
                           size="sm" 
@@ -793,88 +732,6 @@ const VIPPackagesManager = () => {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Usage Registration Modal */}
-      <Dialog open={showUsageModal} onOpenChange={setShowUsageModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Scissors className="w-5 h-5 text-primary" />
-              Registrar Uso - {selectedSubscriber?.profile?.full_name || "Cliente"}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Credits Info */}
-            <div className={`p-3 rounded-lg ${
-              (selectedSubscriber?.weekly_credits_available || 0) > 0 
-                ? "bg-green-500/10 border border-green-500/30" 
-                : "bg-destructive/10 border border-destructive/30"
-            }`}>
-              <p className="text-sm font-medium">
-                Créditos disponíveis esta semana: {selectedSubscriber?.weekly_credits_available || 0}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Uso mensal: {selectedSubscriber?.cuts_used_this_month || 0}/{selectedSubscriber?.monthly_cuts_limit || 0}
-              </p>
-            </div>
-
-            {/* Benefits List */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Selecione o serviço utilizado:</p>
-              
-              {selectedSubscriber?.benefits.map((benefit, idx) => {
-                const isAvailable = benefit.used < benefit.quantity && (selectedSubscriber?.weekly_credits_available || 0) > 0;
-                const percentage = (benefit.used / benefit.quantity) * 100;
-                
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => isAvailable && registerUsage(benefit)}
-                    disabled={!isAvailable}
-                    className={`w-full p-3 rounded-lg border transition-all text-left ${
-                      isAvailable 
-                        ? "border-border hover:border-primary hover:bg-primary/5 cursor-pointer" 
-                        : "border-muted bg-muted/20 opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium flex items-center gap-2">
-                        <Scissors className="w-4 h-4" />
-                        {benefit.service_name}
-                      </span>
-                      <Badge variant={percentage >= 100 ? "destructive" : "secondary"}>
-                        {benefit.used}/{benefit.quantity}
-                      </Badge>
-                    </div>
-                    <Progress 
-                      value={percentage} 
-                      className={`h-1.5 ${percentage >= 100 ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`}
-                    />
-                    {isAvailable && (
-                      <p className="text-xs text-primary mt-2 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Clique para registrar uso
-                      </p>
-                    )}
-                    {percentage >= 100 && (
-                      <p className="text-xs text-destructive mt-2">
-                        Limite atingido
-                      </p>
-                    )}
-                  </button>
-                );
-              })}
-
-              {(!selectedSubscriber?.benefits || selectedSubscriber.benefits.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum benefício encontrado para este pacote
-                </p>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
