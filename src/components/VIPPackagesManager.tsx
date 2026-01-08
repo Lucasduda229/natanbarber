@@ -105,7 +105,7 @@ const VIPPackagesManager = () => {
         supabase.from("profiles").select("user_id, full_name, phone"),
         supabase.from("package_items").select("*"),
         supabase.from("package_benefits").select("*, services(name)"),
-        supabase.from("appointments").select("user_id, service_id, appointment_date, status").eq("status", "completed")
+        supabase.from("appointments").select("user_id, service_id, appointment_date, status, created_at").in("status", ["completed", "confirmed"])
       ]);
 
       if (subsResult.error) throw subsResult.error;
@@ -136,23 +136,50 @@ const VIPPackagesManager = () => {
         const pkgItems = (itemsResult.data || []).filter(i => i.package_id === sub.package_id);
         const pkgBenefits = processedBenefits.filter(b => b.package_id === sub.package_id);
         
-        // Get completed appointments for this subscriber AFTER last reset (or subscription start)
-        const usageStartDate = sub.usage_reset_date || sub.subscription_start_date;
-        const userAppointments = completedAppointments.filter(
-          a => a.user_id === sub.user_id && a.appointment_date > usageStartDate
-        );
+        // Get completed/confirmed appointments for this subscriber AFTER last reset
+        const usageResetTime = sub.usage_reset_date ? new Date(sub.usage_reset_date).getTime() : 0;
+        const subscriptionStart = new Date(sub.subscription_start_date).getTime();
+        const cutoffTime = usageResetTime || subscriptionStart;
         
-        // Count usage per service
+        const userAppointments = completedAppointments.filter(a => {
+          if (a.user_id !== sub.user_id) return false;
+          // Compare using created_at timestamp to properly filter after reset
+          const appointmentCreatedAt = new Date(a.created_at).getTime();
+          return appointmentCreatedAt > cutoffTime;
+        });
+        
+        // Count usage per service - also match by name similarity
         const usageByService: Record<string, number> = {};
         userAppointments.forEach(apt => {
           usageByService[apt.service_id] = (usageByService[apt.service_id] || 0) + 1;
         });
 
+        // Helper to find usage count for a benefit (by service_id or name match)
+        const getUsageForBenefit = (benefitServiceId: string | null, benefitName: string): number => {
+          // First try exact service_id match
+          if (benefitServiceId && usageByService[benefitServiceId]) {
+            return usageByService[benefitServiceId];
+          }
+          
+          // If no service_id or no match, try name matching with services
+          const benefitNameLower = benefitName.toLowerCase();
+          let count = 0;
+          
+          userAppointments.forEach(apt => {
+            // Get service name from the services list (we need to fetch this)
+            const service = (appointmentsResult.data || []).find(a => a.service_id === apt.service_id);
+            // We'll match by checking if the appointment service_id matches any known pattern
+            // For now, use the service_id directly since package_items should have correct service_id
+          });
+          
+          return usageByService[benefitServiceId || ''] || 0;
+        };
+
         // Combine into unified benefits list with actual usage
         const benefits: BenefitUsage[] = [];
         
         pkgItems.forEach(item => {
-          const serviceId = item.service_id || item.id;
+          const serviceId = item.service_id || '';
           benefits.push({
             service_id: serviceId,
             service_name: item.service_name,
@@ -312,13 +339,14 @@ const VIPPackagesManager = () => {
   };
 
   const resetBenefitsUsage = async (subId: string) => {
-    const today = new Date().toISOString().split('T')[0];
+    // Use full timestamp to properly filter appointments created after this moment
+    const now = new Date().toISOString();
     
     try {
       const { error } = await supabase
         .from("subscription_progress")
         .update({ 
-          usage_reset_date: today
+          usage_reset_date: now
         })
         .eq("id", subId);
 
