@@ -101,7 +101,7 @@ const VIPPackagesManager = () => {
       // Fetch all in parallel
       const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult, appointmentServicesResult] = await Promise.all([
         supabase.from("subscription_progress").select("*").order("is_active", { ascending: false }),
-        supabase.from("packages").select("*").eq("active", true).order("price"),
+        supabase.from("packages").select("*").eq("active", true).order("name"),
         supabase.from("profiles").select("user_id, full_name, phone"),
         supabase.from("package_items").select("*"),
         supabase.from("package_benefits").select("*, services(name)"),
