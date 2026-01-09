@@ -300,7 +300,7 @@ const BuySubscription = () => {
         </div>
         
         <div className="grid gap-3">
-          {tierPackages.sort((a, b) => b.price - a.price).map((pkg) => {
+          {tierPackages.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true })).map((pkg) => {
             const isSelected = selectedPackage?.id === pkg.id;
             
             return (
