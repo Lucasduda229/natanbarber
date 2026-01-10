@@ -123,6 +123,13 @@ const getServicesTotal = (services: AppointmentService[]): number => {
   return services.reduce((sum, s) => sum + (s.price || 0), 0);
 };
 
+// Helper function to get services total considering subscription (R$ 0 for subscriptions)
+const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null): number => {
+  if (paymentMethod === 'subscription') return 0;
+  if (!services || services.length === 0) return 0;
+  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+};
+
 // Helper function to get payment method display info
 const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card"; color: string } => {
   switch (method) {
@@ -505,20 +512,21 @@ const Admin = () => {
       .select("id")
       .eq("status", "pending");
 
-    // Count all confirmed appointments
+    // Count all confirmed appointments (excluding subscriptions for revenue)
     const { data: confirmedData } = await supabase
       .from("appointments")
-      .select("services(price)")
+      .select("services(price), payment_method")
       .eq("status", "confirmed");
 
-    // Count completed appointments for revenue
+    // Count completed appointments for revenue (excluding subscriptions)
     const { data: completedData } = await supabase
       .from("appointments")
-      .select("services(price)")
+      .select("services(price), payment_method")
       .eq("status", "completed");
 
-    const confirmedRevenue = confirmedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
-    const completedRevenue = completedData?.reduce((sum, a) => sum + (a.services?.price || 0), 0) || 0;
+    // Exclude subscription appointments from revenue calculation
+    const confirmedRevenue = confirmedData?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : (a.services?.price || 0)), 0) || 0;
+    const completedRevenue = completedData?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : (a.services?.price || 0)), 0) || 0;
     const totalRevenue = confirmedRevenue + completedRevenue;
 
     setStats({
@@ -1062,20 +1070,20 @@ const Admin = () => {
                         a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid'
                       );
                       const pixTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_pix')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                        .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       const cashTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_cash')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                        .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       const cardTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_card')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                        .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       const pendingTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'pending')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                        .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       const refundedTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'refunded')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                        .filter(a => a.payment_status === 'refunded' && a.payment_method !== 'subscription')
+                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       
                       const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
                                          reportPeriod === 'month' ? 'Este Mês' : 
@@ -1096,11 +1104,12 @@ const Admin = () => {
                         `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
                         '',
                         'DETALHAMENTO',
-                        'Data,Horário,Cliente,Serviço,Valor Original,Valor Ajustado,Status Pagamento',
+                        'Data,Horário,Cliente,Serviço,Valor Original,Valor Ajustado,Status Pagamento,Tipo',
                         ...paidAppointments.map(a => {
-                          const originalValue = getServicesTotal(a.services);
-                          const adjustedValue = getAdjustedValue(a.id, originalValue);
-                          return `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${originalValue.toFixed(2)},R$ ${adjustedValue.toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'}`;
+                          const isSubscription = a.payment_method === 'subscription';
+                          const originalValue = isSubscription ? 0 : getServicesTotal(a.services);
+                          const adjustedValue = isSubscription ? 0 : getAdjustedValue(a.id, originalValue);
+                          return `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${originalValue.toFixed(2)},R$ ${adjustedValue.toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'},${isSubscription ? 'Assinatura' : 'Avulso'}`;
                         })
                       ].join('\n');
                       
@@ -1129,8 +1138,8 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-[#00D4AA]">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'paid_pix')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
+                            .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido via PIX</p>
@@ -1147,8 +1156,8 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-green-500">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'paid_cash')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
+                            .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido Dinheiro</p>
@@ -1165,8 +1174,8 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-blue-500">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'paid_card')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
+                            .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Recebido Cartão</p>
@@ -1183,8 +1192,8 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-yellow-500">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'pending')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
+                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Aguardando</p>
@@ -1201,8 +1210,8 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-primary">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0)
+                            .filter(a => (a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid') && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
                         <p className="text-xs text-muted-foreground">Total Recebido</p>
@@ -1221,14 +1230,14 @@ const Admin = () => {
                     <CardContent>
                       {(() => {
                         const pixTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const cashTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const cardTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_card')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const total = pixTotal + cashTotal + cardTotal;
                         
                         if (total === 0) {
@@ -1323,17 +1332,17 @@ const Admin = () => {
                     <CardContent>
                       {(() => {
                         const pixTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_pix')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const cashTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_cash')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const cardTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'paid_card')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const pendingTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'pending')
-                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotal(a.services)), 0);
+                          .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                          .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const maxValue = Math.max(pixTotal, cashTotal, cardTotal, pendingTotal, 1);
                         
                         return (
@@ -1421,8 +1430,9 @@ const Admin = () => {
                       .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())
                       .slice(0, 20)
                       .map((appointment) => {
-                        const originalValue = getServicesTotal(appointment.services);
-                        const adjustedValue = getAdjustedValue(appointment.id, originalValue);
+                        const isSubscription = appointment.payment_method === 'subscription';
+                        const originalValue = isSubscription ? 0 : getServicesTotal(appointment.services);
+                        const adjustedValue = isSubscription ? 0 : getAdjustedValue(appointment.id, originalValue);
                         const hasAdjustment = revenueAdjustments.some(adj => adj.appointment_id === appointment.id);
                         const isEditing = editingAppointmentId === appointment.id;
                         
@@ -1852,6 +1862,14 @@ const Admin = () => {
                                 );
                               })()}
                               {(() => {
+                                // If paid via subscription, show R$ 0
+                                if (appointment.payment_method === 'subscription') {
+                                  return (
+                                    <span className="font-bold text-green-500 flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Assinatura (R$ 0)
+                                    </span>
+                                  );
+                                }
                                 const subscription = getUserSubscription(appointment.user_id);
                                 const hasCredits = hasRemainingCuts(subscription);
                                 if (subscription && hasCredits) {
@@ -1874,7 +1892,9 @@ const Admin = () => {
                             {statusLabels[appointment.status]}
                           </Badge>
 
-                          <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
+                          <span className="font-bold text-primary text-sm sm:text-base">
+                            {appointment.payment_method === 'subscription' ? 'R$ 0,00' : `R$ ${getServicesTotal(appointment.services).toFixed(2)}`}
+                          </span>
 
                           <Select
                             value={appointment.status}
