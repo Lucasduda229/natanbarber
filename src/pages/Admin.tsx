@@ -152,59 +152,53 @@ const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-    // Some browsers start suspended until a user gesture; try resuming.
     if (audioContext.state === "suspended") {
       audioContext.resume().catch(() => undefined);
     }
 
-    // Chain: Oscillators -> masterGain -> compressor -> destination
     const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(1.0, audioContext.currentTime); // Máximo (100%)
+    masterGain.gain.setValueAtTime(0.9, audioContext.currentTime);
+    masterGain.connect(audioContext.destination);
 
-    // Compressor helps perceived loudness without harsh clipping
-    const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-18, audioContext.currentTime);
-    compressor.knee.setValueAtTime(18, audioContext.currentTime);
-    compressor.ratio.setValueAtTime(6, audioContext.currentTime);
-    compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
-    compressor.release.setValueAtTime(0.25, audioContext.currentTime);
-
-    masterGain.connect(compressor);
-    compressor.connect(audioContext.destination);
-
-    const beep = (startAt: number, freq: number, dur: number, peak: number) => {
+    // Melodia estilo "toque de telefone" - mais musical e chamativo
+    const playNote = (freq: number, startTime: number, duration: number, volume = 0.8) => {
       const osc = audioContext.createOscillator();
       const gain = audioContext.createGain();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(freq, startAt);
-
-      gain.gain.setValueAtTime(0, startAt);
-      gain.gain.linearRampToValueAtTime(peak, startAt + 0.02);
-      gain.gain.linearRampToValueAtTime(peak, startAt + Math.max(0.04, dur - 0.04));
-      gain.gain.linearRampToValueAtTime(0, startAt + dur);
-
+      
+      osc.type = "sine"; // Som mais suave e musical
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      // Envelope suave
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+      gain.gain.setValueAtTime(volume, startTime + duration - 0.03);
+      gain.gain.linearRampToValueAtTime(0, startTime + duration);
+      
       osc.connect(gain);
       gain.connect(masterGain);
-
-      osc.start(startAt);
-      osc.stop(startAt + dur);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
     };
 
-    const t0 = audioContext.currentTime;
+    const t = audioContext.currentTime;
+    
+    // Melodia: Dó-Mi-Sol-Dó (acorde maior ascendente) - som alegre e chamativo
+    // Primeira sequência
+    playNote(523.25, t + 0.0, 0.15, 0.9);   // C5
+    playNote(659.25, t + 0.15, 0.15, 0.9);  // E5
+    playNote(783.99, t + 0.30, 0.15, 0.9);  // G5
+    playNote(1046.50, t + 0.45, 0.25, 1.0); // C6 (mais longo)
+    
+    // Pausa e repetição
+    playNote(523.25, t + 0.85, 0.12, 0.8);  // C5
+    playNote(659.25, t + 0.97, 0.12, 0.8);  // E5
+    playNote(783.99, t + 1.09, 0.12, 0.8);  // G5
+    playNote(1046.50, t + 1.21, 0.30, 1.0); // C6 (mais longo)
 
-    // Sequência mais alta e “agressiva”
-    beep(t0 + 0.00, 1400, 0.14, 0.9);
-    beep(t0 + 0.16, 1700, 0.16, 0.9);
-    beep(t0 + 0.34, 2100, 0.22, 1.0);
-
-    // Repetição curta para garantir que chame atenção
-    beep(t0 + 0.90, 1400, 0.12, 0.8);
-    beep(t0 + 1.04, 2100, 0.22, 1.0);
-
-    // Cleanup
     setTimeout(() => {
       audioContext.close().catch(() => undefined);
-    }, 1800);
+    }, 2000);
   } catch (error) {
     console.log("Could not play notification sound:", error);
   }
