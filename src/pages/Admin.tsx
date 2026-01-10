@@ -29,6 +29,7 @@ import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useWebPush } from "@/hooks/useWebPush";
 
 
 interface AppointmentService {
@@ -186,6 +187,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading } = useAuth();
   const { isEnabled: pushEnabled, isSupported: pushSupported, requestPermission, notifyNewAppointment } = usePushNotifications();
+  const { isSupported: webPushSupported, isSubscribed: webPushSubscribed, isLoading: webPushLoading, toggleSubscription: toggleWebPush } = useWebPush();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveSubscription[]>([]);
@@ -909,21 +911,24 @@ const Admin = () => {
               Atualizar
             </Button>
 
-            {/* Push Notifications Button */}
-            {pushSupported && (
+            {/* Web Push Notifications Button (works when PWA is closed) */}
+            {webPushSupported && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={requestPermission}
+                onClick={toggleWebPush}
+                disabled={webPushLoading}
                 className={cn(
                   "h-9 text-xs sm:text-sm touch-target",
-                  pushEnabled 
+                  webPushSubscribed 
                     ? "border-green-500/50 text-green-500 hover:bg-green-500/10" 
                     : "border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
                 )}
-                title={pushEnabled ? "Notificações ativas" : "Ativar notificações push"}
+                title={webPushSubscribed ? "Push ativo (funciona com app fechado)" : "Ativar notificações push"}
               >
-                {pushEnabled ? (
+                {webPushLoading ? (
+                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : webPushSubscribed ? (
                   <>
                     <Bell className="w-4 h-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Push Ativo</span>
