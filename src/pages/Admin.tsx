@@ -271,7 +271,6 @@ const Admin = () => {
           table: 'appointments'
         },
         (payload) => {
-          console.log('Appointment change detected:', payload);
           setLastUpdate(new Date());
           // Refresh all data when any appointment changes
           fetchData(true);
@@ -309,7 +308,6 @@ const Admin = () => {
           table: 'blocked_dates'
         },
         (payload) => {
-          console.log('Blocked dates change detected:', payload);
           setLastUpdate(new Date());
           fetchBlockedDates();
           
@@ -333,7 +331,6 @@ const Admin = () => {
           table: 'barbershop_status'
         },
         (payload) => {
-          console.log('Barbershop status change detected:', payload);
           setLastUpdate(new Date());
         }
       )
