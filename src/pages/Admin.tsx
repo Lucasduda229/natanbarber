@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -28,6 +28,7 @@ import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import { Input } from "@/components/ui/input";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 
 interface AppointmentService {
@@ -184,6 +185,7 @@ const playNotificationSound = () => {
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: authLoading } = useAuth();
+  const { isEnabled: pushEnabled, isSupported: pushSupported, requestPermission, notifyNewAppointment } = usePushNotifications();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveSubscription[]>([]);
@@ -282,6 +284,13 @@ const Admin = () => {
               description: "Um novo pedido foi recebido.",
               duration: 5000
             });
+            // Send push notification (works even with tab minimized)
+            const newRecord = payload.new as any;
+            notifyNewAppointment(
+              'Novo cliente',
+              'Agendamento recebido',
+              newRecord?.appointment_time?.slice(0, 5) || 'horário pendente'
+            );
           } else if (payload.eventType === 'UPDATE') {
             toast.info("📝 Agendamento atualizado", { duration: 2000 });
           } else if (payload.eventType === 'DELETE') {
@@ -342,7 +351,7 @@ const Admin = () => {
       supabase.removeChannel(blockedDatesChannel);
       supabase.removeChannel(statusChannel);
     };
-  }, [isAdmin, authLoading]);
+  }, [isAdmin, authLoading, notifyNewAppointment]);
 
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
@@ -899,6 +908,34 @@ const Admin = () => {
               <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
+
+            {/* Push Notifications Button */}
+            {pushSupported && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={requestPermission}
+                className={cn(
+                  "h-9 text-xs sm:text-sm touch-target",
+                  pushEnabled 
+                    ? "border-green-500/50 text-green-500 hover:bg-green-500/10" 
+                    : "border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                )}
+                title={pushEnabled ? "Notificações ativas" : "Ativar notificações push"}
+              >
+                {pushEnabled ? (
+                  <>
+                    <Bell className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Push Ativo</span>
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Ativar Push</span>
+                  </>
+                )}
+              </Button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
