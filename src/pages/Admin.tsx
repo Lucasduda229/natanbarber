@@ -336,18 +336,11 @@ const Admin = () => {
       )
       .subscribe();
 
-    // Auto-refresh every 30 seconds as fallback
-    const autoRefreshInterval = setInterval(() => {
-      fetchData(true);
-      setLastUpdate(new Date());
-    }, 30000);
-
     // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(blockedDatesChannel);
       supabase.removeChannel(statusChannel);
-      clearInterval(autoRefreshInterval);
     };
   }, [isAdmin, authLoading]);
 
