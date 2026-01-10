@@ -125,7 +125,6 @@ export function ClientsList() {
 
   const deleteClient = async (userId: string, clientName: string) => {
     try {
-      console.log("Deleting client:", userId, clientName);
       
       // Delete loyalty progress
       const { error: loyaltyError } = await supabase
@@ -191,7 +190,7 @@ export function ClientsList() {
         .eq("user_id", userId)
         .select();
 
-      console.log("Delete profile result - error:", profileError, "deleted count:", count);
+      
 
       if (profileError) {
         console.error("Error deleting profile:", profileError);
