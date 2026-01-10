@@ -38,7 +38,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   new_booking: <CalendarPlus className="w-4 h-4 text-amber-500" />,
 };
 
-// Create notification sound using Web Audio API
+// Create notification sound using Web Audio API - Melodia musical
 const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -48,42 +48,38 @@ const playNotificationSound = () => {
     }
 
     const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(1.0, audioContext.currentTime);
+    masterGain.gain.setValueAtTime(0.9, audioContext.currentTime);
+    masterGain.connect(audioContext.destination);
 
-    const compressor = audioContext.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-18, audioContext.currentTime);
-    compressor.knee.setValueAtTime(18, audioContext.currentTime);
-    compressor.ratio.setValueAtTime(6, audioContext.currentTime);
-    compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
-    compressor.release.setValueAtTime(0.25, audioContext.currentTime);
-
-    masterGain.connect(compressor);
-    compressor.connect(audioContext.destination);
-
-    const t0 = audioContext.currentTime;
-    const beep = (startAt: number, freq: number, dur: number, peak: number) => {
+    const playNote = (freq: number, startTime: number, duration: number, volume = 0.8) => {
       const osc = audioContext.createOscillator();
       const gain = audioContext.createGain();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(freq, startAt);
-
-      gain.gain.setValueAtTime(0, startAt);
-      gain.gain.linearRampToValueAtTime(peak, startAt + 0.02);
-      gain.gain.linearRampToValueAtTime(0, startAt + dur);
-
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+      gain.gain.setValueAtTime(volume, startTime + duration - 0.03);
+      gain.gain.linearRampToValueAtTime(0, startTime + duration);
+      
       osc.connect(gain);
       gain.connect(masterGain);
-
-      osc.start(startAt);
-      osc.stop(startAt + dur);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
     };
 
-    beep(t0 + 0.00, 1500, 0.12, 0.9);
-    beep(t0 + 0.14, 2100, 0.18, 1.0);
+    const t = audioContext.currentTime;
+    
+    // Melodia curta: Dó-Mi-Sol
+    playNote(523.25, t + 0.0, 0.12, 0.9);   // C5
+    playNote(659.25, t + 0.12, 0.12, 0.9);  // E5
+    playNote(783.99, t + 0.24, 0.18, 1.0);  // G5
 
     setTimeout(() => {
       audioContext.close().catch(() => undefined);
-    }, 700);
+    }, 600);
   } catch (error) {
     console.log("Audio not supported");
   }
