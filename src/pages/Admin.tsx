@@ -151,83 +151,62 @@ const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pi
 const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Some browsers start suspended until a user gesture; try resuming.
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => undefined);
+    }
+
+    // Chain: Oscillators -> masterGain -> compressor -> destination
     const masterGain = audioContext.createGain();
-    masterGain.connect(audioContext.destination);
-    masterGain.gain.setValueAtTime(0.8, audioContext.currentTime); // Volume alto (80%)
+    masterGain.gain.setValueAtTime(1.0, audioContext.currentTime); // Máximo (100%)
 
-    // Som 1 - Tom alto de alerta
-    const osc1 = audioContext.createOscillator();
-    const gain1 = audioContext.createGain();
-    osc1.connect(gain1);
-    gain1.connect(masterGain);
-    osc1.type = 'square';
-    osc1.frequency.setValueAtTime(1200, audioContext.currentTime);
-    gain1.gain.setValueAtTime(0, audioContext.currentTime);
-    gain1.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.02);
-    gain1.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.15);
-    osc1.start(audioContext.currentTime);
-    osc1.stop(audioContext.currentTime + 0.15);
+    // Compressor helps perceived loudness without harsh clipping
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-18, audioContext.currentTime);
+    compressor.knee.setValueAtTime(18, audioContext.currentTime);
+    compressor.ratio.setValueAtTime(6, audioContext.currentTime);
+    compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
+    compressor.release.setValueAtTime(0.25, audioContext.currentTime);
 
-    // Som 2 - Tom médio
-    const osc2 = audioContext.createOscillator();
-    const gain2 = audioContext.createGain();
-    osc2.connect(gain2);
-    gain2.connect(masterGain);
-    osc2.type = 'square';
-    osc2.frequency.setValueAtTime(1500, audioContext.currentTime + 0.15);
-    gain2.gain.setValueAtTime(0, audioContext.currentTime + 0.15);
-    gain2.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.17);
-    gain2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
-    osc2.start(audioContext.currentTime + 0.15);
-    osc2.stop(audioContext.currentTime + 0.3);
+    masterGain.connect(compressor);
+    compressor.connect(audioContext.destination);
 
-    // Som 3 - Tom alto final (mais longo)
-    const osc3 = audioContext.createOscillator();
-    const gain3 = audioContext.createGain();
-    osc3.connect(gain3);
-    gain3.connect(masterGain);
-    osc3.type = 'square';
-    osc3.frequency.setValueAtTime(1800, audioContext.currentTime + 0.3);
-    gain3.gain.setValueAtTime(0, audioContext.currentTime + 0.3);
-    gain3.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.32);
-    gain3.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.5);
-    gain3.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.65);
-    osc3.start(audioContext.currentTime + 0.3);
-    osc3.stop(audioContext.currentTime + 0.65);
+    const beep = (startAt: number, freq: number, dur: number, peak: number) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(freq, startAt);
 
-    // Repetir sequência após breve pausa
-    setTimeout(() => {
-      const osc4 = audioContext.createOscillator();
-      const gain4 = audioContext.createGain();
-      osc4.connect(gain4);
-      gain4.connect(masterGain);
-      osc4.type = 'square';
-      osc4.frequency.setValueAtTime(1200, audioContext.currentTime);
-      gain4.gain.setValueAtTime(0, audioContext.currentTime);
-      gain4.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.02);
-      gain4.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.12);
-      osc4.start(audioContext.currentTime);
-      osc4.stop(audioContext.currentTime + 0.12);
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(peak, startAt + 0.02);
+      gain.gain.linearRampToValueAtTime(peak, startAt + Math.max(0.04, dur - 0.04));
+      gain.gain.linearRampToValueAtTime(0, startAt + dur);
 
-      const osc5 = audioContext.createOscillator();
-      const gain5 = audioContext.createGain();
-      osc5.connect(gain5);
-      gain5.connect(masterGain);
-      osc5.type = 'square';
-      osc5.frequency.setValueAtTime(1800, audioContext.currentTime + 0.12);
-      gain5.gain.setValueAtTime(0, audioContext.currentTime + 0.12);
-      gain5.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.14);
-      gain5.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.35);
-      osc5.start(audioContext.currentTime + 0.12);
-      osc5.stop(audioContext.currentTime + 0.35);
-    }, 800);
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(startAt);
+      osc.stop(startAt + dur);
+    };
+
+    const t0 = audioContext.currentTime;
+
+    // Sequência mais alta e “agressiva”
+    beep(t0 + 0.00, 1400, 0.14, 0.9);
+    beep(t0 + 0.16, 1700, 0.16, 0.9);
+    beep(t0 + 0.34, 2100, 0.22, 1.0);
+
+    // Repetição curta para garantir que chame atenção
+    beep(t0 + 0.90, 1400, 0.12, 0.8);
+    beep(t0 + 1.04, 2100, 0.22, 1.0);
 
     // Cleanup
     setTimeout(() => {
-      audioContext.close();
-    }, 1500);
+      audioContext.close().catch(() => undefined);
+    }, 1800);
   } catch (error) {
-    console.log('Could not play notification sound:', error);
+    console.log("Could not play notification sound:", error);
   }
 };
 

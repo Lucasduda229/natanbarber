@@ -42,23 +42,50 @@ const typeIcons: Record<string, React.ReactNode> = {
 const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => undefined);
+    }
+
+    const masterGain = audioContext.createGain();
+    masterGain.gain.setValueAtTime(1.0, audioContext.currentTime);
+
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-18, audioContext.currentTime);
+    compressor.knee.setValueAtTime(18, audioContext.currentTime);
+    compressor.ratio.setValueAtTime(6, audioContext.currentTime);
+    compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
+    compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+
+    masterGain.connect(compressor);
+    compressor.connect(audioContext.destination);
+
+    const t0 = audioContext.currentTime;
+    const beep = (startAt: number, freq: number, dur: number, peak: number) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(freq, startAt);
+
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(peak, startAt + 0.02);
+      gain.gain.linearRampToValueAtTime(0, startAt + dur);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(startAt);
+      osc.stop(startAt + dur);
+    };
+
+    beep(t0 + 0.00, 1500, 0.12, 0.9);
+    beep(t0 + 0.14, 2100, 0.18, 1.0);
+
+    setTimeout(() => {
+      audioContext.close().catch(() => undefined);
+    }, 700);
   } catch (error) {
-    console.log('Audio not supported');
+    console.log("Audio not supported");
   }
 };
 
