@@ -151,33 +151,81 @@ const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pi
 const playNotificationSound = () => {
   try {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    // Create oscillator for a pleasant notification tone
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Two-tone notification sound
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
-    oscillator.frequency.setValueAtTime(1108.73, audioContext.currentTime + 0.15); // C#6
-    
-    oscillator.type = 'sine';
-    
-    // Fade in and out for smooth sound
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.2);
-    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.35);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.35);
-    
+    const masterGain = audioContext.createGain();
+    masterGain.connect(audioContext.destination);
+    masterGain.gain.setValueAtTime(0.8, audioContext.currentTime); // Volume alto (80%)
+
+    // Som 1 - Tom alto de alerta
+    const osc1 = audioContext.createOscillator();
+    const gain1 = audioContext.createGain();
+    osc1.connect(gain1);
+    gain1.connect(masterGain);
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(1200, audioContext.currentTime);
+    gain1.gain.setValueAtTime(0, audioContext.currentTime);
+    gain1.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.02);
+    gain1.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.15);
+    osc1.start(audioContext.currentTime);
+    osc1.stop(audioContext.currentTime + 0.15);
+
+    // Som 2 - Tom médio
+    const osc2 = audioContext.createOscillator();
+    const gain2 = audioContext.createGain();
+    osc2.connect(gain2);
+    gain2.connect(masterGain);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(1500, audioContext.currentTime + 0.15);
+    gain2.gain.setValueAtTime(0, audioContext.currentTime + 0.15);
+    gain2.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.17);
+    gain2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+    osc2.start(audioContext.currentTime + 0.15);
+    osc2.stop(audioContext.currentTime + 0.3);
+
+    // Som 3 - Tom alto final (mais longo)
+    const osc3 = audioContext.createOscillator();
+    const gain3 = audioContext.createGain();
+    osc3.connect(gain3);
+    gain3.connect(masterGain);
+    osc3.type = 'square';
+    osc3.frequency.setValueAtTime(1800, audioContext.currentTime + 0.3);
+    gain3.gain.setValueAtTime(0, audioContext.currentTime + 0.3);
+    gain3.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.32);
+    gain3.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + 0.5);
+    gain3.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.65);
+    osc3.start(audioContext.currentTime + 0.3);
+    osc3.stop(audioContext.currentTime + 0.65);
+
+    // Repetir sequência após breve pausa
+    setTimeout(() => {
+      const osc4 = audioContext.createOscillator();
+      const gain4 = audioContext.createGain();
+      osc4.connect(gain4);
+      gain4.connect(masterGain);
+      osc4.type = 'square';
+      osc4.frequency.setValueAtTime(1200, audioContext.currentTime);
+      gain4.gain.setValueAtTime(0, audioContext.currentTime);
+      gain4.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.02);
+      gain4.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.12);
+      osc4.start(audioContext.currentTime);
+      osc4.stop(audioContext.currentTime + 0.12);
+
+      const osc5 = audioContext.createOscillator();
+      const gain5 = audioContext.createGain();
+      osc5.connect(gain5);
+      gain5.connect(masterGain);
+      osc5.type = 'square';
+      osc5.frequency.setValueAtTime(1800, audioContext.currentTime + 0.12);
+      gain5.gain.setValueAtTime(0, audioContext.currentTime + 0.12);
+      gain5.gain.linearRampToValueAtTime(0.6, audioContext.currentTime + 0.14);
+      gain5.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.35);
+      osc5.start(audioContext.currentTime + 0.12);
+      osc5.stop(audioContext.currentTime + 0.35);
+    }, 800);
+
     // Cleanup
     setTimeout(() => {
       audioContext.close();
-    }, 500);
+    }, 1500);
   } catch (error) {
     console.log('Could not play notification sound:', error);
   }
