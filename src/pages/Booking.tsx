@@ -639,7 +639,8 @@ const Booking = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
-    return date < today || dayOfWeek === 0 || dayOfWeek === 1;
+    // Apenas domingo (0) está fechado
+    return date < today || dayOfWeek === 0;
   };
 
   return (
