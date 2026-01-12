@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, getDay } from "date-fns";
+import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -140,6 +140,7 @@ const Booking = () => {
   } | null>(null);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
+  const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates that have subscription bookings
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
@@ -199,6 +200,7 @@ const Booking = () => {
   useEffect(() => {
     if (user) {
       checkActiveSubscription();
+      fetchSubscriptionBookings();
     }
   }, [user]);
 
@@ -313,6 +315,35 @@ const Booking = () => {
     } else {
       setActiveSubscription(null);
       setSubscriptionPackageItems([]);
+    }
+  };
+
+  // Fetch user's subscription bookings to highlight booked weeks
+  const fetchSubscriptionBookings = async () => {
+    if (!user) {
+      setSubscriptionBookedWeeks([]);
+      return;
+    }
+
+    // Get subscription appointments for the next 2 months
+    const today = new Date();
+    const twoMonthsLater = new Date(today);
+    twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
+
+    const { data: appointments } = await supabase
+      .from("appointments")
+      .select("appointment_date")
+      .eq("user_id", user.id)
+      .eq("payment_method", "subscription")
+      .neq("status", "cancelled")
+      .gte("appointment_date", format(today, "yyyy-MM-dd"))
+      .lte("appointment_date", format(twoMonthsLater, "yyyy-MM-dd"));
+
+    if (appointments && appointments.length > 0) {
+      const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
+      setSubscriptionBookedWeeks(bookedDates);
+    } else {
+      setSubscriptionBookedWeeks([]);
     }
   };
 
@@ -686,6 +717,22 @@ const Booking = () => {
     const dayOfWeek = getDay(date);
     // Apenas domingo (0) está fechado
     return date < today || dayOfWeek === 0;
+  };
+
+  // Check if a date is in a week that already has a subscription booking
+  const isWeekBooked = (date: Date): boolean => {
+    return subscriptionBookedWeeks.some(bookedDate => 
+      isSameWeek(date, bookedDate, { weekStartsOn: 0 })
+    );
+  };
+
+  // Modifiers for calendar to highlight booked weeks
+  const calendarModifiers = usingSubscription ? {
+    bookedWeek: (date: Date) => isWeekBooked(date) && !disabledDays(date),
+  } : {};
+
+  const calendarModifiersClassNames = {
+    bookedWeek: "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 border border-amber-500/50",
   };
 
   return (
@@ -1094,6 +1141,12 @@ const Booking = () => {
                     <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     Selecione a Data
                   </CardTitle>
+                  {usingSubscription && subscriptionBookedWeeks.length > 0 && (
+                    <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
+                      <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/50"></span>
+                      Semanas com agendamento marcado
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6 pb-4">
                   <Calendar
@@ -1101,9 +1154,21 @@ const Booking = () => {
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     disabled={disabledDays}
+                    modifiers={calendarModifiers}
+                    modifiersClassNames={calendarModifiersClassNames}
                     locale={ptBR}
                     className="rounded-md border-0 pointer-events-auto w-full"
                   />
+                  {usingSubscription && selectedDate && isWeekBooked(selectedDate) && (
+                    <div className="mt-3 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                      <p className="text-xs text-amber-500 font-medium">
+                        ⚠️ Você já tem um agendamento nesta semana!
+                      </p>
+                      <p className="text-[10px] text-amber-400/80">
+                        Escolha uma data em outra semana ou cancele o agendamento existente.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
