@@ -720,15 +720,27 @@ const VIPPackagesManager = () => {
                           <RotateCcw className="w-3 h-3" />
                           Resetar Benefícios
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="gap-1 text-xs"
-                          onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active)}
-                        >
-                          <X className="w-3 h-3" />
-                          Cancelar
-                        </Button>
+                        {sub.is_active ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="gap-1 text-xs"
+                            onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active)}
+                          >
+                            <X className="w-3 h-3" />
+                            Pausar
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            className="gap-1 text-xs bg-green-600 hover:bg-green-700"
+                            onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active)}
+                          >
+                            <Check className="w-3 h-3" />
+                            Ativar
+                          </Button>
+                        )}
                         <Button 
                           size="sm" 
                           variant="outline"
