@@ -541,17 +541,62 @@ const Booking = () => {
       return;
     }
 
-    // If using subscription, use a cut
+    // If using subscription, verify if user can book for this week
     if (usingSubscription && activeSubscription) {
-      const { data: cutUsed, error: cutError } = await supabase.rpc('use_subscription_cut', {
-        p_user_id: user.id
-      });
-
-      if (cutError || !cutUsed) {
-        toast.error("Erro ao usar crédito da assinatura", { description: "Tente novamente." });
+      // Calculate the week of the appointment date
+      const appointmentWeekStart = new Date(selectedDate);
+      appointmentWeekStart.setDate(appointmentWeekStart.getDate() - appointmentWeekStart.getDay()); // Sunday
+      appointmentWeekStart.setHours(0, 0, 0, 0);
+      
+      const appointmentWeekEnd = new Date(appointmentWeekStart);
+      appointmentWeekEnd.setDate(appointmentWeekEnd.getDate() + 6); // Saturday
+      appointmentWeekEnd.setHours(23, 59, 59, 999);
+      
+      // Check if user already has an appointment in this week
+      const weekStartStr = format(appointmentWeekStart, "yyyy-MM-dd");
+      const weekEndStr = format(appointmentWeekEnd, "yyyy-MM-dd");
+      
+      const { data: existingWeekAppointments } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("appointment_date", weekStartStr)
+        .lte("appointment_date", weekEndStr)
+        .eq("payment_method", "subscription")
+        .neq("status", "cancelled");
+      
+      if (existingWeekAppointments && existingWeekAppointments.length > 0) {
         setLoading(false);
+        toast.error("Limite semanal atingido", { 
+          description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
+        });
         return;
       }
+      
+      // Check if the appointment is for the current week - use credits
+      const today = new Date();
+      const currentWeekStart = new Date(today);
+      currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+      currentWeekStart.setHours(0, 0, 0, 0);
+      
+      const isCurrentWeek = appointmentWeekStart.getTime() === currentWeekStart.getTime();
+      
+      // Only use credits if it's for the current week
+      if (isCurrentWeek) {
+        const { data: cutUsed, error: cutError } = await supabase.rpc('use_subscription_cut', {
+          p_user_id: user.id
+        });
+
+        if (cutError || !cutUsed) {
+          toast.error("Sem créditos disponíveis esta semana", { 
+            description: "Escolha uma data em uma semana futura." 
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      // For future weeks, we just let the booking go through
+      // Credits will be checked/deducted when that week arrives (via cron job or on confirmation)
     }
 
     // Criar o agendamento com o primeiro serviço (para compatibilidade)
@@ -924,50 +969,47 @@ const Booking = () => {
                     ))}
                   </div>
 
-                  {activeSubscription.weekly_credits_available > 0 ? (
-                    <>
-                      {!usingSubscription ? (
-                        <Button
-                          onClick={() => {
-                            setUsingSubscription(true);
-                            toast.success("Modo assinatura ativado!", { 
-                              description: "Selecione os serviços desejados e clique em Continuar." 
-                            });
-                          }}
-                          className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
-                        >
-                          <CalendarIcon className="w-5 h-5 mr-2" />
-                          Usar Crédito da Assinatura
-                        </Button>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-lg border border-green-500/50">
-                            <Check className="w-5 h-5 text-green-500" />
-                            <span className="text-sm font-medium text-green-500">
-                              Modo assinatura ativo! Selecione os serviços acima.
-                            </span>
-                          </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setUsingSubscription(false);
-                              setSelectedServices([]);
-                            }}
-                            className="w-full border-muted-foreground/30 text-muted-foreground h-10"
-                          >
-                            Cancelar uso da assinatura
-                          </Button>
+                  {/* Sempre permite usar a assinatura - a verificação de créditos será feita na data escolhida */}
+                  {!usingSubscription ? (
+                    <Button
+                      onClick={() => {
+                        setUsingSubscription(true);
+                        toast.success("Modo assinatura ativado!", { 
+                          description: activeSubscription.weekly_credits_available > 0 
+                            ? "Selecione os serviços desejados e clique em Continuar." 
+                            : "Selecione os serviços e escolha uma data em uma semana futura."
+                        });
+                      }}
+                      className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
+                    >
+                      <CalendarIcon className="w-5 h-5 mr-2" />
+                      Usar Crédito da Assinatura
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-lg border border-green-500/50">
+                        <Check className="w-5 h-5 text-green-500" />
+                        <span className="text-sm font-medium text-green-500">
+                          Modo assinatura ativo! Selecione os serviços acima.
+                        </span>
+                      </div>
+                      {activeSubscription.weekly_credits_available === 0 && (
+                        <div className="text-center bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
+                          <p className="text-amber-500 text-xs font-medium">
+                            ⏰ Sem créditos esta semana - agende para a próxima!
+                          </p>
                         </div>
                       )}
-                    </>
-                  ) : (
-                    <div className="text-center bg-amber-500/10 p-3 rounded-lg border border-amber-500/30">
-                      <p className="text-amber-500 text-sm font-medium mb-1">
-                        ⏰ Você já usou seu crédito desta semana!
-                      </p>
-                      <p className="text-amber-400/80 text-xs">
-                        Próximo crédito disponível na segunda-feira
-                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setUsingSubscription(false);
+                          setSelectedServices([]);
+                        }}
+                        className="w-full border-muted-foreground/30 text-muted-foreground h-10"
+                      >
+                        Cancelar uso da assinatura
+                      </Button>
                     </div>
                   )}
                 </div>
