@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek } from "date-fns";
+import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -318,17 +318,17 @@ const Booking = () => {
     }
   };
 
-  // Fetch user's subscription bookings to highlight booked weeks
+  // Fetch user's subscription bookings for the CURRENT MONTH only
   const fetchSubscriptionBookings = async () => {
     if (!user) {
       setSubscriptionBookedWeeks([]);
       return;
     }
 
-    // Get subscription appointments for the next 2 months
+    // Subscription is only valid for the current month
     const today = new Date();
-    const twoMonthsLater = new Date(today);
-    twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
+    const monthStart = startOfMonth(today);
+    const monthEnd = endOfMonth(today);
 
     const { data: appointments } = await supabase
       .from("appointments")
@@ -336,8 +336,8 @@ const Booking = () => {
       .eq("user_id", user.id)
       .eq("payment_method", "subscription")
       .neq("status", "cancelled")
-      .gte("appointment_date", format(today, "yyyy-MM-dd"))
-      .lte("appointment_date", format(twoMonthsLater, "yyyy-MM-dd"));
+      .gte("appointment_date", format(monthStart, "yyyy-MM-dd"))
+      .lte("appointment_date", format(monthEnd, "yyyy-MM-dd"));
 
     if (appointments && appointments.length > 0) {
       const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
@@ -346,6 +346,11 @@ const Booking = () => {
       setSubscriptionBookedWeeks([]);
     }
   };
+
+  // Calculate remaining subscription bookings for the current month
+  const remainingMonthlyBookings = activeSubscription 
+    ? Math.max(0, activeSubscription.monthly_cuts_limit - subscriptionBookedWeeks.length)
+    : 0;
 
   const fetchServices = async () => {
     const { data, error } = await supabase
@@ -572,62 +577,40 @@ const Booking = () => {
       return;
     }
 
-    // If using subscription, verify if user can book for this week
+    // If using subscription, verify rules
     if (usingSubscription && activeSubscription) {
-      // Calculate the week of the appointment date
-      const appointmentWeekStart = new Date(selectedDate);
-      appointmentWeekStart.setDate(appointmentWeekStart.getDate() - appointmentWeekStart.getDay()); // Sunday
-      appointmentWeekStart.setHours(0, 0, 0, 0);
+      const today = new Date();
       
-      const appointmentWeekEnd = new Date(appointmentWeekStart);
-      appointmentWeekEnd.setDate(appointmentWeekEnd.getDate() + 6); // Saturday
-      appointmentWeekEnd.setHours(23, 59, 59, 999);
+      // Rule 1: Subscription only valid for current month
+      if (!isSameMonth(selectedDate, today)) {
+        setLoading(false);
+        toast.error("Assinatura só vale para o mês atual", { 
+          description: "Você só pode agendar com assinatura para datas deste mês." 
+        });
+        return;
+      }
       
-      // Check if user already has an appointment in this week
-      const weekStartStr = format(appointmentWeekStart, "yyyy-MM-dd");
-      const weekEndStr = format(appointmentWeekEnd, "yyyy-MM-dd");
+      // Rule 2: Check if user reached monthly limit
+      if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
+        setLoading(false);
+        toast.error("Limite mensal atingido", { 
+          description: `Você já usou todos os ${activeSubscription.monthly_cuts_limit} agendamentos do mês.` 
+        });
+        return;
+      }
       
-      const { data: existingWeekAppointments } = await supabase
-        .from("appointments")
-        .select("id")
-        .eq("user_id", user.id)
-        .gte("appointment_date", weekStartStr)
-        .lte("appointment_date", weekEndStr)
-        .eq("payment_method", "subscription")
-        .neq("status", "cancelled");
+      // Rule 3: Check if user already has an appointment in this week
+      const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
+        isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
+      );
       
-      if (existingWeekAppointments && existingWeekAppointments.length > 0) {
+      if (isWeekAlreadyBooked) {
         setLoading(false);
         toast.error("Limite semanal atingido", { 
           description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
         });
         return;
       }
-      
-      // Check if the appointment is for the current week - use credits
-      const today = new Date();
-      const currentWeekStart = new Date(today);
-      currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
-      currentWeekStart.setHours(0, 0, 0, 0);
-      
-      const isCurrentWeek = appointmentWeekStart.getTime() === currentWeekStart.getTime();
-      
-      // Only use credits if it's for the current week
-      if (isCurrentWeek) {
-        const { data: cutUsed, error: cutError } = await supabase.rpc('use_subscription_cut', {
-          p_user_id: user.id
-        });
-
-        if (cutError || !cutUsed) {
-          toast.error("Sem créditos disponíveis esta semana", { 
-            description: "Escolha uma data em uma semana futura." 
-          });
-          setLoading(false);
-          return;
-        }
-      }
-      // For future weeks, we just let the booking go through
-      // Credits will be checked/deducted when that week arrives (via cron job or on confirmation)
     }
 
     // Criar o agendamento com o primeiro serviço (para compatibilidade)
@@ -675,6 +658,11 @@ const Booking = () => {
       }
     }
 
+    // Refresh subscription bookings to update remaining count
+    if (usingSubscription) {
+      fetchSubscriptionBookings();
+    }
+
     setLoading(false);
     toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
     setStep(5);
@@ -711,10 +699,25 @@ const Booking = () => {
     }
   };
 
+  // Disable days: past, Sundays, and next month when using subscription
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
+    
+    // If using subscription, block next month dates
+    if (usingSubscription) {
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const dateMonth = date.getMonth();
+      const dateYear = date.getFullYear();
+      
+      // Block if it's a different month or year (subscription only valid for current month)
+      if (dateMonth !== currentMonth || dateYear !== currentYear) {
+        return true;
+      }
+    }
+    
     // Apenas domingo (0) está fechado
     return date < today || dayOfWeek === 0;
   };
@@ -988,75 +991,92 @@ const Booking = () => {
                     <div>
                       <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Créditos desta semana
+                        Agendamentos restantes este mês
                       </p>
                       <p className="text-[10px] text-muted-foreground/70">
-                        (créditos expiram semanalmente se não usados)
+                        (1 por semana, até {activeSubscription.monthly_cuts_limit} no mês)
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-green-500">
-                        {activeSubscription.weekly_credits_available}
+                      <p className={`text-2xl font-bold ${remainingMonthlyBookings > 0 ? 'text-green-500' : 'text-destructive'}`}>
+                        {remainingMonthlyBookings}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">disponíveis</p>
+                      <p className="text-[10px] text-muted-foreground">de {activeSubscription.monthly_cuts_limit}</p>
                     </div>
                   </div>
                   
-                  {/* Weekly credits indicator */}
+                  {/* Monthly bookings indicator */}
                   <div className="flex gap-1 mb-3">
-                    {Array.from({ length: Math.ceil(activeSubscription.monthly_cuts_limit / 4) }).map((_, i) => (
+                    {Array.from({ length: activeSubscription.monthly_cuts_limit }).map((_, i) => (
                       <div 
                         key={i}
                         className={`flex-1 h-2 rounded-full ${
-                          i < activeSubscription.weekly_credits_available 
-                            ? "bg-green-500" 
-                            : "bg-muted"
+                          i < subscriptionBookedWeeks.length
+                            ? "bg-amber-500" 
+                            : "bg-green-500"
                         }`}
                       />
                     ))}
                   </div>
-
-                  {/* Sempre permite usar a assinatura - a verificação de créditos será feita na data escolhida */}
-                  {!usingSubscription ? (
-                    <Button
-                      onClick={() => {
-                        setUsingSubscription(true);
-                        toast.success("Modo assinatura ativado!", { 
-                          description: activeSubscription.weekly_credits_available > 0 
-                            ? "Selecione os serviços desejados e clique em Continuar." 
-                            : "Selecione os serviços e escolha uma data em uma semana futura."
-                        });
-                      }}
-                      className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
-                    >
-                      <CalendarIcon className="w-5 h-5 mr-2" />
-                      Usar Crédito da Assinatura
-                    </Button>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-lg border border-green-500/50">
-                        <Check className="w-5 h-5 text-green-500" />
-                        <span className="text-sm font-medium text-green-500">
-                          Modo assinatura ativo! Selecione os serviços acima.
-                        </span>
+                  
+                  {/* Show booked weeks */}
+                  {subscriptionBookedWeeks.length > 0 && (
+                    <div className="mb-3 p-2 bg-muted/30 rounded-lg">
+                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {subscriptionBookedWeeks.map((date, i) => (
+                          <span key={i} className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
+                            {format(date, "dd/MM")}
+                          </span>
+                        ))}
                       </div>
-                      {activeSubscription.weekly_credits_available === 0 && (
-                        <div className="text-center bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
-                          <p className="text-amber-500 text-xs font-medium">
-                            ⏰ Sem créditos esta semana - agende para a próxima!
-                          </p>
+                    </div>
+                  )}
+
+                  {remainingMonthlyBookings > 0 ? (
+                    <>
+                      {!usingSubscription ? (
+                        <Button
+                          onClick={() => {
+                            setUsingSubscription(true);
+                            toast.success("Modo assinatura ativado!", { 
+                              description: `Você tem ${remainingMonthlyBookings} agendamento(s) disponível(is) este mês.`
+                            });
+                          }}
+                          className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
+                        >
+                          <CalendarIcon className="w-5 h-5 mr-2" />
+                          Usar Crédito da Assinatura
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-lg border border-green-500/50">
+                            <Check className="w-5 h-5 text-green-500" />
+                            <span className="text-sm font-medium text-green-500">
+                              Modo assinatura ativo! Selecione os serviços acima.
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setUsingSubscription(false);
+                              setSelectedServices([]);
+                            }}
+                            className="w-full border-muted-foreground/30 text-muted-foreground h-10"
+                          >
+                            Cancelar uso da assinatura
+                          </Button>
                         </div>
                       )}
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setUsingSubscription(false);
-                          setSelectedServices([]);
-                        }}
-                        className="w-full border-muted-foreground/30 text-muted-foreground h-10"
-                      >
-                        Cancelar uso da assinatura
-                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center bg-destructive/10 p-3 rounded-lg border border-destructive/30">
+                      <p className="text-destructive text-sm font-medium mb-1">
+                        🚫 Limite mensal atingido!
+                      </p>
+                      <p className="text-destructive/80 text-xs">
+                        Você já usou todos os {activeSubscription.monthly_cuts_limit} agendamentos deste mês.
+                      </p>
                     </div>
                   )}
                 </div>
