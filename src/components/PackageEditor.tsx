@@ -45,18 +45,17 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
   const [loading, setLoading] = useState(false);
   
   const [packageData, setPackageData] = useState<PackageData>({
-    id: packageToEdit?.id || undefined,
-    name: packageToEdit?.name || "",
-    price: packageToEdit?.price || 0,
-    description: packageToEdit?.description || "",
-    duration_days: packageToEdit?.duration_days || 30,
+    id: undefined,
+    name: "",
+    price: 0,
+    description: "",
+    duration_days: 30,
     items: []
   });
 
+  // Initialize/update package data when packageToEdit changes
   useEffect(() => {
-    fetchServices();
     if (packageToEdit) {
-      // Load existing items for this package
       const items = existingItems
         .filter(i => i.package_id === packageToEdit.id)
         .map(i => ({
@@ -64,9 +63,30 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
           service_name: i.service_name,
           quantity: i.quantity
         }));
-      setPackageData(prev => ({ ...prev, items }));
+      
+      setPackageData({
+        id: packageToEdit.id,
+        name: packageToEdit.name,
+        price: packageToEdit.price,
+        description: packageToEdit.description || "",
+        duration_days: packageToEdit.duration_days || 30,
+        items
+      });
+    } else {
+      setPackageData({
+        id: undefined,
+        name: "",
+        price: 0,
+        description: "",
+        duration_days: 30,
+        items: []
+      });
     }
   }, [packageToEdit, existingItems]);
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
 
   const fetchServices = async () => {
     const { data } = await supabase
