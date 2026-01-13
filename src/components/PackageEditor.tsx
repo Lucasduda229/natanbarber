@@ -116,28 +116,8 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
     });
   };
 
-  // Auto-sync: sum all cortes/degradês and update sobrancelha to match total
-  const syncSobrancelha = (items: PackageItem[]) => {
-    // Calculate total cuts (sum of all corte and degradê items)
-    const totalCuts = items.reduce((sum, item) => {
-      const name = item.service_name.toLowerCase();
-      if (name.includes('corte') || name.includes('degradê') || name.includes('degrade')) {
-        return sum + item.quantity;
-      }
-      return sum;
-    }, 0);
-    
-    if (totalCuts > 0) {
-      const sobrancelhaService = services.find(s => s.name.toLowerCase() === 'sobrancelha');
-      if (sobrancelhaService) {
-        const existingSobrancelha = items.find(i => i.service_id === sobrancelhaService.id);
-        if (existingSobrancelha) {
-          existingSobrancelha.quantity = totalCuts;
-        }
-      }
-    }
-    return items;
-  };
+  // No auto-sync - quantities are set manually as configured in the package
+  // Each service keeps its configured quantity exactly as the admin sets it
 
   const handleSave = async () => {
     if (!packageData.name.trim()) {
@@ -156,8 +136,8 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
     setLoading(true);
 
     try {
-      // Sync sobrancelha with cortes before saving
-      const syncedItems = syncSobrancelha([...packageData.items]);
+      // Use items exactly as configured (no auto-sync)
+      const itemsToSave = [...packageData.items];
 
       if (packageData.id) {
         // UPDATE existing package
@@ -180,7 +160,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
           .eq("package_id", packageData.id);
 
         // Insert new items
-        const itemsToInsert = syncedItems.map(item => ({
+        const itemsToInsert = itemsToSave.map(item => ({
           package_id: packageData.id!,
           service_id: item.service_id,
           service_name: item.service_name,
@@ -211,7 +191,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
         if (pkgError || !newPkg) throw pkgError;
 
         // Insert items
-        const itemsToInsert = syncedItems.map(item => ({
+        const itemsToInsert = itemsToSave.map(item => ({
           package_id: newPkg.id,
           service_id: item.service_id,
           service_name: item.service_name,
@@ -353,14 +333,11 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
           </div>
         )}
 
-        {/* Auto-sync info */}
+        {/* Weekly credits info */}
         {totalCuts > 0 && (
           <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-sm">
             <p className="text-primary font-medium">
               📊 Créditos Semanais: {weeklyCredits} por semana ({totalCuts} cortes total)
-            </p>
-            <p className="text-muted-foreground text-xs mt-1">
-              ⚡ Sobrancelha será sincronizada automaticamente com a quantidade de cortes
             </p>
           </div>
         )}
