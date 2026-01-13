@@ -116,20 +116,23 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
     });
   };
 
-  // Auto-sync: when corte quantity changes, update sobrancelha to match
+  // Auto-sync: sum all cortes/degradês and update sobrancelha to match total
   const syncSobrancelha = (items: PackageItem[]) => {
-    const corteItem = items.find(i => 
-      i.service_name.toLowerCase().includes('corte') || 
-      i.service_name.toLowerCase().includes('degradê') ||
-      i.service_name.toLowerCase().includes('degrade')
-    );
+    // Calculate total cuts (sum of all corte and degradê items)
+    const totalCuts = items.reduce((sum, item) => {
+      const name = item.service_name.toLowerCase();
+      if (name.includes('corte') || name.includes('degradê') || name.includes('degrade')) {
+        return sum + item.quantity;
+      }
+      return sum;
+    }, 0);
     
-    if (corteItem) {
+    if (totalCuts > 0) {
       const sobrancelhaService = services.find(s => s.name.toLowerCase() === 'sobrancelha');
       if (sobrancelhaService) {
         const existingSobrancelha = items.find(i => i.service_id === sobrancelhaService.id);
         if (existingSobrancelha) {
-          existingSobrancelha.quantity = corteItem.quantity;
+          existingSobrancelha.quantity = totalCuts;
         }
       }
     }
