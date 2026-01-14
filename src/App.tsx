@@ -16,6 +16,7 @@ import MyAppointments from "./pages/MyAppointments";
 import Admin from "./pages/Admin";
 import AppointmentHistory from "./pages/AppointmentHistory";
 import Install from "./pages/Install";
+import Pedido from "./pages/Pedido";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/history" element={<AppointmentHistory />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/pedido" element={<Pedido />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
