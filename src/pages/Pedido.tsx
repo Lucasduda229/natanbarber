@@ -314,25 +314,28 @@ const Pedido = () => {
     );
   }
 
+  // Calculate total price
+  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+
   return (
-    <div className="min-h-screen relative overflow-hidden safe-bottom">
+    <div className="min-h-screen relative overflow-x-hidden">
       <AnimatedBackground />
 
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-center px-4 py-6">
-        <div className="flex flex-col items-center gap-2">
+      {/* Header - Compacto para mobile */}
+      <header className="relative z-10 flex items-center justify-center px-4 py-4 safe-top">
+        <div className="flex items-center gap-3">
           <img 
             src={logoImage} 
             alt="Natan Barbershop" 
-            className="w-16 h-16 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
+            className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
           />
-          <div className="text-center">
-            <h1 className="text-xl font-bold">
+          <div>
+            <h1 className="text-lg font-bold leading-tight">
               <span className="text-foreground">Natan </span>
               <span className="text-transparent bg-clip-text bg-gold-gradient">BarberShop</span>
             </h1>
-            <p className="text-muted-foreground text-xs flex items-center justify-center gap-1 mt-1">
-              <MapPin className="w-3 h-3" />
+            <p className="text-muted-foreground text-[10px] flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5" />
               {LOCATION.neighborhood}
             </p>
           </div>
@@ -340,36 +343,36 @@ const Pedido = () => {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 px-4 pb-8 max-w-lg mx-auto">
-        <Card className="bg-card/80 backdrop-blur border-primary/20">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl text-center">
+      <main className="relative z-10 px-3 pb-28 max-w-lg mx-auto">
+        <Card className="bg-card/90 backdrop-blur border-primary/20">
+          <CardHeader className="pb-3 px-4 pt-4">
+            <CardTitle className="text-lg text-center">
               {step === 1 && "Escolha os Serviços"}
-              {step === 2 && "Escolha Data e Horário"}
+              {step === 2 && "Data e Horário"}
               {step === 3 && "Seus Dados"}
             </CardTitle>
             {/* Step indicator */}
-            <div className="flex justify-center gap-2 mt-3">
+            <div className="flex justify-center gap-2 mt-2">
               {[1, 2, 3].map((s) => (
                 <div
                   key={s}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  className={`h-1.5 rounded-full transition-all ${
                     s === step 
                       ? "bg-primary w-8" 
                       : s < step 
-                        ? "bg-primary" 
-                        : "bg-muted"
+                        ? "bg-primary w-4" 
+                        : "bg-muted w-4"
                   }`}
                 />
               ))}
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-3 pb-4">
             {/* Step 1: Select Service */}
             {step === 1 && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground mb-2">Selecione um ou mais serviços</p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">Toque para selecionar</p>
                 {services.map((service) => {
                   const isSelected = selectedServices.some(s => s.id === service.id);
                   return (
@@ -382,34 +385,31 @@ const Pedido = () => {
                           setSelectedServices(prev => [...prev, service]);
                         }
                       }}
-                      className={`w-full p-4 rounded-lg border transition-all text-left ${
+                      className={`w-full p-3 rounded-xl border-2 transition-all text-left active:scale-[0.98] ${
                         isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50 bg-card/50"
+                          ? "border-primary bg-primary/15"
+                          : "border-border/50 bg-card/50 active:border-primary/50"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                           isSelected ? "bg-primary" : "bg-primary/20"
                         }`}>
                           {isSelected ? (
-                            <Check className="w-5 h-5 text-background" />
+                            <Check className="w-4 h-4 text-background" />
                           ) : (
-                            <Scissors className="w-5 h-5 text-primary" />
+                            <Scissors className="w-4 h-4 text-primary" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{service.name}</h3>
-                          {service.description && (
-                            <p className="text-sm text-muted-foreground mt-0.5">{service.description}</p>
-                          )}
-                          <div className="flex items-center gap-3 mt-2 text-sm">
-                            <span className="text-primary font-bold">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm truncate">{service.name}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-primary font-bold text-sm">
                               R$ {service.price.toFixed(2).replace(".", ",")}
                             </span>
-                            <span className="text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              {service.duration_minutes} min
+                            <span className="text-muted-foreground text-xs flex items-center gap-0.5">
+                              <Clock className="w-3 h-3" />
+                              {service.duration_minutes}min
                             </span>
                           </div>
                         </div>
@@ -417,70 +417,51 @@ const Pedido = () => {
                     </button>
                   );
                 })}
-
-                {selectedServices.length > 0 && (
-                  <div className="bg-primary/10 rounded-lg p-3 border border-primary/30">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">{selectedServices.length} serviço(s) selecionado(s)</span>
-                      <span className="font-bold text-primary">
-                        R$ {selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2).replace(".", ",")}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={() => setStep(2)}
-                  disabled={selectedServices.length === 0}
-                  className="w-full bg-gold-gradient text-background mt-4"
-                >
-                  Continuar
-                </Button>
               </div>
             )}
 
             {/* Step 2: Select Date and Time */}
             {step === 2 && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <Label className="flex items-center gap-2 mb-3">
-                    <CalendarIcon className="w-4 h-4 text-primary" />
-                    Data
+                  <Label className="flex items-center gap-2 mb-2 text-sm">
+                    <CalendarIcon className="w-3.5 h-3.5 text-primary" />
+                    Escolha a data
                   </Label>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center -mx-2">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={setSelectedDate}
                       disabled={disabledDays}
                       locale={ptBR}
-                      className="rounded-md border border-primary/20 bg-card/50"
+                      className="rounded-lg border border-primary/20 bg-card/50 text-sm"
                     />
                   </div>
                 </div>
 
                 {selectedDate && (
                   <div>
-                    <Label className="flex items-center gap-2 mb-3">
-                      <Clock className="w-4 h-4 text-primary" />
-                      Horário
+                    <Label className="flex items-center gap-2 mb-2 text-sm">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      Escolha o horário
                     </Label>
                     {availableSlots.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">
-                        Nenhum horário disponível nesta data
+                      <p className="text-center text-muted-foreground py-3 text-sm">
+                        Nenhum horário disponível
                       </p>
                     ) : (
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-4 gap-1.5">
                         {availableSlots.map((slot) => (
                           <Button
                             key={slot.id}
                             variant={selectedTime === slot.slot_time ? "default" : "outline"}
                             size="sm"
                             onClick={() => setSelectedTime(slot.slot_time)}
-                            className={selectedTime === slot.slot_time 
+                            className={`text-xs h-9 ${selectedTime === slot.slot_time 
                               ? "bg-gold-gradient text-background" 
-                              : "border-primary/30 hover:border-primary"
-                            }
+                              : "border-primary/30"
+                            }`}
                           >
                             {slot.slot_time.slice(0, 5)}
                           </Button>
@@ -489,32 +470,15 @@ const Pedido = () => {
                     )}
                   </div>
                 )}
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="flex-1"
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    onClick={() => setStep(3)}
-                    disabled={!selectedDate || !selectedTime}
-                    className="flex-1 bg-gold-gradient text-background"
-                  >
-                    Continuar
-                  </Button>
-                </div>
               </div>
             )}
 
             {/* Step 3: Customer Info */}
             {step === 3 && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <Label htmlFor="name" className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-primary" />
+                  <Label htmlFor="name" className="flex items-center gap-2 mb-1.5 text-sm">
+                    <User className="w-3.5 h-3.5 text-primary" />
                     Seu Nome
                   </Label>
                   <Input
@@ -522,34 +486,36 @@ const Pedido = () => {
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Digite seu nome"
-                    className={formErrors.name ? "border-destructive" : ""}
+                    className={`h-11 text-base ${formErrors.name ? "border-destructive" : ""}`}
                     maxLength={100}
                   />
                   {formErrors.name && (
-                    <p className="text-destructive text-sm mt-1">{formErrors.name}</p>
+                    <p className="text-destructive text-xs mt-1">{formErrors.name}</p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="whatsapp" className="flex items-center gap-2 mb-2">
-                    <Phone className="w-4 h-4 text-primary" />
+                  <Label htmlFor="whatsapp" className="flex items-center gap-2 mb-1.5 text-sm">
+                    <Phone className="w-3.5 h-3.5 text-primary" />
                     WhatsApp
                   </Label>
                   <Input
                     id="whatsapp"
+                    type="tel"
+                    inputMode="tel"
                     value={customerWhatsApp}
                     onChange={(e) => setCustomerWhatsApp(e.target.value)}
                     placeholder="(48) 99999-9999"
-                    className={formErrors.whatsapp ? "border-destructive" : ""}
+                    className={`h-11 text-base ${formErrors.whatsapp ? "border-destructive" : ""}`}
                     maxLength={15}
                   />
                   {formErrors.whatsapp && (
-                    <p className="text-destructive text-sm mt-1">{formErrors.whatsapp}</p>
+                    <p className="text-destructive text-xs mt-1">{formErrors.whatsapp}</p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="notes" className="mb-2 block">
+                  <Label htmlFor="notes" className="mb-1.5 block text-sm">
                     Observação (opcional)
                   </Label>
                   <Textarea
@@ -557,69 +523,104 @@ const Pedido = () => {
                     value={customerNotes}
                     onChange={(e) => setCustomerNotes(e.target.value)}
                     placeholder="Alguma observação especial?"
-                    rows={3}
+                    rows={2}
                     maxLength={500}
+                    className="text-base"
                   />
                 </div>
 
                 {/* Summary */}
-                <div className="bg-card/50 rounded-lg p-4 space-y-2 border border-primary/20">
-                  <h4 className="font-semibold text-sm text-muted-foreground">Resumo do Pedido</h4>
+                <div className="bg-card/50 rounded-lg p-3 space-y-1.5 border border-primary/20 text-sm">
+                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">Resumo</h4>
                   <div>
-                    <span className="text-sm text-muted-foreground">Serviços:</span>
-                    <ul className="mt-1 space-y-1">
+                    <ul className="space-y-0.5">
                       {selectedServices.map(s => (
-                        <li key={s.id} className="flex justify-between text-sm">
-                          <span>{s.name}</span>
-                          <span>R$ {s.price.toFixed(2).replace(".", ",")}</span>
+                        <li key={s.id} className="flex justify-between">
+                          <span className="truncate mr-2">{s.name}</span>
+                          <span className="text-muted-foreground">R$ {s.price.toFixed(2).replace(".", ",")}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Data:</span>
-                    <span className="font-medium">
-                      {selectedDate && format(selectedDate, "dd/MM/yyyy")}
-                    </span>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>📅 {selectedDate && format(selectedDate, "dd/MM")}</span>
+                    <span>🕐 {selectedTime?.slice(0, 5)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Horário:</span>
-                    <span className="font-medium">{selectedTime?.slice(0, 5)}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-primary/20">
+                  <div className="flex justify-between pt-1.5 border-t border-primary/20">
                     <span className="font-semibold">Total:</span>
                     <span className="font-bold text-primary">
-                      R$ {selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2).replace(".", ",")}
+                      R$ {totalPrice.toFixed(2).replace(".", ",")}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep(2)}
-                    className="flex-1"
-                    disabled={loading}
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex-1 bg-gold-gradient text-background"
-                  >
-                    {loading ? "Enviando..." : "Confirmar Pedido"}
-                  </Button>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Após confirmar, entraremos em contato pelo WhatsApp
-        </p>
       </main>
+
+      {/* Fixed Bottom Bar */}
+      {step === 1 && selectedServices.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 bg-card/95 backdrop-blur border-t border-primary/20 p-3 safe-bottom">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">{selectedServices.length} serviço(s)</p>
+              <p className="font-bold text-primary">
+                R$ {totalPrice.toFixed(2).replace(".", ",")}
+              </p>
+            </div>
+            <Button
+              onClick={() => setStep(2)}
+              className="bg-gold-gradient text-background px-6 h-11"
+            >
+              Continuar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 bg-card/95 backdrop-blur border-t border-primary/20 p-3 safe-bottom">
+          <div className="max-w-lg mx-auto flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              className="flex-1 h-11"
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={() => setStep(3)}
+              disabled={!selectedDate || !selectedTime}
+              className="flex-1 bg-gold-gradient text-background h-11"
+            >
+              Continuar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 bg-card/95 backdrop-blur border-t border-primary/20 p-3 safe-bottom">
+          <div className="max-w-lg mx-auto flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStep(2)}
+              className="flex-1 h-11"
+              disabled={loading}
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 bg-gold-gradient text-background h-11"
+            >
+              {loading ? "Enviando..." : "Confirmar"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
