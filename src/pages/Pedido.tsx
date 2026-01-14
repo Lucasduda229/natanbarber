@@ -172,78 +172,48 @@ const Pedido = () => {
       return;
     }
 
-    // Create or find the customer using the edge function
+    // Create or find the customer and appointment using the edge function
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
+    const serviceNames = selectedServices.map(s => s.name).join(", ");
+    const notesText = customerNotes.trim() 
+      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
+      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
     
     try {
       const response = await supabase.functions.invoke("create-guest-customer", {
         body: {
           name: customerName.trim(),
-          phone: cleanPhone
+          phone: cleanPhone,
+          appointment: {
+            service_id: selectedServices[0].id,
+            additional_service_ids: selectedServices.slice(1).map(s => s.id),
+            appointment_date: appointmentDate,
+            appointment_time: selectedTime,
+            notes: notesText,
+          }
         }
       });
 
-      if (response.error || !response.data?.user_id) {
-        console.error("Error creating/finding customer:", response.error);
+      if (response.error) {
+        console.error("Error creating appointment:", response.error);
         setLoading(false);
-        toast.error("Erro ao processar cadastro", { 
+        toast.error("Erro ao processar pedido", { 
           description: "Por favor, tente novamente." 
         });
         return;
       }
 
-      const userId = response.data.user_id;
-      const isNewCustomer = response.data.is_new;
-      
-      if (isNewCustomer) {
-        console.log("New customer created:", userId);
-      } else {
-        console.log("Existing customer found:", userId);
-      }
-
-      // Create the appointment
-      const serviceNames = selectedServices.map(s => s.name).join(", ");
-      const notesText = customerNotes.trim() 
-        ? `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
-        : `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
-
-      const { data: appointment, error } = await supabase
-        .from("appointments")
-        .insert({
-          user_id: userId,
-          service_id: selectedServices[0].id,
-          appointment_date: appointmentDate,
-          appointment_time: selectedTime,
-          status: "pending",
-          payment_status: "pending",
-          payment_method: null,
-          notes: notesText,
-        })
-        .select()
-        .single();
-
-      if (error || !appointment) {
+      if (!response.data?.appointment) {
+        console.error("No appointment in response:", response.data);
         setLoading(false);
-        if (error?.code === '23505') {
-          toast.error("Horário indisponível", {
-            description: "Este horário acabou de ser reservado. Por favor, escolha outro."
-          });
-        } else {
-          console.error("Error creating appointment:", error);
-          toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
-        }
+        toast.error("Erro ao criar agendamento", { 
+          description: response.data?.error || "Por favor, tente novamente." 
+        });
         return;
       }
 
-      // Insert additional services
-      if (selectedServices.length > 1) {
-        const additionalServices = selectedServices.slice(1).map(service => ({
-          appointment_id: appointment.id,
-          service_id: service.id,
-        }));
-
-        await supabase.from("appointment_services").insert(additionalServices);
-      }
+      const isNewCustomer = response.data.is_new;
+      console.log(isNewCustomer ? "New customer created" : "Existing customer found", "- Appointment:", response.data.appointment.id);
 
       setLoading(false);
       setSuccess(true);
