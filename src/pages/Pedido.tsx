@@ -65,7 +65,7 @@ const Pedido = () => {
       .select("*")
       .eq("active", true)
       .eq("subscribers_only", false)
-      .order("price");
+      .order("price", { ascending: false });
 
     if (!error && data) {
       setServices(data);
