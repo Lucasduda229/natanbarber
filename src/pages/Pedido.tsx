@@ -172,99 +172,88 @@ const Pedido = () => {
       return;
     }
 
-    // First, create or find the user profile for this WhatsApp number
-    // For public orders, we'll use a special "guest" approach
+    // Create or find the customer using the edge function
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     
-    // Check if there's already a profile with this phone
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("phone", cleanPhone)
-      .maybeSingle();
+    try {
+      const response = await supabase.functions.invoke("create-guest-customer", {
+        body: {
+          name: customerName.trim(),
+          phone: cleanPhone
+        }
+      });
 
-    let userId: string;
+      if (response.error || !response.data?.user_id) {
+        console.error("Error creating/finding customer:", response.error);
+        setLoading(false);
+        toast.error("Erro ao processar cadastro", { 
+          description: "Por favor, tente novamente." 
+        });
+        return;
+      }
 
-    if (existingProfile) {
-      userId = existingProfile.user_id;
-    } else {
-      // Create a guest user ID based on phone (deterministic)
-      userId = `guest_${cleanPhone}`;
+      const userId = response.data.user_id;
+      const isNewCustomer = response.data.is_new;
       
-      // Create profile for this guest
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .upsert({
+      if (isNewCustomer) {
+        console.log("New customer created:", userId);
+      } else {
+        console.log("Existing customer found:", userId);
+      }
+
+      // Create the appointment
+      const serviceNames = selectedServices.map(s => s.name).join(", ");
+      const notesText = customerNotes.trim() 
+        ? `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
+        : `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
+
+      const { data: appointment, error } = await supabase
+        .from("appointments")
+        .insert({
           user_id: userId,
-          full_name: customerName.trim(),
-          phone: cleanPhone,
-        }, { onConflict: 'user_id' });
+          service_id: selectedServices[0].id,
+          appointment_date: appointmentDate,
+          appointment_time: selectedTime,
+          status: "pending",
+          payment_status: "pending",
+          payment_method: null,
+          notes: notesText,
+        })
+        .select()
+        .single();
 
-      if (profileError) {
-        console.error("Error creating guest profile:", profileError);
+      if (error || !appointment) {
+        setLoading(false);
+        if (error?.code === '23505') {
+          toast.error("Horário indisponível", {
+            description: "Este horário acabou de ser reservado. Por favor, escolha outro."
+          });
+        } else {
+          console.error("Error creating appointment:", error);
+          toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
+        }
+        return;
       }
-    }
 
-    // Create the appointment
-    const serviceNames = selectedServices.map(s => s.name).join(", ");
-    const notesText = customerNotes.trim() 
-      ? `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
-      : `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
+      // Insert additional services
+      if (selectedServices.length > 1) {
+        const additionalServices = selectedServices.slice(1).map(service => ({
+          appointment_id: appointment.id,
+          service_id: service.id,
+        }));
 
-    const { data: appointment, error } = await supabase
-      .from("appointments")
-      .insert({
-        user_id: userId,
-        service_id: selectedServices[0].id,
-        appointment_date: appointmentDate,
-        appointment_time: selectedTime,
-        status: "pending",
-        payment_status: "pending",
-        payment_method: null,
-        notes: notesText,
-      })
-      .select()
-      .single();
+        await supabase.from("appointment_services").insert(additionalServices);
+      }
 
-    if (error || !appointment) {
       setLoading(false);
-      if (error?.code === '23505') {
-        toast.error("Horário indisponível", {
-          description: "Este horário acabou de ser reservado. Por favor, escolha outro."
-        });
-      } else {
-        console.error("Error creating appointment:", error);
-        toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
-      }
-      return;
-    }
+      setSuccess(true);
+      toast.success("Pedido enviado!", { description: "Entraremos em contato para confirmar." });
 
-    // Insert additional services
-    if (selectedServices.length > 1) {
-      const additionalServices = selectedServices.slice(1).map(service => ({
-        appointment_id: appointment.id,
-        service_id: service.id,
-      }));
-
-      await supabase.from("appointment_services").insert(additionalServices);
-    }
-
-    if (error) {
+    } catch (err) {
+      console.error("Error in handleSubmit:", err);
       setLoading(false);
-      if (error.code === '23505') {
-        toast.error("Horário indisponível", {
-          description: "Este horário acabou de ser reservado. Por favor, escolha outro."
-        });
-      } else {
-        console.error("Error creating appointment:", error);
-        toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
-      }
-      return;
+      toast.error("Erro ao processar pedido", { description: "Por favor, tente novamente." });
     }
-
-    setLoading(false);
-    setSuccess(true);
-    toast.success("Pedido enviado!", { description: "Entraremos em contato para confirmar." });
   };
 
   const disabledDays = (date: Date) => {
