@@ -322,7 +322,7 @@ const Pedido = () => {
       <AnimatedBackground />
 
       {/* Header - Compacto para mobile */}
-      <header className="relative z-10 flex items-center justify-center px-4 py-4 safe-top">
+      <header className="relative z-10 flex items-center justify-center px-4 pt-8 pb-4 safe-top">
         <div className="flex items-center gap-3">
           <img 
             src={logoImage} 
