@@ -405,7 +405,7 @@ const Pedido = () => {
                           <h3 className="font-semibold text-sm truncate">{service.name}</h3>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-primary font-bold text-sm">
-                              R$ {service.price.toFixed(2).replace(".", ",")}
+                              {service.price === 0 ? "Cortesia" : `R$ ${service.price.toFixed(2).replace(".", ",")}`}
                             </span>
                             <span className="text-muted-foreground text-xs flex items-center gap-0.5">
                               <Clock className="w-3 h-3" />
