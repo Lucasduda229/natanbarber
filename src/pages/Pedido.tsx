@@ -404,7 +404,7 @@ const Pedido = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-sm truncate">{service.name}</h3>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-primary font-bold text-sm">
+                            <span className={`font-bold text-sm ${service.price === 0 ? "text-green-500" : "text-primary"}`}>
                               {service.price === 0 ? "Cortesia" : `R$ ${service.price.toFixed(2).replace(".", ",")}`}
                             </span>
                             <span className="text-muted-foreground text-xs flex items-center gap-0.5">
