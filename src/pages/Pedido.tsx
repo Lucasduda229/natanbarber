@@ -393,19 +393,13 @@ const Pedido = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border-2 transition-colors ${
-                          isSelected ? "border-primary" : "border-primary/30"
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isSelected ? "bg-primary" : "bg-primary/20"
                         }`}>
                           {isSelected ? (
-                            <div className="w-full h-full bg-primary flex items-center justify-center">
-                              <Check className="w-5 h-5 text-background" />
-                            </div>
+                            <Check className="w-4 h-4 text-background" />
                           ) : (
-                            <img 
-                              src={logoImage} 
-                              alt={service.name}
-                              className="w-full h-full object-cover"
-                            />
+                            <Scissors className="w-4 h-4 text-primary" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
