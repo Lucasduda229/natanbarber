@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin } from "lucide-react";
+import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -35,7 +35,7 @@ const LOCATION = {
 const Pedido = () => {
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -141,7 +141,7 @@ const Pedido = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedService || !selectedDate || !selectedTime) {
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
       toast.error("Dados incompletos", { description: "Selecione serviço, data e horário." });
       return;
     }
@@ -204,22 +204,48 @@ const Pedido = () => {
     }
 
     // Create the appointment
+    const serviceNames = selectedServices.map(s => s.name).join(", ");
     const notesText = customerNotes.trim() 
-      ? `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\n${customerNotes.trim()}`
-      : `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}`;
+      ? `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
+      : `Pedido via WhatsApp - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
 
-    const { error } = await supabase
+    const { data: appointment, error } = await supabase
       .from("appointments")
       .insert({
         user_id: userId,
-        service_id: selectedService.id,
+        service_id: selectedServices[0].id,
         appointment_date: appointmentDate,
         appointment_time: selectedTime,
         status: "pending",
         payment_status: "pending",
         payment_method: null,
         notes: notesText,
-      });
+      })
+      .select()
+      .single();
+
+    if (error || !appointment) {
+      setLoading(false);
+      if (error?.code === '23505') {
+        toast.error("Horário indisponível", {
+          description: "Este horário acabou de ser reservado. Por favor, escolha outro."
+        });
+      } else {
+        console.error("Error creating appointment:", error);
+        toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
+      }
+      return;
+    }
+
+    // Insert additional services
+    if (selectedServices.length > 1) {
+      const additionalServices = selectedServices.slice(1).map(service => ({
+        appointment_id: appointment.id,
+        service_id: service.id,
+      }));
+
+      await supabase.from("appointment_services").insert(additionalServices);
+    }
 
     if (error) {
       setLoading(false);
@@ -261,7 +287,7 @@ const Pedido = () => {
                 Recebemos seu pedido e entraremos em contato pelo WhatsApp para confirmar.
               </p>
               <div className="bg-card/50 rounded-lg p-4 text-left space-y-2">
-                <p><strong>Serviço:</strong> {selectedService?.name}</p>
+                <p><strong>Serviços:</strong> {selectedServices.map(s => s.name).join(", ")}</p>
                 <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}</p>
                 <p><strong>Horário:</strong> {selectedTime?.slice(0, 5)}</p>
                 <p><strong>Cliente:</strong> {customerName}</p>
@@ -270,7 +296,7 @@ const Pedido = () => {
                 onClick={() => {
                   setSuccess(false);
                   setStep(1);
-                  setSelectedService(null);
+                  setSelectedServices([]);
                   setSelectedDate(undefined);
                   setSelectedTime(null);
                   setCustomerName("");
@@ -318,7 +344,7 @@ const Pedido = () => {
         <Card className="bg-card/80 backdrop-blur border-primary/20">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl text-center">
-              {step === 1 && "Escolha o Serviço"}
+              {step === 1 && "Escolha os Serviços"}
               {step === 2 && "Escolha Data e Horário"}
               {step === 3 && "Seus Dados"}
             </CardTitle>
@@ -343,42 +369,69 @@ const Pedido = () => {
             {/* Step 1: Select Service */}
             {step === 1 && (
               <div className="space-y-3">
-                {services.map((service) => (
-                  <button
-                    key={service.id}
-                    onClick={() => setSelectedService(service)}
-                    className={`w-full p-4 rounded-lg border transition-all text-left ${
-                      selectedService?.id === service.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50 bg-card/50"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <Scissors className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{service.name}</h3>
-                        {service.description && (
-                          <p className="text-sm text-muted-foreground mt-0.5">{service.description}</p>
-                        )}
-                        <div className="flex items-center gap-3 mt-2 text-sm">
-                          <span className="text-primary font-bold">
-                            R$ {service.price.toFixed(2).replace(".", ",")}
-                          </span>
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {service.duration_minutes} min
-                          </span>
+                <p className="text-xs text-muted-foreground mb-2">Selecione um ou mais serviços</p>
+                {services.map((service) => {
+                  const isSelected = selectedServices.some(s => s.id === service.id);
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedServices(prev => prev.filter(s => s.id !== service.id));
+                        } else {
+                          setSelectedServices(prev => [...prev, service]);
+                        }
+                      }}
+                      className={`w-full p-4 rounded-lg border transition-all text-left ${
+                        isSelected
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50 bg-card/50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isSelected ? "bg-primary" : "bg-primary/20"
+                        }`}>
+                          {isSelected ? (
+                            <Check className="w-5 h-5 text-background" />
+                          ) : (
+                            <Scissors className="w-5 h-5 text-primary" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{service.name}</h3>
+                          {service.description && (
+                            <p className="text-sm text-muted-foreground mt-0.5">{service.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="text-primary font-bold">
+                              R$ {service.price.toFixed(2).replace(".", ",")}
+                            </span>
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {service.duration_minutes} min
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    </button>
+                  );
+                })}
+
+                {selectedServices.length > 0 && (
+                  <div className="bg-primary/10 rounded-lg p-3 border border-primary/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{selectedServices.length} serviço(s) selecionado(s)</span>
+                      <span className="font-bold text-primary">
+                        R$ {selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2).replace(".", ",")}
+                      </span>
                     </div>
-                  </button>
-                ))}
+                  </div>
+                )}
 
                 <Button
                   onClick={() => setStep(2)}
-                  disabled={!selectedService}
+                  disabled={selectedServices.length === 0}
                   className="w-full bg-gold-gradient text-background mt-4"
                 >
                   Continuar
@@ -512,9 +565,16 @@ const Pedido = () => {
                 {/* Summary */}
                 <div className="bg-card/50 rounded-lg p-4 space-y-2 border border-primary/20">
                   <h4 className="font-semibold text-sm text-muted-foreground">Resumo do Pedido</h4>
-                  <div className="flex justify-between">
-                    <span>Serviço:</span>
-                    <span className="font-medium">{selectedService?.name}</span>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Serviços:</span>
+                    <ul className="mt-1 space-y-1">
+                      {selectedServices.map(s => (
+                        <li key={s.id} className="flex justify-between text-sm">
+                          <span>{s.name}</span>
+                          <span>R$ {s.price.toFixed(2).replace(".", ",")}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                   <div className="flex justify-between">
                     <span>Data:</span>
@@ -529,7 +589,7 @@ const Pedido = () => {
                   <div className="flex justify-between pt-2 border-t border-primary/20">
                     <span className="font-semibold">Total:</span>
                     <span className="font-bold text-primary">
-                      R$ {selectedService?.price.toFixed(2).replace(".", ",")}
+                      R$ {selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2).replace(".", ",")}
                     </span>
                   </div>
                 </div>
