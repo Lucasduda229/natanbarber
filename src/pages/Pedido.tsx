@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
 
 interface Service {
@@ -335,10 +336,13 @@ const Pedido = () => {
               <span className="text-foreground">Natan </span>
               <span className="text-transparent bg-clip-text bg-gold-gradient">BarberShop</span>
             </h1>
-            <p className="text-muted-foreground text-[10px] flex items-center gap-1">
-              <MapPin className="w-2.5 h-2.5" />
-              {LOCATION.neighborhood}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-muted-foreground text-[10px] flex items-center gap-1">
+                <MapPin className="w-2.5 h-2.5" />
+                {LOCATION.neighborhood}
+              </p>
+              <OpenClosedBadge />
+            </div>
           </div>
         </div>
       </header>
