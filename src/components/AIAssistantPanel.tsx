@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2 } from 'lucide-react';
+import { Sparkles, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -23,12 +23,6 @@ interface ParsedAppointment {
   appointment_date: string;
   appointment_time: string;
   notes: string | null;
-}
-
-interface AIResponse {
-  success: boolean;
-  data?: ParsedAppointment;
-  error?: string;
 }
 
 export const AIAssistantPanel = () => {
@@ -52,10 +46,7 @@ export const AIAssistantPanel = () => {
         body: { message: message.trim() }
       });
 
-      if (funcError) {
-        throw new Error(funcError.message);
-      }
-
+      if (funcError) throw new Error(funcError.message);
       if (!data.success) {
         setError(data.error || 'Não foi possível interpretar a mensagem');
         return;
@@ -74,7 +65,6 @@ export const AIAssistantPanel = () => {
 
   const confirmAppointment = async () => {
     if (!parsedData) return;
-
     setIsProcessing(true);
 
     try {
@@ -102,13 +92,8 @@ export const AIAssistantPanel = () => {
         }
       });
 
-      if (funcError) {
-        throw new Error(funcError.message);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao criar agendamento');
-      }
+      if (funcError) throw new Error(funcError.message);
+      if (!data.success) throw new Error(data.error || 'Erro ao criar agendamento');
 
       toast.success('Agendamento criado com sucesso!');
       setMessage('');
@@ -127,63 +112,82 @@ export const AIAssistantPanel = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-card/80 border border-primary/20 shadow-xl">
-      {/* Animated background glow */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-0 left-1/4 w-32 h-32 bg-primary/40 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-24 h-24 bg-primary/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
+    <div className="relative overflow-hidden rounded-3xl border border-primary/30 shadow-2xl">
+      {/* Premium gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#1a1510] via-card to-[#0d0d0d]" />
+      
+      {/* Animated gold particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-10 left-10 w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
+        <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-20 left-1/3 w-1 h-1 bg-primary/50 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 right-10 w-1.5 h-1.5 bg-primary/30 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
       
-      <div className="relative z-10 p-5 space-y-5">
+      {/* Glow effects */}
+      <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
+      <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/15 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
+        <div className="flex items-start gap-4">
+          <div className="relative group">
+            <div className="absolute inset-0 bg-primary/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary to-secondary flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
+              <Sparkles className="h-7 w-7 text-primary-foreground" />
             </div>
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-card animate-pulse" />
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full border-2 border-card flex items-center justify-center">
+              <Zap className="h-3 w-3 text-white" />
+            </span>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <div className="flex-1">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-primary via-yellow-400 to-primary bg-clip-text text-transparent">
               Assistente Inteligente
-              <Wand2 className="h-4 w-4 text-primary" />
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Cole a mensagem do WhatsApp e eu crio o agendamento ✨
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+              Cole a mensagem do WhatsApp e crio o agendamento automaticamente ✨
             </p>
           </div>
         </div>
 
-        {/* Chat-like input area */}
-        <div className="space-y-3">
-          <div className="relative">
-            <div className="absolute left-3 top-3 text-primary/60">
-              <MessageSquare className="h-5 w-5" />
+        {/* Chat input area */}
+        <div className="space-y-4">
+          <div className="relative group">
+            {/* Glow border effect */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-2xl blur opacity-30 group-focus-within:opacity-60 transition-opacity" />
+            
+            <div className="relative bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-xl rounded-2xl border border-primary/20 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-primary/10 bg-primary/5">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Mensagem do Cliente</span>
+              </div>
+              <Textarea
+                placeholder={`Cole aqui a mensagem...\n\n"Corte e barba para João amanhã às 14h"\n"Pedro corte + sobrancelha dia 15/01 às 10:30"`}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 rounded-none resize-none placeholder:text-muted-foreground/40 px-4 py-3"
+                disabled={isProcessing}
+              />
             </div>
-            <Textarea
-              placeholder={`💬 Cole aqui a mensagem do cliente...\n\nExemplos:\n• "Corte e barba para João amanhã às 14h"\n• "Pedro corte + sobrancelha dia 15/01 às 10:30"`}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[120px] pl-10 bg-background/60 backdrop-blur-sm border-primary/20 focus:border-primary/50 rounded-xl resize-none transition-all duration-300 placeholder:text-muted-foreground/60"
-              disabled={isProcessing}
-            />
           </div>
           
           <Button 
             onClick={processMessage} 
             disabled={isProcessing || !message.trim()}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-primary/30 group"
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary via-primary to-secondary hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/20 hover:shadow-primary/40 group text-base font-semibold"
           >
             {isProcessing ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                <span className="animate-pulse">Analisando mensagem...</span>
+                <div className="relative mr-3">
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                </div>
+                <span className="animate-pulse">Processando com IA...</span>
               </>
             ) : (
               <>
-                <Wand2 className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
-                Interpretar com IA
-                <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <Wand2 className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+                Interpretar Mensagem
+                <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
               </>
             )}
           </Button>
@@ -191,129 +195,154 @@ export const AIAssistantPanel = () => {
 
         {/* Error state */}
         {error && (
-          <div className="animate-fade-in flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30">
-            <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="font-medium text-destructive">Ops! Algo deu errado</p>
-              <p className="text-sm text-destructive/80 mt-1">{error}</p>
+          <div className="animate-fade-in relative overflow-hidden rounded-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-red-900/20" />
+            <div className="relative flex items-start gap-4 p-4 border border-red-500/30">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/30">
+                <AlertCircle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-red-400">Não consegui entender</p>
+                <p className="text-sm text-red-300/80 mt-1">{error}</p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Success state - Parsed data */}
+        {/* Success state */}
         {parsedData && (
           <div className="animate-fade-in space-y-4">
-            {/* Success header */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/30">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="font-medium text-green-500">Mensagem interpretada!</p>
-                <p className="text-sm text-green-500/80">Confira os dados abaixo</p>
+            {/* Success banner */}
+            <div className="relative overflow-hidden rounded-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20" />
+              <div className="relative flex items-center gap-4 p-4 border border-green-500/30">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-400">Dados extraídos com sucesso!</p>
+                  <p className="text-sm text-green-300/80">Confira as informações abaixo</p>
+                </div>
               </div>
             </div>
             
-            {/* Extracted data card */}
-            <div className="p-4 rounded-xl bg-background/60 backdrop-blur-sm border border-border/50 space-y-4">
-              {/* Client info */}
-              <div className="flex items-center gap-3 pb-3 border-b border-border/50">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Cliente</p>
-                  <p className="font-semibold text-foreground">{parsedData.client_name}</p>
-                </div>
-                {parsedData.client_phone && (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    📱 {parsedData.client_phone}
-                  </Badge>
-                )}
-              </div>
+            {/* Data card */}
+            <div className="relative overflow-hidden rounded-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-card/50 to-background/90 backdrop-blur-xl" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
               
-              {/* Services */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider">
-                  <Scissors className="h-4 w-4" />
-                  Serviços
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {parsedData.services && parsedData.services.length > 0 ? (
-                    parsedData.services.map((svc, idx) => (
-                      <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                        <span className="font-medium text-foreground">{svc.service_name}</span>
-                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 hover:bg-green-500/30">
-                          R$ {Number(svc.price).toFixed(2)}
-                        </Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                      <span className="font-medium text-foreground">{parsedData.service_name}</span>
-                      {parsedData.service_price !== undefined && (
-                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 hover:bg-green-500/30">
-                          R$ {Number(parsedData.service_price).toFixed(2)}
-                        </Badge>
-                      )}
-                    </div>
+              <div className="relative p-5 space-y-5 border border-primary/20">
+                {/* Client */}
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Cliente</p>
+                    <p className="text-lg font-bold text-foreground">{parsedData.client_name}</p>
+                  </div>
+                  {parsedData.client_phone && (
+                    <Badge variant="outline" className="px-3 py-1.5 bg-muted/30 border-primary/20 text-muted-foreground">
+                      📱 {parsedData.client_phone}
+                    </Badge>
                   )}
                 </div>
-              </div>
-
-              {/* Total */}
-              {parsedData.total_price !== undefined && parsedData.services && parsedData.services.length > 1 && (
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <span className="font-medium text-foreground">Total</span>
-                  <span className="text-xl font-bold text-green-500">
-                    R$ {Number(parsedData.total_price).toFixed(2)}
-                  </span>
-                </div>
-              )}
-              
-              {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Data</p>
-                    <p className="font-semibold text-foreground">{formatDate(parsedData.appointment_date)}</p>
+                
+                {/* Divider */}
+                <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                
+                {/* Services */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Scissors className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Serviços</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {parsedData.services && parsedData.services.length > 0 ? (
+                      parsedData.services.map((svc, idx) => (
+                        <div key={idx} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20 hover:border-primary/40 transition-colors">
+                          <span className="font-semibold text-foreground">{svc.service_name}</span>
+                          <span className="text-sm font-bold text-green-400">
+                            R$ {Number(svc.price).toFixed(2)}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20">
+                        <span className="font-semibold text-foreground">{parsedData.service_name}</span>
+                        {parsedData.service_price !== undefined && (
+                          <span className="text-sm font-bold text-green-400">
+                            R$ {Number(parsedData.service_price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Horário</p>
-                    <p className="font-semibold text-foreground">{parsedData.appointment_time}</p>
+
+                {/* Total */}
+                {parsedData.total_price !== undefined && parsedData.services && parsedData.services.length > 1 && (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-green-500/10 border border-green-500/20">
+                    <span className="font-semibold text-foreground">Total</span>
+                    <span className="text-2xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                      R$ {Number(parsedData.total_price).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Divider */}
+                <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                
+                {/* Date & Time */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-primary/10">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Data</p>
+                      <p className="font-bold text-foreground">{formatDate(parsedData.appointment_date)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-primary/10">
+                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Clock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Horário</p>
+                      <p className="font-bold text-foreground">{parsedData.appointment_time}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Notes */}
-              {parsedData.notes && (
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">📝 Observações</p>
-                  <p className="text-sm text-foreground">{parsedData.notes}</p>
-                </div>
-              )}
+                {/* Notes */}
+                {parsedData.notes && (
+                  <div className="p-4 rounded-xl bg-muted/20 border border-primary/10">
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                      <span>📝</span> Observações
+                    </p>
+                    <p className="text-sm text-foreground">{parsedData.notes}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Confirm button */}
             <Button 
               onClick={confirmAppointment} 
               disabled={isProcessing}
-              className="w-full h-14 rounded-xl bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 transition-all duration-300 shadow-lg hover:shadow-green-500/30 text-lg font-semibold group"
+              className="w-full h-16 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 hover:from-green-500 hover:via-emerald-400 hover:to-green-500 transition-all duration-300 shadow-xl shadow-green-500/30 hover:shadow-green-500/50 text-lg font-bold group"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <div className="relative mr-3">
+                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
                   <span className="animate-pulse">Criando agendamento...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                  <CheckCircle className="mr-2 h-6 w-6 group-hover:scale-110 transition-transform" />
                   Confirmar Agendamento
                 </>
               )}
@@ -321,12 +350,13 @@ export const AIAssistantPanel = () => {
           </div>
         )}
 
-        {/* Helper tip */}
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/30 border border-border/30">
-          <span className="text-lg">💡</span>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-medium text-foreground">Dica:</span> Mencione múltiplos serviços como "corte + barba" ou "corte e sobrancelha". 
-            A IA calcula o valor total automaticamente!
+        {/* Tip */}
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10">
+          <span className="text-xl">💡</span>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-primary">Dica:</span> Use "+" ou "e" para múltiplos serviços.
+            <br />
+            <span className="text-xs opacity-70">Ex: "corte + barba" ou "corte e sobrancelha"</span>
           </p>
         </div>
       </div>
