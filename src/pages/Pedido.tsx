@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check, CreditCard, Banknote } from "lucide-react";
+import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check, Wallet } from "lucide-react";
+import pixIcon from "@/assets/pix-icon-new.png";
+import cardIcon from "@/assets/card-icon.png";
+import cashIcon from "@/assets/cash-icon.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -485,14 +488,14 @@ const Pedido = () => {
                 {/* Payment Method */}
                 <div>
                   <Label className="flex items-center gap-2 mb-2 text-sm">
-                    <CreditCard className="w-3.5 h-3.5 text-primary" />
+                    <Wallet className="w-3.5 h-3.5 text-primary" />
                     Forma de Pagamento
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: "pix", label: "PIX", color: "text-[#32BCAD]", bgSelected: "bg-[#32BCAD]/15", borderSelected: "border-[#32BCAD]" },
-                      { id: "card", label: "Cartão", color: "text-blue-500", bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500", icon: CreditCard },
-                      { id: "cash", label: "Dinheiro", color: "text-green-500", bgSelected: "bg-green-500/15", borderSelected: "border-green-500", icon: Banknote },
+                      { id: "pix", label: "PIX", icon: pixIcon, bgSelected: "bg-[#32BCAD]/15", borderSelected: "border-[#32BCAD]" },
+                      { id: "card", label: "Cartão", icon: cardIcon, bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500" },
+                      { id: "cash", label: "Dinheiro", icon: cashIcon, bgSelected: "bg-green-500/15", borderSelected: "border-green-500" },
                     ].map((method) => {
                       const isSelected = paymentMethod === method.id;
                       return (
@@ -500,20 +503,18 @@ const Pedido = () => {
                           key={method.id}
                           type="button"
                           onClick={() => setPaymentMethod(method.id)}
-                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
                             isSelected
                               ? `${method.borderSelected} ${method.bgSelected}`
                               : "border-border/50 bg-card/50 active:border-primary/50"
                           }`}
                         >
-                          {method.id === "pix" ? (
-                            <svg viewBox="0 0 512 512" className={`w-5 h-5 ${isSelected ? method.color : "text-muted-foreground"}`} fill="currentColor">
-                              <path d="M242.4 292.5C247.8 287.1 257.1 287.1 262.5 292.5L339.5 369.5C353.7 383.7 372.6 391.5 392.6 391.5H407.7L310.6 488.6C280.3 518.1 231.1 518.1 200.8 488.6L103.3 391.2H112.6C132.6 391.2 151.5 383.4 165.7 369.2L242.4 292.5zM262.5 218.9C257.1 224.4 247.9 224.4 242.4 218.9L165.7 142.2C151.5 127.1 132.6 120.2 112.6 120.2H103.3L200.7 22.76C231.1-7.586 280.3-7.586 310.6 22.76L407.8 119.9H392.6C372.6 119.9 353.7 127.7 339.5 141.9L262.5 218.9zM112.6 142.7C126.4 142.7 139.1 148.3 149.7 158.1L226.4 234.8C233.6 241.1 243 245.6 252.5 245.6C261.9 245.6 271.3 241.1 278.5 234.8L355.5 157.8C## 65.3 148.1 378.8 142.5 392.6 142.5H430.3L488.6 200.8C518.9 231.1 518.9 280.3 488.6 310.6L430.3 368.9H392.6C378.8 368.9 365.3 363.3 355.5 353.5L278.5 276.5C264.6 262.6 240.3 262.6 226.4 276.6L149.7 353.2C## 139.1 363 126.4 368.6 112.6 368.6H80.78L22.76 310.6C-7.586 280.3-7.586 231.1 22.76 200.8L80.78 142.7H112.6z"/>
-                            </svg>
-                          ) : (
-                            method.icon && <method.icon className={`w-5 h-5 ${isSelected ? method.color : "text-muted-foreground"}`} />
-                          )}
-                          <span className={`text-xs font-medium ${isSelected ? method.color : "text-muted-foreground"}`}>
+                          <img 
+                            src={method.icon} 
+                            alt={method.label} 
+                            className={`w-7 h-7 ${isSelected ? "opacity-100" : "opacity-50 grayscale"} transition-all`}
+                          />
+                          <span className={`text-xs font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
                             {method.label}
                           </span>
                         </button>
