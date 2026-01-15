@@ -79,12 +79,6 @@ export const AIAssistantPanel = () => {
     setIsProcessing(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
-
       // Check if the time slot is available
       const { data: existingAppointments } = await supabase
         .from('appointments')
@@ -99,38 +93,37 @@ export const AIAssistantPanel = () => {
         return;
       }
 
-      // Create the appointment with primary service
-      const { data: appointment, error: insertError } = await supabase
-        .from('appointments')
-        .insert({
-          user_id: user.id,
-          service_id: parsedData.service_id,
-          appointment_date: parsedData.appointment_date,
-          appointment_time: parsedData.appointment_time,
-          status: 'confirmed',
-          notes: `Cliente: ${parsedData.client_name}${parsedData.client_phone ? ` | Tel: ${parsedData.client_phone}` : ''}${parsedData.notes ? ` | ${parsedData.notes}` : ''}`
-        })
-        .select('id')
-        .single();
+      // Use edge function to create guest customer and appointment
+      const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
+      const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
+      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}`;
+      
+      // Get all service IDs for additional services
+      const additionalServiceIds = parsedData.services && parsedData.services.length > 1 
+        ? parsedData.services.slice(1).map(s => s.service_id) 
+        : [];
 
-      if (insertError) {
-        throw insertError;
+      const { data, error: funcError } = await supabase.functions.invoke('create-guest-customer', {
+        body: {
+          name: parsedData.client_name.trim(),
+          phone: cleanPhone,
+          appointment: {
+            service_id: parsedData.service_id,
+            additional_service_ids: additionalServiceIds,
+            appointment_date: parsedData.appointment_date,
+            appointment_time: parsedData.appointment_time,
+            notes: notesText,
+            payment_method: 'pending',
+          }
+        }
+      });
+
+      if (funcError) {
+        throw new Error(funcError.message);
       }
 
-      // Add additional services to appointment_services table
-      if (parsedData.services && parsedData.services.length > 1 && appointment) {
-        const additionalServices = parsedData.services.slice(1).map(svc => ({
-          appointment_id: appointment.id,
-          service_id: svc.service_id
-        }));
-
-        const { error: servicesError } = await supabase
-          .from('appointment_services')
-          .insert(additionalServices);
-
-        if (servicesError) {
-          console.error('Error adding additional services:', servicesError);
-        }
+      if (!data.success) {
+        throw new Error(data.error || 'Erro ao criar agendamento');
       }
 
       toast.success('Agendamento criado com sucesso!');
