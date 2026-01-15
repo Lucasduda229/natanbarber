@@ -12,6 +12,7 @@ interface AppointmentData {
   appointment_time: string;
   notes?: string;
   payment_method?: string;
+  check_availability?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -115,6 +116,23 @@ Deno.serve(async (req) => {
     // If appointment data is provided, create the appointment
     let appointmentResult = null;
     if (appointment) {
+      // Check availability if requested
+      if (appointment.check_availability) {
+        const { data: existingAppointments } = await supabaseAdmin
+          .from("appointments")
+          .select("id")
+          .eq("appointment_date", appointment.appointment_date)
+          .eq("appointment_time", appointment.appointment_time)
+          .neq("status", "cancelled");
+
+        if (existingAppointments && existingAppointments.length > 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Este horário já está ocupado!" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       const { data: newAppointment, error: appointmentError } = await supabaseAdmin
         .from("appointments")
         .insert({
@@ -133,7 +151,7 @@ Deno.serve(async (req) => {
       if (appointmentError) {
         console.error("Error creating appointment:", appointmentError);
         return new Response(
-          JSON.stringify({ error: "Erro ao criar agendamento: " + appointmentError.message }),
+          JSON.stringify({ success: false, error: "Erro ao criar agendamento: " + appointmentError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -161,6 +179,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
+        success: true,
         user_id: userId, 
         is_new: isNewCustomer,
         appointment: appointmentResult,

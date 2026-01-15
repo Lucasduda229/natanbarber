@@ -79,21 +79,7 @@ export const AIAssistantPanel = () => {
     setIsProcessing(true);
 
     try {
-      // Check if the time slot is available
-      const { data: existingAppointments } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('appointment_date', parsedData.appointment_date)
-        .eq('appointment_time', parsedData.appointment_time)
-        .neq('status', 'cancelled');
-
-      if (existingAppointments && existingAppointments.length > 0) {
-        toast.error('Este horário já está ocupado!');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Use edge function to create guest customer and appointment
+      // Use edge function to create guest customer and appointment (bypasses RLS)
       const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
       const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
       const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}`;
@@ -106,7 +92,7 @@ export const AIAssistantPanel = () => {
       const { data, error: funcError } = await supabase.functions.invoke('create-guest-customer', {
         body: {
           name: parsedData.client_name.trim(),
-          phone: cleanPhone,
+          phone: cleanPhone || `temp_${Date.now()}`,
           appointment: {
             service_id: parsedData.service_id,
             additional_service_ids: additionalServiceIds,
@@ -114,6 +100,7 @@ export const AIAssistantPanel = () => {
             appointment_time: parsedData.appointment_time,
             notes: notesText,
             payment_method: 'pending',
+            check_availability: true,
           }
         }
       });
