@@ -23,7 +23,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { generatePixPayload } from "@/lib/pix";
 import { QRCodeSVG } from "qrcode.react";
 import logoImage from "@/assets/logo-barbershop.png";
-import pixIcon from "@/assets/pix-icon.png";
+import pixIcon from "@/assets/pix-icon-new.png";
+import cardIcon from "@/assets/card-icon.png";
+import cashIcon from "@/assets/cash-icon.png";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -1498,8 +1500,8 @@ const Booking = () => {
                   }`}>
                     {selectedPaymentMethod === "dinheiro" && <Check className="w-3 h-3 text-white" />}
                   </div>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <Banknote className="w-6 h-6 text-green-500" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
+                    <img src={cashIcon} alt="Dinheiro" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm sm:text-base font-semibold text-foreground">Dinheiro</h4>
@@ -1521,8 +1523,8 @@ const Booking = () => {
                   }`}>
                     {selectedPaymentMethod === "cartao" && <Check className="w-3 h-3 text-white" />}
                   </div>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <CreditCard className="w-6 h-6 text-blue-500" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
+                    <img src={cardIcon} alt="Cartão" className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm sm:text-base font-semibold text-foreground">Cartão</h4>
