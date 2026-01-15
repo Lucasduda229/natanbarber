@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check } from "lucide-react";
+import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check, CreditCard, Banknote, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,6 +49,7 @@ const Pedido = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("pix");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
 
   useEffect(() => {
@@ -175,9 +176,10 @@ const Pedido = () => {
     // Create or find the customer and appointment using the edge function
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
+    const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "card" ? "Cartão" : "Dinheiro";
     const notesText = customerNotes.trim() 
-      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\n${customerNotes.trim()}`
-      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}`;
+      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}`
+      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}`;
     
     try {
       const response = await supabase.functions.invoke("create-guest-customer", {
@@ -190,6 +192,7 @@ const Pedido = () => {
             appointment_date: appointmentDate,
             appointment_time: selectedTime,
             notes: notesText,
+            payment_method: paymentMethod,
           }
         }
       });
@@ -263,6 +266,7 @@ const Pedido = () => {
                   setCustomerName("");
                   setCustomerWhatsApp("");
                   setCustomerNotes("");
+                  setPaymentMethod("pix");
                 }}
                 className="mt-6 bg-gold-gradient text-background w-full"
               >
@@ -476,6 +480,41 @@ const Pedido = () => {
                   {formErrors.whatsapp && (
                     <p className="text-destructive text-xs mt-1">{formErrors.whatsapp}</p>
                   )}
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <Label className="flex items-center gap-2 mb-2 text-sm">
+                    <CreditCard className="w-3.5 h-3.5 text-primary" />
+                    Forma de Pagamento
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "pix", label: "PIX", icon: QrCode },
+                      { id: "card", label: "Cartão", icon: CreditCard },
+                      { id: "cash", label: "Dinheiro", icon: Banknote },
+                    ].map((method) => {
+                      const Icon = method.icon;
+                      const isSelected = paymentMethod === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => setPaymentMethod(method.id)}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/15"
+                              : "border-border/50 bg-card/50 active:border-primary/50"
+                          }`}
+                        >
+                          <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className={`text-xs font-medium ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                            {method.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>

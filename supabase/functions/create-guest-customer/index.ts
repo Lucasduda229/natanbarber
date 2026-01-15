@@ -11,6 +11,7 @@ interface AppointmentData {
   appointment_date: string;
   appointment_time: string;
   notes?: string;
+  payment_method?: string;
 }
 
 Deno.serve(async (req) => {
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
           appointment_time: appointment.appointment_time,
           status: "pending",
           payment_status: "pending",
-          payment_method: null,
+          payment_method: appointment.payment_method || null,
           notes: appointment.notes || null,
         })
         .select()
