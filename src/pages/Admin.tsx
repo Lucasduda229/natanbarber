@@ -1055,39 +1055,39 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
-          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-card/40 backdrop-blur-xl border border-primary/20 grid grid-cols-8 sm:inline-flex w-full sm:w-auto gap-0.5 p-1">
-              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Agendamentos">
-                <Scissors className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Agenda</span>
+          <div className="overflow-x-auto pb-3 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="bg-card/60 backdrop-blur-xl border border-primary/20 inline-flex w-max sm:w-auto gap-1 p-1.5 rounded-xl">
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Agendamentos">
+                <Scissors className="w-4 h-4" />
+                <span>Agenda</span>
               </TabsTrigger>
-              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Relatórios">
-                <BarChart3 className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Relatórios</span>
+              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Relatórios">
+                <BarChart3 className="w-4 h-4" />
+                <span>Relatórios</span>
               </TabsTrigger>
-              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Assistente IA">
-                <Bot className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">IA</span>
+              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assistente IA">
+                <Bot className="w-4 h-4" />
+                <span>IA</span>
               </TabsTrigger>
-              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Horários">
-                <Lock className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Horários</span>
+              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Horários">
+                <Lock className="w-4 h-4" />
+                <span>Horários</span>
               </TabsTrigger>
-              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Galeria">
-                <Image className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Galeria</span>
+              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Galeria">
+                <Image className="w-4 h-4" />
+                <span>Galeria</span>
               </TabsTrigger>
-              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Clientes">
-                <UserCheck className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Clientes</span>
+              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Clientes">
+                <UserCheck className="w-4 h-4" />
+                <span>Clientes</span>
               </TabsTrigger>
-              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Fidelidade">
-                <Trophy className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Fidelidade</span>
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Fidelidade">
+                <Trophy className="w-4 h-4" />
+                <span>Fidelidade</span>
               </TabsTrigger>
-              <TabsTrigger value="subscriptions" className="data-[state=active]:bg-primary data-[state=active]:text-background flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-3 py-2 sm:py-1.5 text-[10px] sm:text-sm min-w-0" title="Assinaturas">
-                <Crown className="w-4 h-4 sm:w-4 sm:h-4" />
-                <span className="truncate">Assinat.</span>
+              <TabsTrigger value="subscriptions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assinaturas">
+                <Crown className="w-4 h-4" />
+                <span>Assinat.</span>
               </TabsTrigger>
             </TabsList>
           </div>
