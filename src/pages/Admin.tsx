@@ -1211,69 +1211,199 @@ const Admin = () => {
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Resumo Financeiro
                   </CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const paidAppointments = filteredReportAppointments.filter(a => 
-                        a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid'
-                      );
-                      const pixTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
-                      const cashTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
-                      const cardTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
-                      const pendingTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
-                      const refundedTotal = filteredReportAppointments
-                        .filter(a => a.payment_status === 'refunded' && a.payment_method !== 'subscription')
-                        .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
-                      
-                      const periodLabel = reportStartDate && reportEndDate 
-                        ? `${format(reportStartDate, "dd/MM/yyyy")} a ${format(reportEndDate, "dd/MM/yyyy")}`
-                        : 'Período selecionado';
-                      
-                      const csvContent = [
-                        'Relatório Financeiro - Natan Barber',
-                        `Data de exportação: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
-                        `Período: ${periodLabel}`,
-                        '',
-                        'RESUMO POR MÉTODO DE PAGAMENTO',
-                        `PIX,R$ ${pixTotal.toFixed(2)}`,
-                        `Dinheiro,R$ ${cashTotal.toFixed(2)}`,
-                        `Cartão,R$ ${cardTotal.toFixed(2)}`,
-                        `Total Recebido,R$ ${(pixTotal + cashTotal + cardTotal).toFixed(2)}`,
-                        '',
-                        `Aguardando Pagamento,R$ ${pendingTotal.toFixed(2)}`,
-                        `Reembolsado,R$ ${refundedTotal.toFixed(2)}`,
-                        '',
-                        'DETALHAMENTO',
-                        'Data,Horário,Cliente,Serviço,Valor Original,Valor Ajustado,Status Pagamento,Tipo',
-                        ...paidAppointments.map(a => {
-                          const isSubscription = a.payment_method === 'subscription';
-                          const originalValue = isSubscription ? 0 : getServicesTotal(a.services);
-                          const adjustedValue = isSubscription ? 0 : getAdjustedValue(a.id, originalValue);
-                          return `${format(parseISO(a.appointment_date), "dd/MM/yyyy")},${a.appointment_time},${a.profiles?.full_name || 'N/A'},${getServicesNames(a.services)},R$ ${originalValue.toFixed(2)},R$ ${adjustedValue.toFixed(2)},${a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago'},${isSubscription ? 'Assinatura' : 'Avulso'}`;
-                        })
-                      ].join('\n');
-                      
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                      const link = document.createElement('a');
-                      link.href = URL.createObjectURL(blob);
-                      link.download = `relatorio-financeiro-${format(reportStartDate || new Date(), "yyyy-MM-dd")}-${format(reportEndDate || new Date(), "yyyy-MM-dd")}.csv`;
-                      link.click();
-                      toast.success("Relatório exportado com sucesso!");
-                    }}
-                    className="border-primary/30 hover:bg-primary/10"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar CSV
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        import('jspdf').then(({ jsPDF }) => {
+                          const doc = new jsPDF();
+                          const paidAppointments = filteredReportAppointments.filter(a => 
+                            a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid'
+                          );
+                          const pixTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const cashTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const cardTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const totalReceived = pixTotal + cashTotal + cardTotal;
+                          
+                          const periodLabel = reportStartDate && reportEndDate 
+                            ? `${format(reportStartDate, "dd/MM/yyyy")} a ${format(reportEndDate, "dd/MM/yyyy")}`
+                            : 'Período selecionado';
+                          
+                          // Header
+                          doc.setFontSize(20);
+                          doc.setTextColor(218, 165, 32);
+                          doc.text('Relatório Financeiro', 105, 20, { align: 'center' });
+                          
+                          doc.setFontSize(12);
+                          doc.setTextColor(100);
+                          doc.text('Natan Barber', 105, 28, { align: 'center' });
+                          
+                          doc.setFontSize(10);
+                          doc.text(`Período: ${periodLabel}`, 105, 36, { align: 'center' });
+                          doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 105, 42, { align: 'center' });
+                          
+                          // Summary section
+                          doc.setFontSize(14);
+                          doc.setTextColor(0);
+                          doc.text('Resumo por Método de Pagamento', 20, 55);
+                          
+                          doc.setFontSize(11);
+                          let yPos = 65;
+                          doc.text(`PIX: R$ ${pixTotal.toFixed(2)}`, 25, yPos);
+                          yPos += 8;
+                          doc.text(`Dinheiro: R$ ${cashTotal.toFixed(2)}`, 25, yPos);
+                          yPos += 8;
+                          doc.text(`Cartão: R$ ${cardTotal.toFixed(2)}`, 25, yPos);
+                          yPos += 10;
+                          doc.setFontSize(12);
+                          doc.setTextColor(218, 165, 32);
+                          doc.text(`Total Recebido: R$ ${totalReceived.toFixed(2)}`, 25, yPos);
+                          
+                          // Transactions table
+                          yPos += 20;
+                          doc.setFontSize(14);
+                          doc.setTextColor(0);
+                          doc.text('Detalhamento', 20, yPos);
+                          
+                          yPos += 10;
+                          doc.setFontSize(9);
+                          doc.setTextColor(100);
+                          doc.text('Data', 20, yPos);
+                          doc.text('Cliente', 45, yPos);
+                          doc.text('Serviço', 95, yPos);
+                          doc.text('Valor', 145, yPos);
+                          doc.text('Pagamento', 170, yPos);
+                          
+                          yPos += 5;
+                          doc.setDrawColor(200);
+                          doc.line(20, yPos, 190, yPos);
+                          
+                          doc.setTextColor(0);
+                          paidAppointments.slice(0, 30).forEach(a => {
+                            yPos += 7;
+                            if (yPos > 270) {
+                              doc.addPage();
+                              yPos = 20;
+                            }
+                            const isSubscription = a.payment_method === 'subscription';
+                            const value = isSubscription ? 0 : getAdjustedValue(a.id, getServicesTotal(a.services));
+                            const paymentLabel = a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago';
+                            
+                            doc.text(format(parseISO(a.appointment_date), "dd/MM/yy"), 20, yPos);
+                            doc.text((a.profiles?.full_name || 'N/A').substring(0, 20), 45, yPos);
+                            doc.text(getServicesNames(a.services).substring(0, 25), 95, yPos);
+                            doc.text(`R$ ${value.toFixed(2)}`, 145, yPos);
+                            doc.text(paymentLabel, 170, yPos);
+                          });
+                          
+                          if (paidAppointments.length > 30) {
+                            yPos += 10;
+                            doc.setTextColor(100);
+                            doc.text(`... e mais ${paidAppointments.length - 30} transações`, 20, yPos);
+                          }
+                          
+                          doc.save(`relatorio-financeiro-${format(reportStartDate || new Date(), "yyyy-MM-dd")}.pdf`);
+                          toast.success("PDF exportado com sucesso!");
+                        });
+                      }}
+                      className="border-red-500/30 hover:bg-red-500/10 text-red-400"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      PDF
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        import('xlsx').then((XLSX) => {
+                          const paidAppointments = filteredReportAppointments.filter(a => 
+                            a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid'
+                          );
+                          const pixTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const cashTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const cardTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          const pendingTotal = filteredReportAppointments
+                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                          
+                          const periodLabel = reportStartDate && reportEndDate 
+                            ? `${format(reportStartDate, "dd/MM/yyyy")} a ${format(reportEndDate, "dd/MM/yyyy")}`
+                            : 'Período selecionado';
+                          
+                          // Summary sheet data
+                          const summaryData = [
+                            ['Relatório Financeiro - Natan Barber'],
+                            [`Período: ${periodLabel}`],
+                            [`Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`],
+                            [],
+                            ['RESUMO POR MÉTODO'],
+                            ['PIX', `R$ ${pixTotal.toFixed(2)}`],
+                            ['Dinheiro', `R$ ${cashTotal.toFixed(2)}`],
+                            ['Cartão', `R$ ${cardTotal.toFixed(2)}`],
+                            ['Total Recebido', `R$ ${(pixTotal + cashTotal + cardTotal).toFixed(2)}`],
+                            [],
+                            ['Aguardando Pagamento', `R$ ${pendingTotal.toFixed(2)}`],
+                          ];
+                          
+                          // Transactions sheet data
+                          const transactionsData = [
+                            ['Data', 'Horário', 'Cliente', 'Serviço', 'Valor Original', 'Valor Ajustado', 'Pagamento', 'Tipo'],
+                            ...paidAppointments.map(a => {
+                              const isSubscription = a.payment_method === 'subscription';
+                              const originalValue = isSubscription ? 0 : getServicesTotal(a.services);
+                              const adjustedValue = isSubscription ? 0 : getAdjustedValue(a.id, originalValue);
+                              const paymentLabel = a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago';
+                              return [
+                                format(parseISO(a.appointment_date), "dd/MM/yyyy"),
+                                a.appointment_time.slice(0, 5),
+                                a.profiles?.full_name || 'N/A',
+                                getServicesNames(a.services),
+                                `R$ ${originalValue.toFixed(2)}`,
+                                `R$ ${adjustedValue.toFixed(2)}`,
+                                paymentLabel,
+                                isSubscription ? 'Assinatura' : 'Avulso'
+                              ];
+                            })
+                          ];
+                          
+                          const wb = XLSX.utils.book_new();
+                          const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+                          const wsTransactions = XLSX.utils.aoa_to_sheet(transactionsData);
+                          
+                          // Set column widths
+                          wsSummary['!cols'] = [{ wch: 25 }, { wch: 20 }];
+                          wsTransactions['!cols'] = [
+                            { wch: 12 }, { wch: 8 }, { wch: 25 }, { wch: 30 }, 
+                            { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }
+                          ];
+                          
+                          XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
+                          XLSX.utils.book_append_sheet(wb, wsTransactions, 'Transações');
+                          
+                          XLSX.writeFile(wb, `relatorio-financeiro-${format(reportStartDate || new Date(), "yyyy-MM-dd")}.xlsx`);
+                          toast.success("Excel exportado com sucesso!");
+                        });
+                      }}
+                      className="border-green-500/30 hover:bg-green-500/10 text-green-400"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Excel
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Date Range Picker */}
