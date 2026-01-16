@@ -222,7 +222,8 @@ const Admin = () => {
   const [syncing, setSyncing] = useState(false);
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
-  const [reportPeriod, setReportPeriod] = useState<string>("all");
+const [reportPeriod, setReportPeriod] = useState<string>("today");
+  const [statsPeriod, setStatsPeriod] = useState<string>("today");
   const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -243,35 +244,46 @@ const Admin = () => {
 
   // Filter appointments by period for reports (uses custom closing day for "month")
   const getFilteredAppointmentsForReports = useCallback(() => {
-    if (reportPeriod === "all") return appointments;
-    
     const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
     let startDate: Date;
     let endDate: Date | null = null;
     
     switch (reportPeriod) {
-      case "week":
-        startDate = startOfWeek(now, { weekStartsOn: 0 });
+      case "today":
+        return appointments.filter(a => a.appointment_date === todayStr);
+      case "7days":
+        startDate = subDays(now, 7);
         break;
-      case "month": {
+      case "30days":
+        startDate = subDays(now, 30);
+        break;
+      case "closing": {
         // Use custom billing period based on cash closing day
         const currentDay = now.getDate();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
         if (currentDay > cashClosingDay) {
-          // Period: (closing_day + 1) of current month to closing_day of next month
           startDate = new Date(currentYear, currentMonth, cashClosingDay + 1);
           endDate = new Date(currentYear, currentMonth + 1, cashClosingDay);
         } else {
-          // Period: (closing_day + 1) of previous month to closing_day of current month
           startDate = new Date(currentYear, currentMonth - 1, cashClosingDay + 1);
           endDate = new Date(currentYear, currentMonth, cashClosingDay);
         }
         break;
       }
-      case "year":
-        startDate = startOfYear(now);
+      case "1month":
+        startDate = subMonths(now, 1);
+        break;
+      case "2months":
+        startDate = subMonths(now, 2);
+        break;
+      case "3months":
+        startDate = subMonths(now, 3);
+        break;
+      case "6months":
+        startDate = subMonths(now, 6);
         break;
       default:
         return appointments;
@@ -289,6 +301,33 @@ const Admin = () => {
       return afterStart;
     });
   }, [appointments, reportPeriod, cashClosingDay]);
+
+  // Filter appointments by period for stats cards
+  const getFilteredAppointmentsForStats = useCallback(() => {
+    const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
+    
+    switch (statsPeriod) {
+      case "today":
+        return appointments.filter(a => a.appointment_date === todayStr);
+      case "7days":
+        const start7 = subDays(now, 7);
+        return appointments.filter(a => {
+          const appointmentDate = parseISO(a.appointment_date);
+          return isAfter(appointmentDate, start7) || isEqual(appointmentDate, start7);
+        });
+      case "30days":
+        const start30 = subDays(now, 30);
+        return appointments.filter(a => {
+          const appointmentDate = parseISO(a.appointment_date);
+          return isAfter(appointmentDate, start30) || isEqual(appointmentDate, start30);
+        });
+      default:
+        return appointments.filter(a => a.appointment_date === todayStr);
+    }
+  }, [appointments, statsPeriod]);
+
+  const filteredStatsAppointments = getFilteredAppointmentsForStats();
 
   const filteredReportAppointments = getFilteredAppointmentsForReports();
 
@@ -1094,7 +1133,19 @@ const Admin = () => {
           </div>
         </div>
 
-        <h2 className="text-sm sm:text-base font-semibold text-foreground mb-3">Estatísticas</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <h2 className="text-sm sm:text-base font-semibold text-foreground">Resumo Financeiro</h2>
+          <Select value={statsPeriod} onValueChange={setStatsPeriod}>
+            <SelectTrigger className="w-[160px] h-8 text-xs border-primary/30 bg-card/60">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="7days">Últimos 7 dias</SelectItem>
+              <SelectItem value="30days">Últimos 30 dias</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
@@ -1102,8 +1153,12 @@ const Admin = () => {
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.today}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Hoje</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
+                  {filteredStatsAppointments.filter(a => a.status !== 'cancelled').length}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {statsPeriod === 'today' ? 'Hoje' : statsPeriod === '7days' ? '7 dias' : '30 dias'}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -1114,7 +1169,9 @@ const Admin = () => {
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.pending}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
+                  {filteredStatsAppointments.filter(a => a.status === 'pending').length}
+                </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Pendentes</p>
               </div>
             </CardContent>
@@ -1126,7 +1183,9 @@ const Admin = () => {
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
               <div className="min-w-0">
-                <p className="text-lg sm:text-2xl font-bold text-foreground">{stats.confirmed}</p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
+                  {filteredStatsAppointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length}
+                </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Confirmados</p>
               </div>
             </CardContent>
@@ -1138,7 +1197,12 @@ const Admin = () => {
                 <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="text-base sm:text-xl font-bold text-primary">R$ {stats.revenue.toFixed(0)}</p>
+                <p className="text-base sm:text-xl font-bold text-primary">
+                  R$ {filteredStatsAppointments
+                    .filter(a => (a.status === 'confirmed' || a.status === 'completed') && a.payment_method !== 'subscription')
+                    .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                    .toFixed(0)}
+                </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
               </div>
             </CardContent>
@@ -1192,7 +1256,7 @@ const Admin = () => {
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Resumo Financeiro
                   </CardTitle>
-                  {reportPeriod === 'month' && (
+                  {reportPeriod === 'closing' && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Período: dia {cashClosingDay + 1} a dia {cashClosingDay}
                       {editingClosingDay ? (
@@ -1248,10 +1312,14 @@ const Admin = () => {
                         <SelectValue placeholder="Período" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todo período</SelectItem>
-                        <SelectItem value="week">Esta semana</SelectItem>
-                        <SelectItem value="month">Período de fechamento</SelectItem>
-                        <SelectItem value="year">Este ano</SelectItem>
+                        <SelectItem value="today">Hoje</SelectItem>
+                        <SelectItem value="7days">Últimos 7 dias</SelectItem>
+                        <SelectItem value="30days">Últimos 30 dias</SelectItem>
+                        <SelectItem value="closing">Período de fechamento</SelectItem>
+                        <SelectItem value="1month">Último mês</SelectItem>
+                        <SelectItem value="2months">Últimos 2 meses</SelectItem>
+                        <SelectItem value="3months">Últimos 3 meses</SelectItem>
+                        <SelectItem value="6months">Últimos 6 meses</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1278,9 +1346,14 @@ const Admin = () => {
                         .filter(a => a.payment_status === 'refunded' && a.payment_method !== 'subscription')
                         .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       
-                      const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
-                                         reportPeriod === 'month' ? `Período de Fechamento (dia ${cashClosingDay + 1} a ${cashClosingDay})` : 
-                                         reportPeriod === 'year' ? 'Este Ano' : 'Todo Período';
+                      const periodLabel = reportPeriod === 'today' ? 'Hoje' :
+                                         reportPeriod === '7days' ? 'Últimos 7 dias' :
+                                         reportPeriod === '30days' ? 'Últimos 30 dias' :
+                                         reportPeriod === 'closing' ? `Período de Fechamento (dia ${cashClosingDay + 1} a ${cashClosingDay})` : 
+                                         reportPeriod === '1month' ? 'Último mês' :
+                                         reportPeriod === '2months' ? 'Últimos 2 meses' :
+                                         reportPeriod === '3months' ? 'Últimos 3 meses' :
+                                         reportPeriod === '6months' ? 'Últimos 6 meses' : 'Período selecionado';
                       
                       const csvContent = [
                         'Relatório Financeiro - Natan Barber',
