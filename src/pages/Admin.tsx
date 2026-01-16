@@ -1105,7 +1105,7 @@ const Admin = () => {
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold text-foreground">
