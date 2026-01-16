@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter } from "date-fns";
+import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff } from "lucide-react";
 import { gsap } from "gsap";
@@ -226,6 +226,9 @@ const Admin = () => {
   const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [cashClosingDay, setCashClosingDay] = useState<number>(15);
+  const [editingClosingDay, setEditingClosingDay] = useState<boolean>(false);
+  const [closingDayInput, setClosingDayInput] = useState<string>("15");
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -238,20 +241,35 @@ const Admin = () => {
     return subscription.cuts_used_this_month < subscription.monthly_cuts_limit;
   };
 
-  // Filter appointments by period for reports
+  // Filter appointments by period for reports (uses custom closing day for "month")
   const getFilteredAppointmentsForReports = useCallback(() => {
     if (reportPeriod === "all") return appointments;
     
     const now = new Date();
     let startDate: Date;
+    let endDate: Date | null = null;
     
     switch (reportPeriod) {
       case "week":
         startDate = startOfWeek(now, { weekStartsOn: 0 });
         break;
-      case "month":
-        startDate = startOfMonth(now);
+      case "month": {
+        // Use custom billing period based on cash closing day
+        const currentDay = now.getDate();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        if (currentDay > cashClosingDay) {
+          // Period: (closing_day + 1) of current month to closing_day of next month
+          startDate = new Date(currentYear, currentMonth, cashClosingDay + 1);
+          endDate = new Date(currentYear, currentMonth + 1, cashClosingDay);
+        } else {
+          // Period: (closing_day + 1) of previous month to closing_day of current month
+          startDate = new Date(currentYear, currentMonth - 1, cashClosingDay + 1);
+          endDate = new Date(currentYear, currentMonth, cashClosingDay);
+        }
         break;
+      }
       case "year":
         startDate = startOfYear(now);
         break;
@@ -261,9 +279,16 @@ const Admin = () => {
     
     return appointments.filter(a => {
       const appointmentDate = parseISO(a.appointment_date);
-      return isAfter(appointmentDate, startDate) || appointmentDate.getTime() === startDate.getTime();
+      const afterStart = isAfter(appointmentDate, startDate) || isEqual(appointmentDate, startDate);
+      
+      if (endDate) {
+        const beforeEnd = isBefore(appointmentDate, endDate) || isEqual(appointmentDate, endDate);
+        return afterStart && beforeEnd;
+      }
+      
+      return afterStart;
     });
-  }, [appointments, reportPeriod]);
+  }, [appointments, reportPeriod, cashClosingDay]);
 
   const filteredReportAppointments = getFilteredAppointmentsForReports();
 
@@ -379,7 +404,7 @@ const Admin = () => {
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments()]);
+      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay()]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -568,6 +593,72 @@ const Admin = () => {
       setRevenueAdjustments(data as RevenueAdjustment[]);
     }
   };
+
+  const fetchCashClosingDay = async () => {
+    const { data, error } = await supabase
+      .from("admin_settings")
+      .select("setting_value")
+      .eq("setting_key", "cash_closing_day")
+      .single();
+
+    if (!error && data) {
+      const day = parseInt(data.setting_value, 10);
+      if (!isNaN(day) && day >= 1 && day <= 28) {
+        setCashClosingDay(day);
+        setClosingDayInput(day.toString());
+      }
+    }
+  };
+
+  const saveCashClosingDay = async (day: number) => {
+    if (day < 1 || day > 28) {
+      toast.error("O dia deve ser entre 1 e 28");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("admin_settings")
+      .upsert({
+        setting_key: "cash_closing_day",
+        setting_value: day.toString(),
+        description: "Dia do mês para fechamento de caixa"
+      }, { onConflict: 'setting_key' });
+
+    if (error) {
+      console.error("Error saving closing day:", error);
+      toast.error("Erro ao salvar dia de fechamento");
+      return;
+    }
+
+    setCashClosingDay(day);
+    setEditingClosingDay(false);
+    toast.success(`Dia de fechamento atualizado para dia ${day}`);
+  };
+
+  // Calculate the current billing period based on cash closing day
+  const getCurrentBillingPeriod = useCallback(() => {
+    const now = new Date();
+    const currentDay = now.getDate();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // If we're past the closing day, period starts on closing_day + 1 of current month
+    // If we're before or on closing day, period started on closing_day + 1 of previous month
+    let startDate: Date;
+    let endDate: Date;
+
+    if (currentDay > cashClosingDay) {
+      // Period: (closing_day + 1) of current month to closing_day of next month
+      startDate = new Date(currentYear, currentMonth, cashClosingDay + 1);
+      endDate = new Date(currentYear, currentMonth + 1, cashClosingDay);
+    } else {
+      // Period: (closing_day + 1) of previous month to closing_day of current month
+      startDate = new Date(currentYear, currentMonth - 1, cashClosingDay + 1);
+      endDate = new Date(currentYear, currentMonth, cashClosingDay);
+    }
+
+    return { startDate, endDate };
+  }, [cashClosingDay]);
 
   // Get adjusted value for an appointment
   const getAdjustedValue = (appointmentId: string, originalValue: number): number => {
@@ -1096,21 +1187,70 @@ const Admin = () => {
           <TabsContent value="reports" className="space-y-6">
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Resumo Financeiro
-                </CardTitle>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Resumo Financeiro
+                  </CardTitle>
+                  {reportPeriod === 'month' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Período: dia {cashClosingDay + 1} a dia {cashClosingDay}
+                      {editingClosingDay ? (
+                        <span className="inline-flex items-center gap-1 ml-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="28"
+                            value={closingDayInput}
+                            onChange={(e) => setClosingDayInput(e.target.value)}
+                            className="w-14 h-6 text-xs inline-block"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-green-500"
+                            onClick={() => {
+                              const day = parseInt(closingDayInput, 10);
+                              if (!isNaN(day)) saveCashClosingDay(day);
+                            }}
+                          >
+                            <Save className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              setEditingClosingDay(false);
+                              setClosingDayInput(cashClosingDay.toString());
+                            }}
+                          >
+                            <XCircle className="w-3 h-3" />
+                          </Button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setEditingClosingDay(true)}
+                          className="ml-2 text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          <Settings className="w-3 h-3" />
+                          Configurar
+                        </button>
+                      )}
+                    </p>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-muted-foreground" />
                     <Select value={reportPeriod} onValueChange={setReportPeriod}>
-                      <SelectTrigger className="w-[140px] border-primary/30 bg-card/60">
+                      <SelectTrigger className="w-[180px] border-primary/30 bg-card/60">
                         <SelectValue placeholder="Período" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todo período</SelectItem>
                         <SelectItem value="week">Esta semana</SelectItem>
-                        <SelectItem value="month">Este mês</SelectItem>
+                        <SelectItem value="month">Período de fechamento</SelectItem>
                         <SelectItem value="year">Este ano</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1139,7 +1279,7 @@ const Admin = () => {
                         .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       
                       const periodLabel = reportPeriod === 'week' ? 'Esta Semana' : 
-                                         reportPeriod === 'month' ? 'Este Mês' : 
+                                         reportPeriod === 'month' ? `Período de Fechamento (dia ${cashClosingDay + 1} a ${cashClosingDay})` : 
                                          reportPeriod === 'year' ? 'Este Ano' : 'Todo Período';
                       
                       const csvContent = [
