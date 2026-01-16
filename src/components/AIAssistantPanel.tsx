@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap } from 'lucide-react';
+import { Sparkles, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap, CreditCard, Banknote } from 'lucide-react';
+import pixIcon from '@/assets/pix-icon-new.png';
+import cardIcon from '@/assets/card-icon.png';
+import cashIcon from '@/assets/cash-icon.png';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -30,6 +33,7 @@ export const AIAssistantPanel = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAppointment | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('pending');
 
   const processMessage = async () => {
     if (!message.trim()) {
@@ -86,7 +90,7 @@ export const AIAssistantPanel = () => {
             appointment_date: parsedData.appointment_date,
             appointment_time: parsedData.appointment_time,
             notes: notesText,
-            payment_method: 'pending',
+            payment_method: selectedPaymentMethod,
             check_availability: true,
           }
         }
@@ -98,6 +102,7 @@ export const AIAssistantPanel = () => {
       toast.success('Agendamento criado com sucesso!');
       setMessage('');
       setParsedData(null);
+      setSelectedPaymentMethod('pending');
     } catch (err: any) {
       console.error('Error creating appointment:', err);
       toast.error(err.message || 'Erro ao criar agendamento');
@@ -324,6 +329,64 @@ export const AIAssistantPanel = () => {
                     <p className="text-sm text-foreground">{parsedData.notes}</p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                Forma de Pagamento
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('pix')}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                    selectedPaymentMethod === 'pix'
+                      ? 'border-[#32BCAD] bg-[#32BCAD]/20 ring-2 ring-[#32BCAD]/50'
+                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                  }`}
+                >
+                  <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain" />
+                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'pix' ? 'text-[#32BCAD]' : 'text-muted-foreground'}`}>PIX</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('card')}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                    selectedPaymentMethod === 'card'
+                      ? 'border-blue-500 bg-blue-500/20 ring-2 ring-blue-500/50'
+                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                  }`}
+                >
+                  <img src={cardIcon} alt="Cartão" className="w-6 h-6 object-contain" />
+                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'card' ? 'text-blue-400' : 'text-muted-foreground'}`}>Cartão</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('cash')}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                    selectedPaymentMethod === 'cash'
+                      ? 'border-green-500 bg-green-500/20 ring-2 ring-green-500/50'
+                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                  }`}
+                >
+                  <img src={cashIcon} alt="Dinheiro" className="w-6 h-6 object-contain" />
+                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'cash' ? 'text-green-400' : 'text-muted-foreground'}`}>Dinheiro</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('pending')}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                    selectedPaymentMethod === 'pending'
+                      ? 'border-yellow-500 bg-yellow-500/20 ring-2 ring-yellow-500/50'
+                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                  }`}
+                >
+                  <Clock className="w-6 h-6 text-yellow-500" />
+                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'pending' ? 'text-yellow-400' : 'text-muted-foreground'}`}>Pendente</span>
+                </button>
               </div>
             </div>
 
