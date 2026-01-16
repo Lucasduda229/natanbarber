@@ -1330,6 +1330,24 @@ const Admin = () => {
                       size="sm"
                       className="h-7 text-xs px-2"
                       onClick={() => {
+                        // Find earliest appointment date or default to 1 year ago
+                        const earliestDate = appointments.length > 0 
+                          ? appointments.reduce((earliest, a) => {
+                              const date = parseISO(a.appointment_date);
+                              return date < earliest ? date : earliest;
+                            }, parseISO(appointments[0].appointment_date))
+                          : subYears(new Date(), 1);
+                        setReportStartDate(earliestDate);
+                        setReportEndDate(new Date());
+                      }}
+                    >
+                      Todo Período
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
                         setReportStartDate(new Date());
                         setReportEndDate(new Date());
                       }}
