@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap, CreditCard, Banknote } from 'lucide-react';
+import { Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap, CreditCard } from 'lucide-react';
 import pixIcon from '@/assets/pix-icon-new.png';
 import cardIcon from '@/assets/card-icon.png';
 import cashIcon from '@/assets/cash-icon.png';
+import whatsappIcon from '@/assets/whatsapp-icon.svg';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -139,7 +140,7 @@ export const AIAssistantPanel = () => {
           <div className="relative group">
             <div className="absolute inset-0 bg-primary/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
             <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary to-secondary flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
-              <MessageCircle className="h-7 w-7 text-primary-foreground" />
+              <img src={whatsappIcon} alt="WhatsApp" className="h-7 w-7" />
             </div>
             <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full border-2 border-card flex items-center justify-center">
               <Zap className="h-3 w-3 text-white" />

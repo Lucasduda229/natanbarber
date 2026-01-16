@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
 import pixIcon from "@/assets/pix-icon.png";
+import whatsappIcon from "@/assets/whatsapp-icon.svg";
 import { AIAssistantPanel } from "@/components/AIAssistantPanel";
 import { GalleryManager } from "@/components/GalleryManager";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -1176,7 +1177,7 @@ const Admin = () => {
                 <span>Relatórios</span>
               </TabsTrigger>
               <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="WhatsApp IA">
-                <MessageCircle className="w-4 h-4" />
+                <img src={whatsappIcon} alt="WhatsApp" className="w-4 h-4" />
                 <span>WhatsApp</span>
               </TabsTrigger>
               <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Horários">
