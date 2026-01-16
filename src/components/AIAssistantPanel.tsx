@@ -118,37 +118,37 @@ export const AIAssistantPanel = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-primary/30 shadow-2xl">
-      {/* Premium gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a1510] via-card to-[#0d0d0d]" />
+    <div className="relative overflow-hidden rounded-3xl border border-[#25D366]/30 shadow-2xl">
+      {/* WhatsApp gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0d1f12] via-card to-[#0a0d0a]" />
       
-      {/* Animated gold particles */}
+      {/* Animated green particles */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-10 left-10 w-2 h-2 bg-primary/60 rounded-full animate-pulse" />
-        <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-primary/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute bottom-20 left-1/3 w-1 h-1 bg-primary/50 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/3 right-10 w-1.5 h-1.5 bg-primary/30 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
+        <div className="absolute top-10 left-10 w-2 h-2 bg-[#25D366]/60 rounded-full animate-pulse" />
+        <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-[#25D366]/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute bottom-20 left-1/3 w-1 h-1 bg-[#25D366]/50 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/3 right-10 w-1.5 h-1.5 bg-[#25D366]/30 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
       </div>
       
       {/* Glow effects */}
-      <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
-      <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-primary/15 rounded-full blur-3xl" />
+      <div className="absolute -top-20 -left-20 w-40 h-40 bg-[#25D366]/20 rounded-full blur-3xl" />
+      <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-[#25D366]/15 rounded-full blur-3xl" />
       
       <div className="relative z-10 p-6 space-y-6">
         {/* Header */}
         <div className="flex items-start gap-4">
           <div className="relative group">
-            <div className="absolute inset-0 bg-primary/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary to-secondary flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
-              <img src={whatsappIcon} alt="WhatsApp" className="h-7 w-7" />
+            <div className="absolute inset-0 bg-[#25D366]/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#25D366] via-[#128C7E] to-[#075E54] flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
+              <img src={whatsappIcon} alt="WhatsApp" className="h-8 w-8" />
             </div>
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-green-400 to-green-600 rounded-full border-2 border-card flex items-center justify-center">
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-[#25D366] to-[#128C7E] rounded-full border-2 border-card flex items-center justify-center">
               <Zap className="h-3 w-3 text-white" />
             </span>
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold bg-gradient-to-r from-primary via-yellow-400 to-primary bg-clip-text text-transparent">
-              Assistente Inteligente
+            <h3 className="text-xl font-bold bg-gradient-to-r from-[#25D366] via-[#20c65a] to-[#25D366] bg-clip-text text-transparent">
+              Assistente WhatsApp
             </h3>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
               Cole a mensagem do WhatsApp e crio o agendamento automaticamente ✨
@@ -160,12 +160,12 @@ export const AIAssistantPanel = () => {
         <div className="space-y-4">
           <div className="relative group">
             {/* Glow border effect */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-2xl blur opacity-30 group-focus-within:opacity-60 transition-opacity" />
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#25D366]/50 via-[#128C7E]/20 to-[#25D366]/50 rounded-2xl blur opacity-30 group-focus-within:opacity-60 transition-opacity" />
             
-            <div className="relative bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-xl rounded-2xl border border-primary/20 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-primary/10 bg-primary/5">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-primary">Mensagem do Cliente</span>
+            <div className="relative bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-xl rounded-2xl border border-[#25D366]/20 overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-[#25D366]/10 bg-[#25D366]/5">
+                <MessageSquare className="h-4 w-4 text-[#25D366]" />
+                <span className="text-xs font-medium text-[#25D366]">Mensagem do Cliente</span>
               </div>
               <Textarea
                 placeholder={`Cole aqui a mensagem...\n\n"Corte e barba para João amanhã às 14h"\n"Pedro corte + sobrancelha dia 15/01 às 10:30"`}
@@ -180,7 +180,7 @@ export const AIAssistantPanel = () => {
           <Button 
             onClick={processMessage} 
             disabled={isProcessing || !message.trim()}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary via-primary to-secondary hover:opacity-90 transition-all duration-300 shadow-xl shadow-primary/20 hover:shadow-primary/40 group text-base font-semibold"
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366] hover:opacity-90 transition-all duration-300 shadow-xl shadow-[#25D366]/20 hover:shadow-[#25D366]/40 group text-base font-semibold text-white"
           >
             {isProcessing ? (
               <>
@@ -415,10 +415,10 @@ export const AIAssistantPanel = () => {
         )}
 
         {/* Tip */}
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10">
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-[#25D366]/5 via-transparent to-[#25D366]/5 border border-[#25D366]/10">
           <span className="text-xl">💡</span>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            <span className="font-semibold text-primary">Dica:</span> Use "+" ou "e" para múltiplos serviços.
+            <span className="font-semibold text-[#25D366]">Dica:</span> Use "+" ou "e" para múltiplos serviços.
             <br />
             <span className="text-xs opacity-70">Ex: "corte + barba" ou "corte e sobrancelha"</span>
           </p>
