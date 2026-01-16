@@ -1290,7 +1290,7 @@ const Admin = () => {
                         {reportStartDate ? format(reportStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-[100] bg-card border border-primary/20" align="start">
                       <Calendar
                         mode="single"
                         selected={reportStartDate}
@@ -1311,7 +1311,7 @@ const Admin = () => {
                         {reportEndDate ? format(reportEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-[100] bg-card border border-primary/20" align="start">
                       <Calendar
                         mode="single"
                         selected={reportEndDate}
