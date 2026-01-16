@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, Bot, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -30,6 +30,8 @@ import VIPPackagesManager from "@/components/VIPPackagesManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useWebPush } from "@/hooks/useWebPush";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 interface AppointmentService {
@@ -222,8 +224,9 @@ const Admin = () => {
   const [syncing, setSyncing] = useState(false);
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
-const [reportPeriod, setReportPeriod] = useState<string>("today");
   const [statsPeriod, setStatsPeriod] = useState<string>("today");
+  const [reportStartDate, setReportStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
+  const [reportEndDate, setReportEndDate] = useState<Date | undefined>(new Date());
   const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -242,65 +245,17 @@ const [reportPeriod, setReportPeriod] = useState<string>("today");
     return subscription.cuts_used_this_month < subscription.monthly_cuts_limit;
   };
 
-  // Filter appointments by period for reports (uses custom closing day for "month")
+  // Filter appointments by date range for reports
   const getFilteredAppointmentsForReports = useCallback(() => {
-    const now = new Date();
-    const todayStr = format(now, "yyyy-MM-dd");
-    let startDate: Date;
-    let endDate: Date | null = null;
-    
-    switch (reportPeriod) {
-      case "today":
-        return appointments.filter(a => a.appointment_date === todayStr);
-      case "7days":
-        startDate = subDays(now, 7);
-        break;
-      case "30days":
-        startDate = subDays(now, 30);
-        break;
-      case "closing": {
-        // Use custom billing period based on cash closing day
-        const currentDay = now.getDate();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
-        if (currentDay > cashClosingDay) {
-          startDate = new Date(currentYear, currentMonth, cashClosingDay + 1);
-          endDate = new Date(currentYear, currentMonth + 1, cashClosingDay);
-        } else {
-          startDate = new Date(currentYear, currentMonth - 1, cashClosingDay + 1);
-          endDate = new Date(currentYear, currentMonth, cashClosingDay);
-        }
-        break;
-      }
-      case "1month":
-        startDate = subMonths(now, 1);
-        break;
-      case "2months":
-        startDate = subMonths(now, 2);
-        break;
-      case "3months":
-        startDate = subMonths(now, 3);
-        break;
-      case "6months":
-        startDate = subMonths(now, 6);
-        break;
-      default:
-        return appointments;
-    }
+    if (!reportStartDate || !reportEndDate) return appointments;
     
     return appointments.filter(a => {
       const appointmentDate = parseISO(a.appointment_date);
-      const afterStart = isAfter(appointmentDate, startDate) || isEqual(appointmentDate, startDate);
-      
-      if (endDate) {
-        const beforeEnd = isBefore(appointmentDate, endDate) || isEqual(appointmentDate, endDate);
-        return afterStart && beforeEnd;
-      }
-      
-      return afterStart;
+      const afterStart = isAfter(appointmentDate, reportStartDate) || isEqual(appointmentDate, reportStartDate);
+      const beforeEnd = isBefore(appointmentDate, reportEndDate) || isEqual(appointmentDate, reportEndDate);
+      return afterStart && beforeEnd;
     });
-  }, [appointments, reportPeriod, cashClosingDay]);
+  }, [appointments, reportStartDate, reportEndDate]);
 
   // Filter appointments by period for stats cards
   const getFilteredAppointmentsForStats = useCallback(() => {
@@ -1250,79 +1205,12 @@ const [reportPeriod, setReportPeriod] = useState<string>("today");
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
+              <CardHeader className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-primary" />
                     Resumo Financeiro
                   </CardTitle>
-                  {reportPeriod === 'closing' && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Período: dia {cashClosingDay + 1} a dia {cashClosingDay}
-                      {editingClosingDay ? (
-                        <span className="inline-flex items-center gap-1 ml-2">
-                          <Input
-                            type="number"
-                            min="1"
-                            max="28"
-                            value={closingDayInput}
-                            onChange={(e) => setClosingDayInput(e.target.value)}
-                            className="w-14 h-6 text-xs inline-block"
-                          />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0 text-green-500"
-                            onClick={() => {
-                              const day = parseInt(closingDayInput, 10);
-                              if (!isNaN(day)) saveCashClosingDay(day);
-                            }}
-                          >
-                            <Save className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0"
-                            onClick={() => {
-                              setEditingClosingDay(false);
-                              setClosingDayInput(cashClosingDay.toString());
-                            }}
-                          >
-                            <XCircle className="w-3 h-3" />
-                          </Button>
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => setEditingClosingDay(true)}
-                          className="ml-2 text-primary hover:underline inline-flex items-center gap-1"
-                        >
-                          <Settings className="w-3 h-3" />
-                          Configurar
-                        </button>
-                      )}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-4 h-4 text-muted-foreground" />
-                    <Select value={reportPeriod} onValueChange={setReportPeriod}>
-                      <SelectTrigger className="w-[180px] border-primary/30 bg-card/60">
-                        <SelectValue placeholder="Período" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">Hoje</SelectItem>
-                        <SelectItem value="7days">Últimos 7 dias</SelectItem>
-                        <SelectItem value="30days">Últimos 30 dias</SelectItem>
-                        <SelectItem value="closing">Período de fechamento</SelectItem>
-                        <SelectItem value="1month">Último mês</SelectItem>
-                        <SelectItem value="2months">Últimos 2 meses</SelectItem>
-                        <SelectItem value="3months">Últimos 3 meses</SelectItem>
-                        <SelectItem value="6months">Últimos 6 meses</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1346,14 +1234,9 @@ const [reportPeriod, setReportPeriod] = useState<string>("today");
                         .filter(a => a.payment_status === 'refunded' && a.payment_method !== 'subscription')
                         .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                       
-                      const periodLabel = reportPeriod === 'today' ? 'Hoje' :
-                                         reportPeriod === '7days' ? 'Últimos 7 dias' :
-                                         reportPeriod === '30days' ? 'Últimos 30 dias' :
-                                         reportPeriod === 'closing' ? `Período de Fechamento (dia ${cashClosingDay + 1} a ${cashClosingDay})` : 
-                                         reportPeriod === '1month' ? 'Último mês' :
-                                         reportPeriod === '2months' ? 'Últimos 2 meses' :
-                                         reportPeriod === '3months' ? 'Últimos 3 meses' :
-                                         reportPeriod === '6months' ? 'Últimos 6 meses' : 'Período selecionado';
+                      const periodLabel = reportStartDate && reportEndDate 
+                        ? `${format(reportStartDate, "dd/MM/yyyy")} a ${format(reportEndDate, "dd/MM/yyyy")}`
+                        : 'Período selecionado';
                       
                       const csvContent = [
                         'Relatório Financeiro - Natan Barber',
@@ -1382,7 +1265,7 @@ const [reportPeriod, setReportPeriod] = useState<string>("today");
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                       const link = document.createElement('a');
                       link.href = URL.createObjectURL(blob);
-                      link.download = `relatorio-financeiro-${reportPeriod}-${format(new Date(), "yyyy-MM-dd")}.csv`;
+                      link.download = `relatorio-financeiro-${format(reportStartDate || new Date(), "yyyy-MM-dd")}-${format(reportEndDate || new Date(), "yyyy-MM-dd")}.csv`;
                       link.click();
                       toast.success("Relatório exportado com sucesso!");
                     }}
@@ -1392,6 +1275,120 @@ const [reportPeriod, setReportPeriod] = useState<string>("today");
                     Exportar CSV
                   </Button>
                 </div>
+                
+                {/* Date Range Picker */}
+                <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg border border-primary/10">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Período:</span>
+                  </div>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 border-primary/30 bg-card/60 gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        {reportStartDate ? format(reportStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={reportStartDate}
+                        onSelect={setReportStartDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <span className="text-sm text-muted-foreground">até</span>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 border-primary/30 bg-card/60 gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        {reportEndDate ? format(reportEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={reportEndDate}
+                        onSelect={setReportEndDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  
+                  {/* Quick Filters */}
+                  <div className="flex flex-wrap gap-1 ml-auto">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
+                        setReportStartDate(new Date());
+                        setReportEndDate(new Date());
+                      }}
+                    >
+                      Hoje
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
+                        setReportStartDate(subDays(new Date(), 7));
+                        setReportEndDate(new Date());
+                      }}
+                    >
+                      7 dias
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
+                        setReportStartDate(subDays(new Date(), 30));
+                        setReportEndDate(new Date());
+                      }}
+                    >
+                      30 dias
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
+                        // Billing period based on cash closing day
+                        const now = new Date();
+                        const currentDay = now.getDate();
+                        const currentMonth = now.getMonth();
+                        const currentYear = now.getFullYear();
+
+                        if (currentDay > cashClosingDay) {
+                          setReportStartDate(new Date(currentYear, currentMonth, cashClosingDay + 1));
+                          setReportEndDate(new Date(currentYear, currentMonth + 1, cashClosingDay));
+                        } else {
+                          setReportStartDate(new Date(currentYear, currentMonth - 1, cashClosingDay + 1));
+                          setReportEndDate(new Date(currentYear, currentMonth, cashClosingDay));
+                        }
+                      }}
+                    >
+                      Fechamento
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Period info */}
+                {reportStartDate && reportEndDate && (
+                  <p className="text-xs text-muted-foreground">
+                    Mostrando {filteredReportAppointments.length} agendamento(s) de {format(reportStartDate, "dd/MM/yyyy")} a {format(reportEndDate, "dd/MM/yyyy")}
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
