@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ interface SubscriberWithUsage {
   cuts_used_this_month: number;
   weekly_credits_available: number;
   current_week_start: string | null;
+  consecutive_months: number;
   profile: {
     full_name: string | null;
     phone: string | null;
@@ -354,6 +355,51 @@ const VIPPackagesManager = () => {
     } catch (error) {
       console.error("Error resetting benefits:", error);
       toast.error("Erro ao resetar benefícios");
+    }
+  };
+
+  const renewSubscription = async (sub: SubscriberWithUsage) => {
+    if (!confirm(`Renovar assinatura de ${sub.profile?.full_name || "Cliente"} para o próximo mês?`)) return;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const nowTimestamp = today.toISOString();
+    
+    // Calculate weekly credits based on monthly limit
+    const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({
+          // Reset subscription start date to today
+          subscription_start_date: todayStr,
+          // Increment consecutive months
+          consecutive_months: sub.consecutive_months + 1,
+          // Reset monthly usage
+          cuts_used_this_month: 0,
+          current_month_start: todayStr,
+          // Reset weekly credits
+          weekly_credits_available: weeklyCredits,
+          current_week_start: todayStr,
+          credits_expired_this_month: 0,
+          // Reset benefits usage timestamp
+          usage_reset_date: nowTimestamp,
+          // Update last payment date
+          last_payment_date: todayStr,
+          // Ensure active
+          is_active: true,
+          updated_at: nowTimestamp
+        })
+        .eq("id", sub.id);
+
+      if (error) throw error;
+
+      toast.success(`Assinatura renovada! ${sub.profile?.full_name || "Cliente"} agora está no mês ${sub.consecutive_months + 1}`);
+      fetchData();
+    } catch (error) {
+      console.error("Error renewing subscription:", error);
+      toast.error("Erro ao renovar assinatura");
     }
   };
 
@@ -719,6 +765,15 @@ const VIPPackagesManager = () => {
                         >
                           <RotateCcw className="w-3 h-3" />
                           Resetar Benefícios
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          className="gap-1 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => renewSubscription(sub)}
+                        >
+                          <ArrowRight className="w-3 h-3" />
+                          Renovar Mês
                         </Button>
                         {sub.is_active ? (
                           <Button 
