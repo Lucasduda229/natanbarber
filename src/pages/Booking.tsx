@@ -144,6 +144,9 @@ const Booking = () => {
   const [usingSubscription, setUsingSubscription] = useState(false);
   const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates that have subscription bookings
   
+  // Track usage per service for the current month
+  const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
+  
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
@@ -321,9 +324,11 @@ const Booking = () => {
   };
 
   // Fetch user's subscription bookings for the CURRENT MONTH only
+  // Also calculate usage per service
   const fetchSubscriptionBookings = async () => {
     if (!user) {
       setSubscriptionBookedWeeks([]);
+      setServiceUsageThisMonth({});
       return;
     }
 
@@ -332,9 +337,15 @@ const Booking = () => {
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
 
+    // Fetch appointments with their services
     const { data: appointments } = await supabase
       .from("appointments")
-      .select("appointment_date")
+      .select(`
+        id,
+        appointment_date,
+        service_id,
+        appointment_services (service_id)
+      `)
       .eq("user_id", user.id)
       .eq("payment_method", "subscription")
       .neq("status", "cancelled")
@@ -344,15 +355,33 @@ const Booking = () => {
     if (appointments && appointments.length > 0) {
       const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
       setSubscriptionBookedWeeks(bookedDates);
+      
+      // Calculate usage per service
+      const usageMap: Record<string, number> = {};
+      
+      for (const apt of appointments) {
+        // Count main service
+        if (apt.service_id) {
+          usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
+        }
+        
+        // Count additional services
+        const additionalServices = apt.appointment_services as { service_id: string }[] | null;
+        if (additionalServices && Array.isArray(additionalServices)) {
+          for (const svc of additionalServices) {
+            if (svc.service_id) {
+              usageMap[svc.service_id] = (usageMap[svc.service_id] || 0) + 1;
+            }
+          }
+        }
+      }
+      
+      setServiceUsageThisMonth(usageMap);
     } else {
       setSubscriptionBookedWeeks([]);
+      setServiceUsageThisMonth({});
     }
   };
-
-  // Calculate remaining subscription bookings for the current month
-  const remainingMonthlyBookings = activeSubscription 
-    ? Math.max(0, activeSubscription.monthly_cuts_limit - subscriptionBookedWeeks.length)
-    : 0;
 
   const fetchServices = async () => {
     const { data, error } = await supabase
@@ -592,11 +621,11 @@ const Booking = () => {
         return;
       }
       
-      // Rule 2: Check if user reached monthly limit
+      // Rule 2: Check if user reached weekly booking limit
       if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
         setLoading(false);
-        toast.error("Limite mensal atingido", { 
-          description: `Você já usou todos os ${activeSubscription.monthly_cuts_limit} agendamentos do mês.` 
+        toast.error("Limite de agendamentos atingido", { 
+          description: `Você já agendou ${activeSubscription.monthly_cuts_limit} vezes este mês.` 
         });
         return;
       }
@@ -612,6 +641,27 @@ const Booking = () => {
           description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
         });
         return;
+      }
+      
+      // Rule 4: Verify each selected service has available credits
+      for (const service of selectedServices) {
+        const packageItem = subscriptionPackageItems.find(item => 
+          item.service_id === service.id || 
+          item.service_name.toLowerCase() === service.name.toLowerCase()
+        );
+        
+        if (packageItem) {
+          const used = serviceUsageThisMonth[service.id] || 0;
+          const limit = packageItem.quantity;
+          
+          if (used >= limit) {
+            setLoading(false);
+            toast.error(`Limite de ${service.name} atingido`, { 
+              description: `Você já usou ${used}/${limit} este mês.` 
+            });
+            return;
+          }
+        }
       }
     }
 
@@ -907,20 +957,36 @@ const Booking = () => {
                         )
                       : null;
 
+                    // Calculate usage for this specific service
+                    const serviceUsed = serviceUsageThisMonth[service.id] || 0;
+                    const serviceLimit = packageItem?.quantity || 0;
+                    const serviceRemaining = Math.max(0, serviceLimit - serviceUsed);
+                    const isServiceLimitReached = usingSubscription && packageItem && serviceRemaining === 0;
+
                     return (
                       <div
                         key={service.id}
-                        className={`relative rounded-xl p-3 cursor-pointer transition-all active:scale-[0.97] ${
-                          isSelected 
-                            ? usingSubscription 
-                              ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20"
-                              : "bg-primary/15 border-2 border-primary ring-2 ring-primary/20" 
-                            : "bg-card/60 backdrop-blur-xl border border-primary/10"
+                        className={`relative rounded-xl p-3 transition-all ${
+                          isServiceLimitReached
+                            ? "bg-muted/30 border border-muted cursor-not-allowed opacity-60"
+                            : isSelected 
+                              ? usingSubscription 
+                                ? "bg-green-500/15 border-2 border-green-500 ring-2 ring-green-500/20 cursor-pointer active:scale-[0.97]"
+                                : "bg-primary/15 border-2 border-primary ring-2 ring-primary/20 cursor-pointer active:scale-[0.97]" 
+                              : "bg-card/60 backdrop-blur-xl border border-primary/10 cursor-pointer active:scale-[0.97]"
                         }`}
-                        onClick={() => handleServiceSelect(service)}
+                        onClick={() => {
+                          if (!isServiceLimitReached) {
+                            handleServiceSelect(service);
+                          } else {
+                            toast.error(`Limite de ${service.name} atingido`, {
+                              description: `Você já usou ${serviceUsed}/${serviceLimit} este mês.`
+                            });
+                          }
+                        }}
                       >
                         {/* Selection indicator */}
-                        {isSelected && (
+                        {isSelected && !isServiceLimitReached && (
                           <div className={`absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center ${
                             usingSubscription ? "bg-green-500" : "bg-primary"
                           }`}>
@@ -928,25 +994,45 @@ const Booking = () => {
                           </div>
                         )}
 
-                        {/* Package quantity badge */}
+                        {/* Package quantity badge - shows remaining/total */}
                         {usingSubscription && packageItem && (
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/50">
-                            <span className="text-[10px] font-bold text-green-500">{packageItem.quantity}x/mês</span>
+                          <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full border ${
+                            isServiceLimitReached 
+                              ? "bg-destructive/20 border-destructive/50"
+                              : "bg-green-500/20 border-green-500/50"
+                          }`}>
+                            <span className={`text-[10px] font-bold ${
+                              isServiceLimitReached ? "text-destructive" : "text-green-500"
+                            }`}>
+                              {isServiceLimitReached ? "Esgotado" : `${serviceRemaining}/${serviceLimit}`}
+                            </span>
                           </div>
                         )}
                         
                         {/* Icon */}
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${
-                          usingSubscription && packageItem ? "bg-green-500/10 mt-4" : "bg-primary/10"
+                          isServiceLimitReached
+                            ? "bg-muted/30 mt-4"
+                            : usingSubscription && packageItem 
+                              ? "bg-green-500/10 mt-4" 
+                              : "bg-primary/10"
                         }`}>
-                          <Scissors className={`w-4 h-4 ${usingSubscription ? "text-green-500" : "text-primary"}`} />
+                          <Scissors className={`w-4 h-4 ${
+                            isServiceLimitReached 
+                              ? "text-muted-foreground" 
+                              : usingSubscription 
+                                ? "text-green-500" 
+                                : "text-primary"
+                          }`} />
                         </div>
                         
                         {/* Service Info */}
                         <h4 className={`font-semibold text-sm mb-0.5 pr-5 leading-tight ${
-                          isSelected 
-                            ? usingSubscription ? "text-green-500" : "text-primary" 
-                            : "text-foreground"
+                          isServiceLimitReached
+                            ? "text-muted-foreground"
+                            : isSelected 
+                              ? usingSubscription ? "text-green-500" : "text-primary" 
+                              : "text-foreground"
                         }`}>
                           {service.name}
                         </h4>
@@ -954,8 +1040,12 @@ const Booking = () => {
                           {service.description || "Serviço profissional"}
                         </p>
                         
-                        {/* Price */}
-                        {usingSubscription ? (
+                        {/* Price or Limit reached message */}
+                        {isServiceLimitReached ? (
+                          <p className="text-xs text-destructive font-medium">
+                            🚫 Limite atingido ({serviceUsed}/{serviceLimit})
+                          </p>
+                        ) : usingSubscription ? (
                           <div className="flex items-center gap-2">
                             <p className="text-xs text-muted-foreground line-through">R$ {service.price.toFixed(2)}</p>
                             <p className="text-base font-bold text-green-500">Grátis</p>
@@ -984,47 +1074,48 @@ const Booking = () => {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-foreground">Sua Assinatura Ativa</h3>
-                    <p className="text-xs text-muted-foreground">Use seus créditos semanais para agendar</p>
+                    <p className="text-xs text-muted-foreground">Use seus benefícios para agendar</p>
                   </div>
                 </div>
 
                 <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-card/80 border-2 border-green-500/50 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Agendamentos restantes este mês
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/70">
-                        (1 por semana, até {activeSubscription.monthly_cuts_limit} no mês)
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-2xl font-bold ${remainingMonthlyBookings > 0 ? 'text-green-500' : 'text-destructive'}`}>
-                        {remainingMonthlyBookings}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">de {activeSubscription.monthly_cuts_limit}</p>
-                    </div>
-                  </div>
+                  <p className="font-bold text-foreground mb-3">{activeSubscription.package_name}</p>
                   
-                  {/* Monthly bookings indicator */}
-                  <div className="flex gap-1 mb-3">
-                    {Array.from({ length: activeSubscription.monthly_cuts_limit }).map((_, i) => (
-                      <div 
-                        key={i}
-                        className={`flex-1 h-2 rounded-full ${
-                          i < subscriptionBookedWeeks.length
-                            ? "bg-amber-500" 
-                            : "bg-green-500"
-                        }`}
-                      />
-                    ))}
-                  </div>
+                  {/* Service-by-service usage display */}
+                  {subscriptionPackageItems.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      <p className="text-xs text-muted-foreground font-medium">Uso por serviço este mês:</p>
+                      {subscriptionPackageItems.map((item) => {
+                        const used = serviceUsageThisMonth[item.service_id || ''] || 0;
+                        const total = item.quantity;
+                        const remaining = Math.max(0, total - used);
+                        const percentage = total > 0 ? (used / total) * 100 : 0;
+                        const isExhausted = remaining === 0;
+                        
+                        return (
+                          <div key={item.id} className="bg-muted/30 rounded-lg p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-foreground">{item.service_name}</span>
+                              <span className={`text-xs font-bold ${isExhausted ? 'text-destructive' : 'text-green-500'}`}>
+                                {remaining}/{total}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all ${isExhausted ? 'bg-destructive' : 'bg-green-500'}`}
+                                style={{ width: `${Math.min(100, percentage)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                   
                   {/* Show booked weeks */}
                   {subscriptionBookedWeeks.length > 0 && (
                     <div className="mb-3 p-2 bg-muted/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas:</p>
+                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas ({subscriptionBookedWeeks.length}/{activeSubscription.monthly_cuts_limit}):</p>
                       <div className="flex flex-wrap gap-1">
                         {subscriptionBookedWeeks.map((date, i) => (
                           <span key={i} className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
@@ -1035,20 +1126,29 @@ const Booking = () => {
                     </div>
                   )}
 
-                  {remainingMonthlyBookings > 0 ? (
-                    <>
-                      {!usingSubscription ? (
+                  {/* Check if ANY service still has credits available */}
+                  {(() => {
+                    const hasAnyCreditsLeft = subscriptionPackageItems.some(item => {
+                      const used = serviceUsageThisMonth[item.service_id || ''] || 0;
+                      return used < item.quantity;
+                    });
+                    
+                    // Also check weekly booking limit
+                    const hasWeeklySlots = subscriptionBookedWeeks.length < activeSubscription.monthly_cuts_limit;
+
+                    if (hasAnyCreditsLeft && hasWeeklySlots) {
+                      return !usingSubscription ? (
                         <Button
                           onClick={() => {
                             setUsingSubscription(true);
                             toast.success("Modo assinatura ativado!", { 
-                              description: `Você tem ${remainingMonthlyBookings} agendamento(s) disponível(is) este mês.`
+                              description: "Selecione os serviços que deseja usar."
                             });
                           }}
                           className="w-full bg-green-500 hover:bg-green-600 text-background font-semibold h-12 rounded-xl"
                         >
                           <CalendarIcon className="w-5 h-5 mr-2" />
-                          Usar Crédito da Assinatura
+                          Usar Benefícios da Assinatura
                         </Button>
                       ) : (
                         <div className="space-y-2">
@@ -1069,18 +1169,24 @@ const Booking = () => {
                             Cancelar uso da assinatura
                           </Button>
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center bg-destructive/10 p-3 rounded-lg border border-destructive/30">
-                      <p className="text-destructive text-sm font-medium mb-1">
-                        🚫 Limite mensal atingido!
-                      </p>
-                      <p className="text-destructive/80 text-xs">
-                        Você já usou todos os {activeSubscription.monthly_cuts_limit} agendamentos deste mês.
-                      </p>
-                    </div>
-                  )}
+                      );
+                    } else {
+                      return (
+                        <div className="text-center bg-destructive/10 p-3 rounded-lg border border-destructive/30">
+                          <p className="text-destructive text-sm font-medium mb-1">
+                            {!hasWeeklySlots 
+                              ? "🚫 Limite de agendamentos semanais atingido!"
+                              : "🚫 Todos os benefícios foram utilizados!"}
+                          </p>
+                          <p className="text-destructive/80 text-xs">
+                            {!hasWeeklySlots 
+                              ? `Você já agendou ${subscriptionBookedWeeks.length}x este mês (máx: ${activeSubscription.monthly_cuts_limit}).`
+                              : "Você já usou todos os seus benefícios deste mês."}
+                          </p>
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             )}
