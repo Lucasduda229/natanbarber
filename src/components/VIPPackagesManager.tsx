@@ -717,6 +717,12 @@ const VIPPackagesManager = () => {
                       <p className="text-sm text-primary font-medium mt-1">
                         {sub.package?.name || sub.package_name || "Sem pacote"} • R$ {sub.package?.price || 0}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1 bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full text-xs font-bold border border-amber-500/30">
+                          <Crown className="w-3 h-3" />
+                          {sub.consecutive_months} {sub.consecutive_months === 1 ? "mês" : "meses"} consecutivo{sub.consecutive_months !== 1 ? "s" : ""}
+                        </div>
+                      </div>
                       
                       {/* Weekly Credits Display */}
                       <div className="flex items-center gap-2 mt-2">
