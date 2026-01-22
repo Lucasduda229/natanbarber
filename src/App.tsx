@@ -18,6 +18,7 @@ import AppointmentHistory from "./pages/AppointmentHistory";
 import Install from "./pages/Install";
 import Pedido from "./pages/Pedido";
 import NotFound from "./pages/NotFound";
+import AuthRecoveryRedirect from "./components/AuthRecoveryRedirect";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
         <Sonner />
         <OfflineIndicator />
         <BrowserRouter>
+          <AuthRecoveryRedirect />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
