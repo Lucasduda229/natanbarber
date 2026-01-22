@@ -442,7 +442,7 @@ const Admin = () => {
           price
         )
       `)
-      .order("appointment_date", { ascending: false })
+      .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
 
     if (appointmentsError) {
