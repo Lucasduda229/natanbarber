@@ -36,10 +36,15 @@ const ForgotPassword = () => {
     setError("");
 
     try {
+      // Use custom domain for redirect to ensure consistent behavior
+      const redirectUrl = window.location.hostname.includes('natanbarber.site') 
+        ? 'https://natanbarber.site/reset-password'
+        : `${window.location.origin}/reset-password`;
+      
       const { data, error: fnError } = await supabase.functions.invoke('send-reset-email', {
         body: {
           email: email,
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: redirectUrl,
         },
       });
 
