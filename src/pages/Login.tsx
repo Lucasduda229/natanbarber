@@ -87,9 +87,9 @@ const Login = () => {
             <p className="text-muted-foreground text-sm sm:text-lg">Acesse sua conta para agendar</p>
           </div>
           <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-5 sm:p-8 border border-primary/20 shadow-gold-glow">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <GhostInput icon={Mail} name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} error={errors.email} autoFocus />
-              <GhostInput icon={Lock} name="password" type="password" placeholder="Sua senha" value={formData.password} onChange={handleChange} error={errors.password} />
+            <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+              <GhostInput icon={Mail} name="email" type="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} error={errors.email} autoFocus autoComplete="off" />
+              <GhostInput icon={Lock} name="password" type="password" placeholder="Sua senha" value={formData.password} onChange={handleChange} error={errors.password} autoComplete="new-password" />
               <div className="flex justify-end">
                 <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                   Esqueci a senha
