@@ -26,6 +26,7 @@ interface Appointment {
   appointment_time: string;
   status: string;
   payment_status: string;
+  payment_method: string | null;
   services: {
     name: string;
     price: number;
@@ -53,6 +54,12 @@ const paymentLabels: Record<string, string> = {
   refunded: "Reembolsado",
 };
 
+const paymentMethodLabels: Record<string, string> = {
+  pix: "PIX",
+  cash: "Dinheiro",
+  card: "Cartão",
+};
+
 const MyAppointments = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -77,6 +84,7 @@ const MyAppointments = () => {
         appointment_time,
         status,
         payment_status,
+        payment_method,
         services (
           name,
           price
@@ -219,7 +227,7 @@ const MyAppointments = () => {
                                   {statusLabels[appointment.status]}
                                 </Badge>
                                 <Badge variant="outline" className="bg-muted/50 text-xs">
-                                  {paymentLabels[appointment.payment_status]} (PIX)
+                                  {paymentLabels[appointment.payment_status]} ({paymentMethodLabels[appointment.payment_method || 'pix'] || appointment.payment_method || 'PIX'})
                                 </Badge>
                               </div>
                             </div>
