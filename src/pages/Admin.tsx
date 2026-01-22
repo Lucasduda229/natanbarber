@@ -525,7 +525,23 @@ const Admin = () => {
       };
     });
 
-    setAppointments(appointmentsWithData as Appointment[]);
+    // Sort: active appointments first (by date/time ascending), then completed/cancelled at the end
+    const sortedAppointments = (appointmentsWithData as Appointment[]).sort((a, b) => {
+      const completedStatuses = ['completed', 'cancelled'];
+      const aIsCompleted = completedStatuses.includes(a.status);
+      const bIsCompleted = completedStatuses.includes(b.status);
+      
+      // If one is completed and the other isn't, put completed at the end
+      if (aIsCompleted && !bIsCompleted) return 1;
+      if (!aIsCompleted && bIsCompleted) return -1;
+      
+      // Both same category: sort by date then time ascending
+      const dateCompare = a.appointment_date.localeCompare(b.appointment_date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.appointment_time.localeCompare(b.appointment_time);
+    });
+
+    setAppointments(sortedAppointments);
   };
 
   const fetchBlockedDates = async () => {
