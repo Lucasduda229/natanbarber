@@ -14,20 +14,40 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validatingSession, setValidatingSession] = useState(true);
   const [formData, setFormData] = useState({ password: "", confirmPassword: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
 
-    // Check if we have an access token in the URL (from email link)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get("access_token");
-    const type = hashParams.get("type");
+    const validateRecoverySession = async () => {
+      // First check hash params (initial redirect from email)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      const type = hashParams.get("type");
 
-    if (!accessToken || type !== "recovery") {
+      if (accessToken && type === "recovery") {
+        // Valid recovery link, user will be logged in automatically
+        setValidatingSession(false);
+        return;
+      }
+
+      // If no hash params, check if user has an active session (already processed the link)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // User has a valid session - allow password reset
+        setValidatingSession(false);
+        return;
+      }
+
+      // No valid recovery link and no session
       setError("Link de recuperação inválido ou expirado. Solicite um novo link.");
-    }
+      setValidatingSession(false);
+    };
+
+    validateRecoverySession();
   }, []);
 
   const validateForm = () => {
@@ -90,15 +110,19 @@ const ResetPassword = () => {
 
           <div className="text-center mb-8 space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-              {success ? "Senha Redefinida!" : error ? "Link Inválido" : "Nova Senha"}
+              {validatingSession ? "Verificando..." : success ? "Senha Redefinida!" : error ? "Link Inválido" : "Nova Senha"}
             </h1>
             <p className="text-muted-foreground">
-              {success ? "Sua senha foi alterada com sucesso" : error ? "" : "Digite sua nova senha"}
+              {validatingSession ? "Aguarde um momento" : success ? "Sua senha foi alterada com sucesso" : error ? "" : "Digite sua nova senha"}
             </p>
           </div>
 
           <div className="auth-card bg-card/40 backdrop-blur-xl rounded-2xl p-8 border border-primary/20 shadow-gold-glow">
-            {success ? (
+            {validatingSession ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+              </div>
+            ) : success ? (
               <div className="text-center space-y-6">
                 <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
                   <CheckCircle className="w-10 h-10 text-green-500" />
