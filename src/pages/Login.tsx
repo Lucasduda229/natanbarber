@@ -17,12 +17,8 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    // Only redirect if auth is finished loading AND user exists
-    if (!authLoading && user) {
-      navigate("/booking");
-    }
-  }, [user, authLoading, navigate]);
+  // Removed auto-redirect: users should always see the login page
+  // and fill credentials manually after logout
 
   useEffect(() => {
     gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
