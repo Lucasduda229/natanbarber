@@ -17,12 +17,8 @@ const Register = () => {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    // Only redirect if auth is finished loading AND user exists
-    if (!authLoading && user) {
-      navigate("/booking");
-    }
-  }, [user, authLoading, navigate]);
+  // Removed auto-redirect: users should always see the registration page
+  // even if already logged in, so they can create a new account or realize they're logged in
 
   useEffect(() => {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
