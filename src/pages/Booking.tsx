@@ -738,9 +738,16 @@ const Booking = () => {
     }, 50);
   };
 
-  const copyPixKey = () => {
-    navigator.clipboard.writeText(PIX_KEY.replace(/\s/g, ""));
-    toast.success("Chave PIX copiada!");
+  const copyPixCode = (amount: number, description: string = "") => {
+    const pixPayload = generatePixPayload({
+      pixKey: PIX_KEY,
+      merchantName: "NATAN BARBER",
+      merchantCity: "LAURO MULLER",
+      amount: amount,
+      description: description.substring(0, 25),
+    });
+    navigator.clipboard.writeText(pixPayload);
+    toast.success("Código PIX copiado!", { description: `Valor: R$ ${amount.toFixed(2).replace('.', ',')}` });
   };
 
 
@@ -1573,19 +1580,19 @@ const Booking = () => {
                         </p>
                       </div>
                       
-                      {/* Chave PIX manual */}
-                      <div className="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-border bg-card/50 w-full">
+                      {/* PIX Copia e Cola */}
+                      <div className="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5 w-full">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-medium text-muted-foreground">Ou copie a chave</h4>
-                          <p className="text-sm font-mono text-foreground truncate">{PIX_KEY}</p>
+                          <h4 className="text-xs font-medium text-[#00D4AA]">PIX Copia e Cola</h4>
+                          <p className="text-sm text-muted-foreground">Clique para copiar o código com valor</p>
                         </div>
                         <Button
                           variant="outline"
-                          size="icon"
-                          onClick={copyPixKey}
-                          className="border-[#00D4AA]/30 hover:bg-[#00D4AA]/10 flex-shrink-0 h-8 w-8"
+                          onClick={() => copyPixCode(totalPrice, selectedServices.map(s => s.name).join(", "))}
+                          className="border-[#00D4AA]/30 hover:bg-[#00D4AA]/10 flex-shrink-0 text-[#00D4AA]"
                         >
-                          <Copy className="w-3.5 h-3.5 text-[#00D4AA]" />
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          Copiar
                         </Button>
                       </div>
                     </div>
@@ -1706,17 +1713,17 @@ const Booking = () => {
 
             <Card className="bg-primary/5 border-primary/30 max-w-md mx-auto">
               <CardContent className="p-4">
-                <p className="text-sm text-foreground mb-2 font-semibold">Chave PIX para pagamento:</p>
+                <p className="text-sm text-foreground mb-2 font-semibold">PIX Copia e Cola:</p>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-primary text-lg">{PIX_KEY}</span>
+                  <span className="text-muted-foreground text-sm">Valor: R$ {totalPrice.toFixed(2).replace('.', ',')}</span>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={copyPixKey}
+                    onClick={() => copyPixCode(totalPrice, selectedServices.map(s => s.name).join(", "))}
                     className="border-primary/30 hover:bg-primary/10"
                   >
                     <Copy className="w-4 h-4 mr-1" />
-                    Copiar
+                    Copiar Código
                   </Button>
                 </div>
               </CardContent>

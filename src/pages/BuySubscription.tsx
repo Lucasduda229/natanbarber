@@ -233,9 +233,16 @@ const BuySubscription = () => {
     toast.success("Pedido enviado!", { description: "Aguardando confirmação do pagamento." });
   };
 
-  const copyPixKey = () => {
-    navigator.clipboard.writeText(PIX_KEY.replace(/\s/g, ""));
-    toast.success("Chave PIX copiada!");
+  const copyPixCode = (amount: number, description: string = "") => {
+    const pixPayload = generatePixPayload({
+      pixKey: PIX_KEY,
+      merchantName: "NATAN BARBER",
+      merchantCity: "LAURO MULLER",
+      amount: amount,
+      description: description.substring(0, 25),
+    });
+    navigator.clipboard.writeText(pixPayload);
+    toast.success("Código PIX copiado!", { description: `Valor: R$ ${amount.toFixed(2).replace('.', ',')}` });
   };
 
   const getPackageColor = (pkgName: string) => {
@@ -522,17 +529,18 @@ const BuySubscription = () => {
               </CardContent>
             </Card>
 
-            {/* PIX Key */}
-            <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card/50">
+            {/* PIX Copia e Cola */}
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/30 bg-primary/5">
               <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm">
                 <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Ou copie a chave</p>
-                <p className="font-mono text-foreground">{PIX_KEY}</p>
+                <p className="text-xs text-primary font-medium">PIX Copia e Cola</p>
+                <p className="text-sm text-muted-foreground">Clique para copiar o código com valor</p>
               </div>
-              <Button variant="outline" size="icon" onClick={copyPixKey}>
-                <Copy className="w-4 h-4" />
+              <Button variant="outline" onClick={() => copyPixCode(selectedPackage.price, selectedPackage.name)} className="border-primary/30 hover:bg-primary/10">
+                <Copy className="w-4 h-4 mr-1" />
+                Copiar
               </Button>
             </div>
 
