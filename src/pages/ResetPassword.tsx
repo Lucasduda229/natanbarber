@@ -22,6 +22,36 @@ const ResetPassword = () => {
     gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
 
     const validateRecoverySession = async () => {
+      // 1) Custom email link: /reset-password?type=recovery&token_hash=...
+      // This keeps the email button URL on the custom domain.
+      const searchParams = new URLSearchParams(window.location.search);
+      const tokenHash = searchParams.get("token_hash");
+      const queryType = searchParams.get("type");
+
+      if (tokenHash && queryType === "recovery") {
+        try {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            type: "recovery",
+            token_hash: tokenHash,
+          });
+
+          if (verifyError) {
+            setError("Link de recuperação inválido ou expirado. Solicite um novo link.");
+            setValidatingSession(false);
+            return;
+          }
+
+          // Remove sensitive params from the URL after successful verification
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setValidatingSession(false);
+          return;
+        } catch {
+          setError("Link de recuperação inválido ou expirado. Solicite um novo link.");
+          setValidatingSession(false);
+          return;
+        }
+      }
+
       // First check hash params (initial redirect from email)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
