@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -962,6 +962,11 @@ const Admin = () => {
     if (!filterDate) return true;
     return a.appointment_date === filterDate;
   });
+
+  // Separate active and completed/cancelled appointments
+  const completedStatuses = ['completed', 'cancelled'];
+  const activeAppointments = filteredAppointments.filter(a => !completedStatuses.includes(a.status));
+  const completedAppointments = filteredAppointments.filter(a => completedStatuses.includes(a.status));
 
   if (authLoading) {
     return (
@@ -2213,8 +2218,15 @@ const Admin = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {filteredAppointments.map((appointment) => (
+              <div className="space-y-4">
+                {/* Active Appointments Section */}
+                {activeAppointments.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Clock className="w-4 h-4" />
+                      <span>Agendamentos Ativos ({activeAppointments.length})</span>
+                    </div>
+                    {activeAppointments.map((appointment) => (
                   <Card key={appointment.id} className="bg-card/40 backdrop-blur-xl border-primary/20">
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex flex-col gap-3 sm:gap-4">
@@ -2402,8 +2414,66 @@ const Admin = () => {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                    </Card>
+                  ))}
+                  </div>
+                )}
+
+                {/* Divider between sections */}
+                {activeAppointments.length > 0 && completedAppointments.length > 0 && (
+                  <div className="flex items-center gap-3 py-2">
+                    <div className="flex-1 h-px bg-muted-foreground/20" />
+                    <span className="text-xs text-muted-foreground">Finalizados</span>
+                    <div className="flex-1 h-px bg-muted-foreground/20" />
+                  </div>
+                )}
+
+                {/* Completed/Cancelled Appointments Section */}
+                {completedAppointments.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Concluídos/Cancelados ({completedAppointments.length})</span>
+                    </div>
+                    {completedAppointments.map((appointment) => (
+                      <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-muted-foreground/10 opacity-70">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex flex-col gap-3 sm:gap-4">
+                            <div className="flex items-start gap-3">
+                              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-muted/20 flex flex-col items-center justify-center flex-shrink-0">
+                                <span className="text-base sm:text-lg font-bold text-muted-foreground">
+                                  {format(parseISO(appointment.appointment_date), "dd")}
+                                </span>
+                                <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">
+                                  {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-muted-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base flex-wrap">
+                                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                  <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
+                                </h3>
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    {appointment.appointment_time.slice(0, 5)}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
+                                  </span>
+                                </div>
+                              </div>
+                              <Badge className={cn("text-[10px] sm:text-xs", statusColors[appointment.status as keyof typeof statusColors])}>
+                                {statusLabels[appointment.status as keyof typeof statusLabels]}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
