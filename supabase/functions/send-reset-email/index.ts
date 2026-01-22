@@ -150,8 +150,24 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const resetLink = data.properties?.action_link;
+    const tokenHash = data.properties?.hashed_token;
+
+    // Build a direct app link so the email button shows the custom domain.
+    // This avoids relying on the provider's verify URL for redirection.
+    let appResetLink: string | null = null;
+    if (tokenHash) {
+      try {
+        const url = new URL(redirectTo);
+        url.searchParams.set("type", "recovery");
+        url.searchParams.set("token_hash", tokenHash);
+        appResetLink = url.toString();
+      } catch {
+        // ignore
+      }
+    }
+    const finalResetLink = appResetLink ?? resetLink;
     
-    if (!resetLink) {
+    if (!finalResetLink) {
       console.log("Failed to generate reset link");
       return new Response(JSON.stringify({ success: true, message: "Se o email estiver cadastrado, você receberá um link de recuperação" }), {
         status: 200,
@@ -191,7 +207,7 @@ const handler = async (req: Request): Promise<Response> => {
                 Você solicitou a redefinição da sua senha. Clique no botão abaixo para criar uma nova senha:
               </p>
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${resetLink}" style="display: inline-block; background: linear-gradient(135deg, #d4af37, #b8960c); color: #0a0a0a; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                <a href="${finalResetLink}" style="display: inline-block; background: linear-gradient(135deg, #d4af37, #b8960c); color: #0a0a0a; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                   Redefinir Senha
                 </a>
               </div>
