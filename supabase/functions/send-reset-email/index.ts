@@ -17,7 +17,42 @@ const corsHeaders = {
 
 interface ResetEmailRequest {
   email: string;
-  redirectTo: string;
+  redirectTo?: string;
+}
+
+const DEFAULT_APP_ORIGIN = "https://natanbarber.lovable.app";
+
+function isAllowedHostname(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname.endsWith(".lovable.app") ||
+    hostname.endsWith(".natanbarber.site") ||
+    hostname === "natanbarber.site" ||
+    hostname === "www.natanbarber.site"
+  );
+}
+
+function safeParseUrl(raw: string | null | undefined): URL | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    const protocolOk = url.protocol === "https:" || url.protocol === "http:";
+    if (!protocolOk) return null;
+    if (!isAllowedHostname(url.hostname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function buildAppResetUrl(req: Request, redirectTo?: string) {
+  const preferred = safeParseUrl(redirectTo);
+  const fromOriginHeader = safeParseUrl(req.headers.get("origin"));
+  const fromRefererHeader = safeParseUrl(req.headers.get("referer"));
+
+  const base = preferred?.origin ?? fromOriginHeader?.origin ?? fromRefererHeader?.origin ?? DEFAULT_APP_ORIGIN;
+  const url = new URL("/reset-password", base);
+  return url.toString();
 }
 
 // Simple in-memory rate limiting (per IP, resets on function cold start)
@@ -91,17 +126,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate redirectTo URL
-    if (!redirectTo || typeof redirectTo !== 'string' || redirectTo.length > 500) {
-      console.log("Invalid redirectTo URL");
-      return new Response(
-        JSON.stringify({ error: "Invalid redirect URL" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
+    // Compute a safe app URL for the reset page.
+    // We intentionally don't rely on auth provider redirects (which may fall back to home).
+    const appResetUrl = buildAppResetUrl(req, typeof redirectTo === "string" ? redirectTo : undefined);
 
     const sanitizedEmail = email.trim().toLowerCase();
     console.log("Received reset password request for:", sanitizedEmail);
@@ -132,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
       type: 'recovery',
       email: sanitizedEmail,
       options: {
-        redirectTo: redirectTo,
+        redirectTo: appResetUrl,
       },
     });
 
@@ -152,12 +179,12 @@ const handler = async (req: Request): Promise<Response> => {
     const resetLink = data.properties?.action_link;
     const tokenHash = data.properties?.hashed_token;
 
-    // Build a direct app link so the email button shows the custom domain.
-    // This avoids relying on the provider's verify URL for redirection.
+    // Build a direct app link so the email button goes straight to the reset page.
+    // This avoids relying on provider redirects (which can fall back to /).
     let appResetLink: string | null = null;
     if (tokenHash) {
       try {
-        const url = new URL(redirectTo);
+        const url = new URL(appResetUrl);
         url.searchParams.set("type", "recovery");
         url.searchParams.set("token_hash", tokenHash);
         appResetLink = url.toString();
