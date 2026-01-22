@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const RESEND_API_KEY = (Deno.env.get("RESEND_API_KEY") ?? "")
+  .trim()
+  // In case the value was pasted with quotes
+  .replace(/^"(.+)"$/, "$1")
+  .replace(/^'(.+)'$/, "$1");
+
+const RESEND_FROM = (Deno.env.get("RESEND_FROM") ?? "Barbearia <onboarding@resend.dev>").trim();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -100,6 +106,22 @@ const handler = async (req: Request): Promise<Response> => {
     const sanitizedEmail = email.trim().toLowerCase();
     console.log("Received reset password request for:", sanitizedEmail);
 
+    // If email provider isn't configured, return a friendly response (avoid 500 in the app)
+    if (!RESEND_API_KEY) {
+      console.error("RESEND_API_KEY is missing");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message:
+            "Envio de email não está configurado no momento. Tente novamente mais tarde.",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
     // Create Supabase admin client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -150,7 +172,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Barbearia <onboarding@resend.dev>",
+        from: RESEND_FROM,
         to: [sanitizedEmail],
         subject: "Redefinir sua senha",
         html: `
@@ -188,9 +210,30 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (!emailResponse.ok) {
-      const errorData = await emailResponse.json();
-      console.error("Resend API error:", errorData);
-      throw new Error(errorData.message || "Failed to send email");
+      let errorData: any = null;
+      try {
+        errorData = await emailResponse.json();
+      } catch {
+        // ignore
+      }
+
+      console.error("Resend API error:", errorData ?? { status: emailResponse.status });
+
+      const providerMessage =
+        (errorData && typeof errorData.message === "string" && errorData.message) ||
+        "Falha ao enviar email";
+
+      // Return 200 to avoid surfacing a runtime error overlay in the frontend
+      return new Response(
+        JSON.stringify({ success: false, message: providerMessage }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        },
+      );
     }
 
     const emailResult = await emailResponse.json();
@@ -206,12 +249,16 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-reset-email function:", error);
+    // Return 200 to avoid surfacing a runtime error overlay in the frontend
     return new Response(
-      JSON.stringify({ error: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde." }),
+      JSON.stringify({
+        success: false,
+        message: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
+      }),
       {
-        status: 500,
+        status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      },
     );
   }
 };
