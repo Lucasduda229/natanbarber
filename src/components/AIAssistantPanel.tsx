@@ -14,6 +14,7 @@ interface ServiceItem {
   service_id: string;
   service_name: string;
   price: number;
+  duration_minutes?: number;
 }
 
 interface ParsedAppointment {
@@ -24,6 +25,7 @@ interface ParsedAppointment {
   service_price?: number;
   services?: ServiceItem[];
   total_price?: number;
+  total_duration_minutes?: number;
   appointment_date: string;
   appointment_time: string;
   notes: string | null;
@@ -120,6 +122,7 @@ export const AIAssistantPanel = () => {
             notes: notesText,
             payment_method: selectedPaymentMethod === 'pending' ? null : selectedPaymentMethod,
             check_availability: true,
+            total_duration_minutes: parsedData.total_duration_minutes || 30,
           }
         }
       });
