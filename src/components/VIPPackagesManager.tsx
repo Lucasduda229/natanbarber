@@ -91,6 +91,8 @@ const VIPPackagesManager = () => {
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [selectedSubscriber, setSelectedSubscriber] = useState<SubscriberWithUsage | null>(null);
+  const [selectedBenefits, setSelectedBenefits] = useState<Set<string>>(new Set());
+  const [registeringUsage, setRegisteringUsage] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -405,50 +407,91 @@ const VIPPackagesManager = () => {
 
   const openUsageModal = (subscriber: SubscriberWithUsage) => {
     setSelectedSubscriber(subscriber);
+    setSelectedBenefits(new Set());
     setShowUsageModal(true);
   };
 
-  const registerUsage = async (benefit: BenefitUsage) => {
-    if (!selectedSubscriber) return;
+  const toggleBenefitSelection = (serviceId: string) => {
+    setSelectedBenefits(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(serviceId)) {
+        newSet.delete(serviceId);
+      } else {
+        newSet.add(serviceId);
+      }
+      return newSet;
+    });
+  };
+
+  const registerMultipleUsage = async () => {
+    if (!selectedSubscriber || selectedBenefits.size === 0) return;
     
-    // Check if there are remaining credits for this benefit
-    if (benefit.used >= benefit.quantity) {
-      toast.error(`Limite de ${benefit.service_name} atingido`);
+    // Get selected benefits
+    const benefitsToRegister = selectedSubscriber.benefits.filter(
+      b => selectedBenefits.has(b.service_id) && b.used < b.quantity
+    );
+
+    if (benefitsToRegister.length === 0) {
+      toast.error("Selecione pelo menos um benefício disponível");
       return;
     }
 
+    setRegisteringUsage(true);
+
     try {
-      // Use a unique timestamp to avoid slot conflicts (use seconds as time)
       const now = new Date();
-      const uniqueTime = `23:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
       const today = now.toISOString().split('T')[0];
       
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .insert({
-          user_id: selectedSubscriber.user_id,
-          service_id: benefit.service_id,
-          appointment_date: today,
-          appointment_time: uniqueTime,
-          status: "completed",
-          payment_status: "paid",
-          payment_method: "subscription",
-          notes: `Uso manual de assinatura - ${selectedSubscriber.package_name || 'Pacote VIP'}`
-        });
+      // Create appointments for each selected benefit with unique timestamps
+      const insertPromises = benefitsToRegister.map((benefit, index) => {
+        // Use unique time for each to avoid conflicts
+        const seconds = (now.getSeconds() + index) % 60;
+        const minutes = now.getMinutes() + Math.floor((now.getSeconds() + index) / 60);
+        const uniqueTime = `23:${String(minutes % 60).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        return supabase
+          .from("appointments")
+          .insert({
+            user_id: selectedSubscriber.user_id,
+            service_id: benefit.service_id,
+            appointment_date: today,
+            appointment_time: uniqueTime,
+            status: "completed",
+            payment_status: "paid",
+            payment_method: "subscription",
+            notes: `Uso manual de assinatura - ${selectedSubscriber.package_name || 'Pacote VIP'}`
+          });
+      });
 
-      if (appointmentError) throw appointmentError;
+      const results = await Promise.all(insertPromises);
+      
+      // Check for errors
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        console.error("Some inserts failed:", errors);
+        if (errors.length < benefitsToRegister.length) {
+          toast.warning(`${benefitsToRegister.length - errors.length} de ${benefitsToRegister.length} usos registrados`);
+        } else {
+          throw errors[0].error;
+        }
+      } else {
+        const serviceNames = benefitsToRegister.map(b => b.service_name).join(", ");
+        toast.success(`Uso registrado: ${serviceNames}`);
+      }
 
-      toast.success(`Uso de ${benefit.service_name} registrado!`);
       setShowUsageModal(false);
       setSelectedSubscriber(null);
+      setSelectedBenefits(new Set());
       fetchData();
     } catch (error: any) {
       console.error("Error registering usage:", error);
       if (error.code === '23505') {
-        toast.error("Aguarde 1 segundo e tente novamente");
+        toast.error("Aguarde alguns segundos e tente novamente");
       } else {
         toast.error("Erro ao registrar uso");
       }
+    } finally {
+      setRegisteringUsage(false);
     }
   };
 
@@ -853,7 +896,12 @@ const VIPPackagesManager = () => {
       </Tabs>
 
       {/* Usage Registration Modal */}
-      <Dialog open={showUsageModal} onOpenChange={setShowUsageModal}>
+      <Dialog open={showUsageModal} onOpenChange={(open) => {
+        setShowUsageModal(open);
+        if (!open) {
+          setSelectedBenefits(new Set());
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -866,33 +914,51 @@ const VIPPackagesManager = () => {
             {/* Info */}
             <div className="p-3 rounded-lg bg-muted/50 border border-border">
               <p className="text-xs text-muted-foreground">
-                ⚡ O uso é contabilizado automaticamente pelos agendamentos confirmados/concluídos. 
-                Use este botão apenas para registros manuais.
+                ⚡ Selecione um ou mais serviços utilizados e clique em "Confirmar".
+                O uso é contabilizado automaticamente pelos agendamentos. Use apenas para registros manuais.
               </p>
             </div>
 
-            {/* Benefits List */}
+            {/* Benefits List - Multiple Selection */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Selecione o serviço utilizado:</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Selecione os serviços utilizados:
+                {selectedBenefits.size > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedBenefits.size} selecionado{selectedBenefits.size > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </p>
               
               {selectedSubscriber?.benefits.map((benefit, idx) => {
                 const isAvailable = benefit.used < benefit.quantity;
                 const percentage = (benefit.used / benefit.quantity) * 100;
+                const isSelected = selectedBenefits.has(benefit.service_id);
                 
                 return (
                   <button
                     key={idx}
-                    onClick={() => isAvailable && registerUsage(benefit)}
+                    onClick={() => isAvailable && toggleBenefitSelection(benefit.service_id)}
                     disabled={!isAvailable}
                     className={`w-full p-3 rounded-lg border transition-all text-left ${
-                      isAvailable 
-                        ? "border-border hover:border-primary hover:bg-primary/5 cursor-pointer" 
-                        : "border-muted bg-muted/20 opacity-50 cursor-not-allowed"
+                      !isAvailable 
+                        ? "border-muted bg-muted/20 opacity-50 cursor-not-allowed"
+                        : isSelected
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary hover:bg-primary/5 cursor-pointer"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium flex items-center gap-2">
-                        <Scissors className="w-4 h-4" />
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? "border-primary bg-primary" 
+                            : isAvailable 
+                              ? "border-muted-foreground" 
+                              : "border-muted"
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
                         {benefit.service_name}
                       </span>
                       <Badge variant={percentage >= 100 ? "destructive" : "secondary"}>
@@ -903,12 +969,6 @@ const VIPPackagesManager = () => {
                       value={percentage} 
                       className={`h-1.5 ${percentage >= 100 ? '[&>div]:bg-destructive' : '[&>div]:bg-primary'}`}
                     />
-                    {isAvailable && (
-                      <p className="text-xs text-primary mt-2 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Clique para registrar uso
-                      </p>
-                    )}
                     {percentage >= 100 && (
                       <p className="text-xs text-destructive mt-2">
                         Limite atingido
@@ -924,6 +984,27 @@ const VIPPackagesManager = () => {
                 </p>
               )}
             </div>
+
+            {/* Confirm Button */}
+            {selectedSubscriber?.benefits && selectedSubscriber.benefits.length > 0 && (
+              <Button
+                onClick={registerMultipleUsage}
+                disabled={selectedBenefits.size === 0 || registeringUsage}
+                className="w-full gap-2 bg-primary hover:bg-primary/90"
+              >
+                {registeringUsage ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Confirmar Uso {selectedBenefits.size > 0 && `(${selectedBenefits.size})`}
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
