@@ -118,7 +118,7 @@ export const AIAssistantPanel = () => {
             appointment_date: parsedData.appointment_date,
             appointment_time: parsedData.appointment_time,
             notes: notesText,
-            payment_method: selectedPaymentMethod,
+            payment_method: selectedPaymentMethod === 'pending' ? null : selectedPaymentMethod,
             check_availability: true,
           }
         }
