@@ -63,7 +63,7 @@ const Pedido = () => {
     if (selectedDate) {
       fetchAvailableSlots(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedServices]);
 
   const fetchServices = async () => {
     const { data, error } = await supabase
@@ -76,6 +76,19 @@ const Pedido = () => {
     if (!error && data) {
       setServices(data);
     }
+  };
+
+  // Calculate total duration and required slots
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+  const requiredSlots = Math.ceil(totalDuration / 30);
+
+  // Helper function to add minutes to a time string (HH:mm:ss)
+  const addMinutesToTime = (timeStr: string, minutes: number): string => {
+    const [hours, mins] = timeStr.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMins = totalMinutes % 60;
+    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}:00`;
   };
 
   const fetchAvailableSlots = async (date: Date) => {
@@ -110,13 +123,34 @@ const Pedido = () => {
     const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
     const currentTime = format(now, "HH:mm:ss");
 
+    // Get all slot times for checking consecutive availability
+    const allSlotTimes = slots?.map(s => s.slot_time) || [];
+    const unavailableTimes = new Set([...blockedTimes, ...bookedTimesArray]);
+
     const available = slots?.filter((slot) => {
-      if (blockedTimes.includes(slot.slot_time) || bookedTimesArray.includes(slot.slot_time)) {
+      // Basic availability check
+      if (unavailableTimes.has(slot.slot_time)) {
         return false;
       }
       if (isToday && slot.slot_time <= currentTime) {
         return false;
       }
+      
+      // Check if we have enough consecutive slots for the total service duration
+      if (requiredSlots > 1) {
+        for (let i = 1; i < requiredSlots; i++) {
+          const nextSlotTime = addMinutesToTime(slot.slot_time, i * 30);
+          // Check if next slot exists and is available
+          if (!allSlotTimes.includes(nextSlotTime) || unavailableTimes.has(nextSlotTime)) {
+            return false;
+          }
+          // Check if next slot is not in the past for today
+          if (isToday && nextSlotTime <= currentTime) {
+            return false;
+          }
+        }
+      }
+      
       return true;
     }) || [];
 
@@ -158,19 +192,26 @@ const Pedido = () => {
 
     const appointmentDate = format(selectedDate, "yyyy-MM-dd");
 
-    // Check if slot is still available
-    const { data: existingAppointment } = await supabase
+    // Generate all time slots that will be occupied based on total duration
+    const timesToCheck = [selectedTime];
+    for (let i = 1; i < requiredSlots; i++) {
+      timesToCheck.push(addMinutesToTime(selectedTime, i * 30));
+    }
+
+    // Check if any of the required slots are already booked
+    const { data: existingAppointments } = await supabase
       .from("appointments")
       .select("id")
       .eq("appointment_date", appointmentDate)
-      .eq("appointment_time", selectedTime)
-      .neq("status", "cancelled")
-      .maybeSingle();
+      .in("appointment_time", timesToCheck)
+      .neq("status", "cancelled");
 
-    if (existingAppointment) {
+    if (existingAppointments && existingAppointments.length > 0) {
       setLoading(false);
       toast.error("Horário indisponível", {
-        description: "Este horário já foi reservado. Por favor, escolha outro."
+        description: requiredSlots > 1 
+          ? "Um ou mais horários necessários já foram reservados. Por favor, escolha outro."
+          : "Este horário já foi reservado. Por favor, escolha outro."
       });
       fetchAvailableSlots(selectedDate);
       return;
@@ -196,6 +237,8 @@ const Pedido = () => {
             appointment_time: selectedTime,
             notes: notesText,
             payment_method: paymentMethod,
+            check_availability: true,
+            total_duration_minutes: totalDuration,
           }
         }
       });

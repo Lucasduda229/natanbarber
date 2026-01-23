@@ -213,7 +213,7 @@ const Booking = () => {
     if (selectedDate) {
       fetchAvailableSlots(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedServices]);
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -421,6 +421,19 @@ const Booking = () => {
     setPackages(packagesWithItems);
   };
 
+  // Calculate total duration and required slots
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+  const requiredSlots = Math.ceil(totalDuration / 30);
+
+  // Helper function to add minutes to a time string (HH:mm:ss)
+  const addMinutesToTime = (timeStr: string, minutes: number): string => {
+    const [hours, mins] = timeStr.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMins = totalMinutes % 60;
+    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}:00`;
+  };
+
   const fetchAvailableSlots = async (date: Date) => {
     const dayOfWeek = getDay(date);
     const dateStr = format(date, "yyyy-MM-dd");
@@ -458,15 +471,35 @@ const Booking = () => {
     const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
     const currentTime = format(now, "HH:mm:ss");
 
+    // Get all slot times for checking consecutive availability
+    const allSlotTimes = slots?.map(s => s.slot_time) || [];
+    const unavailableTimes = new Set([...blockedTimes, ...bookedTimesArray]);
+
     const availableSlots = slots?.filter((slot) => {
       // Excluir horários bloqueados ou já reservados
-      if (blockedTimes.includes(slot.slot_time) || bookedTimesArray.includes(slot.slot_time)) {
+      if (unavailableTimes.has(slot.slot_time)) {
         return false;
       }
       // Se for hoje, excluir horários que já passaram
       if (isToday && slot.slot_time <= currentTime) {
         return false;
       }
+      
+      // Check if we have enough consecutive slots for the total service duration
+      if (requiredSlots > 1) {
+        for (let i = 1; i < requiredSlots; i++) {
+          const nextSlotTime = addMinutesToTime(slot.slot_time, i * 30);
+          // Check if next slot exists and is available
+          if (!allSlotTimes.includes(nextSlotTime) || unavailableTimes.has(nextSlotTime)) {
+            return false;
+          }
+          // Check if next slot is not in the past for today
+          if (isToday && nextSlotTime <= currentTime) {
+            return false;
+          }
+        }
+      }
+      
       return true;
     }) || [];
 
@@ -589,22 +622,31 @@ const Booking = () => {
       // Continue anyway, but log the error
     }
 
-    // CRITICAL: Check if slot is still available before proceeding
+    // CRITICAL: Check if all required slots are still available before proceeding
     const appointmentDate = format(selectedDate, "yyyy-MM-dd");
-    const { data: existingAppointment } = await supabase
+    
+    // Generate all time slots that will be occupied based on total duration
+    const timesToCheck = [selectedTime];
+    for (let i = 1; i < requiredSlots; i++) {
+      timesToCheck.push(addMinutesToTime(selectedTime, i * 30));
+    }
+    
+    const { data: existingAppointments } = await supabase
       .from("appointments")
       .select("id")
       .eq("appointment_date", appointmentDate)
-      .eq("appointment_time", selectedTime)
-      .neq("status", "cancelled")
-      .maybeSingle();
+      .in("appointment_time", timesToCheck)
+      .neq("status", "cancelled");
 
-    if (existingAppointment) {
+    if (existingAppointments && existingAppointments.length > 0) {
       setLoading(false);
       toast.error("Horário indisponível", { 
-        description: "Este horário já foi reservado. Por favor, escolha outro." 
+        description: requiredSlots > 1
+          ? "Um ou mais horários necessários já foram reservados. Por favor, escolha outro."
+          : "Este horário já foi reservado. Por favor, escolha outro." 
       });
       // Refresh available times
+      fetchAvailableSlots(selectedDate);
       return;
     }
 

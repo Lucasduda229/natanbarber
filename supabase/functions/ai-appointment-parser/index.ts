@@ -187,7 +187,8 @@ EXEMPLOS:
             validatedServices.push({
               service_id: matchedService.id,
               service_name: matchedService.name,
-              price: matchedService.price
+              price: matchedService.price,
+              duration_minutes: matchedService.duration_minutes
             });
           }
         }
@@ -199,13 +200,15 @@ EXEMPLOS:
             validatedServices.push({
               service_id: defaultService.id,
               service_name: defaultService.name,
-              price: defaultService.price
+              price: defaultService.price,
+              duration_minutes: defaultService.duration_minutes
             });
           }
         }
         
         parsedData.data.services = validatedServices;
         parsedData.data.total_price = validatedServices.reduce((sum, s) => sum + Number(s.price), 0);
+        parsedData.data.total_duration_minutes = validatedServices.reduce((sum, s) => sum + Number(s.duration_minutes || 30), 0);
         
         // Keep backward compatibility - set primary service
         if (validatedServices.length > 0) {
@@ -213,7 +216,7 @@ EXEMPLOS:
           parsedData.data.service_name = validatedServices[0].service_name;
           parsedData.data.service_price = validatedServices[0].price;
         }
-      } 
+      }
       // Handle old format with single service_id
       else if (parsedData.data.service_id) {
         let matchedService = services?.find(s => s.id === parsedData.data.service_id);
@@ -237,9 +240,11 @@ EXEMPLOS:
           parsedData.data.services = [{
             service_id: matchedService.id,
             service_name: matchedService.name,
-            price: matchedService.price
+            price: matchedService.price,
+            duration_minutes: matchedService.duration_minutes
           }];
           parsedData.data.total_price = matchedService.price;
+          parsedData.data.total_duration_minutes = matchedService.duration_minutes || 30;
         }
       }
     }

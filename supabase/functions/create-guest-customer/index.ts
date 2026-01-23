@@ -13,7 +13,17 @@ interface AppointmentData {
   notes?: string;
   payment_method?: string;
   check_availability?: boolean;
+  total_duration_minutes?: number;
 }
+
+// Helper function to add minutes to a time string (HH:mm:ss)
+const addMinutesToTime = (timeStr: string, minutes: number): string => {
+  const [hours, mins] = timeStr.split(':').map(Number);
+  const totalMinutes = hours * 60 + mins + minutes;
+  const newHours = Math.floor(totalMinutes / 60) % 24;
+  const newMins = totalMinutes % 60;
+  return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}:00`;
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -116,18 +126,34 @@ Deno.serve(async (req) => {
     // If appointment data is provided, create the appointment
     let appointmentResult = null;
     if (appointment) {
-      // Check availability if requested
+      // Check availability if requested - now checking all required slots based on duration
       if (appointment.check_availability) {
+        // Calculate required slots based on total duration (default 30 min if not provided)
+        const totalDuration = appointment.total_duration_minutes || 30;
+        const requiredSlots = Math.ceil(totalDuration / 30);
+        
+        // Generate all time slots that will be occupied
+        const timesToCheck = [appointment.appointment_time];
+        for (let i = 1; i < requiredSlots; i++) {
+          timesToCheck.push(addMinutesToTime(appointment.appointment_time, i * 30));
+        }
+        
+        // Check if any of the required time slots are already booked
         const { data: existingAppointments } = await supabaseAdmin
           .from("appointments")
-          .select("id")
+          .select("id, appointment_time")
           .eq("appointment_date", appointment.appointment_date)
-          .eq("appointment_time", appointment.appointment_time)
+          .in("appointment_time", timesToCheck)
           .neq("status", "cancelled");
 
         if (existingAppointments && existingAppointments.length > 0) {
           return new Response(
-            JSON.stringify({ success: false, error: "Este horário já está ocupado!" }),
+            JSON.stringify({ 
+              success: false, 
+              error: requiredSlots > 1 
+                ? "Um ou mais horários necessários já estão ocupados!" 
+                : "Este horário já está ocupado!" 
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
