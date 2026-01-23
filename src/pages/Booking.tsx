@@ -800,13 +800,13 @@ const Booking = () => {
     }
   };
 
-  // Disable days: past, Sundays, and next month when using subscription
+  // Disable days: past, Sundays, Saturdays for subscribers, and next month when using subscription
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
     
-    // If using subscription, block next month dates
+    // If using subscription, block next month dates AND Saturdays
     if (usingSubscription) {
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
@@ -815,6 +815,11 @@ const Booking = () => {
       
       // Block if it's a different month or year (subscription only valid for current month)
       if (dateMonth !== currentMonth || dateYear !== currentYear) {
+        return true;
+      }
+      
+      // Block Saturdays for subscribers (dayOfWeek 6 = Saturday)
+      if (dayOfWeek === 6) {
         return true;
       }
     }
