@@ -27,6 +27,7 @@ import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
+import { ServicesManager } from "@/components/ServicesManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -1231,6 +1232,10 @@ const Admin = () => {
               <TabsTrigger value="subscriptions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assinaturas">
                 <Crown className="w-4 h-4" />
                 <span>Assinat.</span>
+              </TabsTrigger>
+              <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Serviços">
+                <Settings className="w-4 h-4" />
+                <span>Serviços</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -2628,6 +2633,11 @@ const Admin = () => {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
             <VIPPackagesManager />
+          </TabsContent>
+
+          {/* Services Tab */}
+          <TabsContent value="services">
+            <ServicesManager />
           </TabsContent>
         </Tabs>
       </main>
