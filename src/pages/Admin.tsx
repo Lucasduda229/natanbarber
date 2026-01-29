@@ -305,7 +305,7 @@ const Admin = () => {
     gsap.fromTo(".admin-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     fetchData();
 
-    // Set up realtime subscription for appointments
+    // Set up realtime subscription for appointments with reconnection logic
     const appointmentsChannel = supabase
       .channel('admin-appointments-realtime')
       .on(
@@ -316,6 +316,7 @@ const Admin = () => {
           table: 'appointments'
         },
         (payload) => {
+          console.log('📡 Realtime event received:', payload.eventType);
           setLastUpdate(new Date());
           // Refresh all data when any appointment changes
           fetchData(true);
@@ -341,11 +342,21 @@ const Admin = () => {
           }
         }
       )
-      .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Appointments channel error');
-          toast.error("Erro na conexão real-time. Clique em Atualizar.");
+      .subscribe((status, err) => {
+        console.log('📡 Appointments channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+          console.log('✅ Realtime connected - auto-refresh enabled');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setIsConnected(false);
+          console.error('❌ Appointments channel error:', err);
+          toast.error("Conexão perdida. Tentando reconectar...", { duration: 3000 });
+          // Try to reconnect after a delay
+          setTimeout(() => {
+            appointmentsChannel.subscribe();
+          }, 3000);
+        } else if (status === 'CLOSED') {
+          setIsConnected(false);
         }
       });
 
@@ -1006,9 +1017,9 @@ const Admin = () => {
                 </>
               ) : (
                 <>
-                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                  <span className="text-xs text-muted-foreground">
-                    {isConnected ? 'Sincronizado' : 'Desconectado'}
+                  <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
+                  <span className={`text-xs font-medium ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+                    {isConnected ? '🔴 Ao vivo' : 'Desconectado'}
                   </span>
                 </>
               )}
