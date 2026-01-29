@@ -1100,20 +1100,30 @@ const Booking = () => {
                           {service.description || "Serviço profissional"}
                         </p>
                         
-                        {/* Price or Limit reached message */}
+                        {/* Price and Duration */}
                         {isServiceLimitReached ? (
                           <p className="text-xs text-destructive font-medium">
                             🚫 Limite atingido ({serviceUsed}/{serviceLimit})
                           </p>
                         ) : usingSubscription ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-xs text-muted-foreground line-through">R$ {service.price.toFixed(2)}</p>
                             <p className="text-base font-bold text-green-500">Grátis</p>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {service.duration_minutes}min
+                            </span>
                           </div>
                         ) : (
-                          <p className="text-base font-bold text-primary">
-                            R$ {service.price.toFixed(2)}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-base font-bold text-primary">
+                              R$ {service.price.toFixed(2)}
+                            </p>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {service.duration_minutes}min
+                            </span>
+                          </div>
                         )}
                       </div>
                     );
