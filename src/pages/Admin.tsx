@@ -2537,9 +2537,9 @@ const Admin = () => {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-6">
                 <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
                   <Unlock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  Bloqueados ({blockedDates.length})
+                  Bloqueados ({blockedDates.filter(b => b.blocked_date >= format(new Date(), "yyyy-MM-dd")).length})
                 </CardTitle>
-                {blockedDates.length > 0 && (
+                {blockedDates.filter(b => b.blocked_date >= format(new Date(), "yyyy-MM-dd")).length > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -2578,39 +2578,46 @@ const Admin = () => {
                 )}
               </CardHeader>
               <CardContent>
-                {blockedDates.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6 text-sm">Nenhum bloqueio ativo</p>
-                ) : (
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                    {blockedDates.map((blocked) => (
-                      <div
-                        key={blocked.id}
-                        className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-destructive/10 border border-destructive/20 gap-2"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                          <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
-                          <div className="min-w-0">
-                            <span className="text-foreground text-sm block truncate">
-                              {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
-                              {blocked.blocked_time && ` às ${blocked.blocked_time.slice(0, 5)}`}
-                            </span>
-                            {blocked.reason && (
-                              <span className="text-muted-foreground text-xs truncate block">{blocked.reason}</span>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => unblockDate(blocked.id)}
-                          className="text-destructive hover:bg-destructive/20 h-8 w-8 p-0 flex-shrink-0"
+                {(() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  const futureBlockedDates = blockedDates.filter(blocked => blocked.blocked_date >= today);
+                  
+                  if (futureBlockedDates.length === 0) {
+                    return <p className="text-muted-foreground text-center py-6 text-sm">Nenhum bloqueio ativo</p>;
+                  }
+                  
+                  return (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                      {futureBlockedDates.map((blocked) => (
+                        <div
+                          key={blocked.id}
+                          className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-destructive/10 border border-destructive/20 gap-2"
                         >
-                          <Unlock className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-foreground text-sm block truncate">
+                                {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
+                                {blocked.blocked_time && ` às ${blocked.blocked_time.slice(0, 5)}`}
+                              </span>
+                              {blocked.reason && (
+                                <span className="text-muted-foreground text-xs truncate block">{blocked.reason}</span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => unblockDate(blocked.id)}
+                            className="text-destructive hover:bg-destructive/20 h-8 w-8 p-0 flex-shrink-0"
+                          >
+                            <Unlock className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
