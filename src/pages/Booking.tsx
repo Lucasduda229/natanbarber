@@ -438,6 +438,10 @@ const Booking = () => {
     const dayOfWeek = getDay(date);
     const dateStr = format(date, "yyyy-MM-dd");
 
+    // Calculate required slots inside function to ensure fresh value
+    const currentTotalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+    const currentRequiredSlots = Math.ceil(currentTotalDuration / 30) || 1;
+
     const { data: slots, error: slotsError } = await supabase
       .from("time_slots")
       .select("*")
@@ -475,6 +479,8 @@ const Booking = () => {
     const allSlotTimes = slots?.map(s => s.slot_time) || [];
     const unavailableTimes = new Set([...blockedTimes, ...bookedTimesArray]);
 
+    console.log(`Multi-slot blocking: duration=${currentTotalDuration}min, slots=${currentRequiredSlots}`);
+
     const availableSlots = slots?.filter((slot) => {
       // Excluir horários bloqueados ou já reservados
       if (unavailableTimes.has(slot.slot_time)) {
@@ -486,8 +492,8 @@ const Booking = () => {
       }
       
       // Check if we have enough consecutive slots for the total service duration
-      if (requiredSlots > 1) {
-        for (let i = 1; i < requiredSlots; i++) {
+      if (currentRequiredSlots > 1) {
+        for (let i = 1; i < currentRequiredSlots; i++) {
           const nextSlotTime = addMinutesToTime(slot.slot_time, i * 30);
           // Check if next slot exists and is available
           if (!allSlotTimes.includes(nextSlotTime) || unavailableTimes.has(nextSlotTime)) {
