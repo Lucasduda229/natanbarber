@@ -323,8 +323,9 @@ const Booking = () => {
     }
   };
 
-  // Fetch user's subscription bookings for the CURRENT MONTH only
-  // Also calculate usage per service
+  // Fetch user's subscription bookings
+  // Track usage per service for the CURRENT period (month where appointment is scheduled)
+  // Also track weekly bookings for ONE-BOOKING-PER-WEEK rule
   const fetchSubscriptionBookings = async () => {
     if (!user) {
       setSubscriptionBookedWeeks([]);
@@ -332,12 +333,12 @@ const Booking = () => {
       return;
     }
 
-    // Subscription is only valid for the current month
+    // Fetch all future and current subscription appointments (not just current month)
+    // This allows us to track weekly bookings across months
     const today = new Date();
     const monthStart = startOfMonth(today);
-    const monthEnd = endOfMonth(today);
 
-    // Fetch appointments with their services
+    // Fetch appointments with their services - current month and future
     const { data: appointments } = await supabase
       .from("appointments")
       .select(`
@@ -349,28 +350,33 @@ const Booking = () => {
       .eq("user_id", user.id)
       .eq("payment_method", "subscription")
       .neq("status", "cancelled")
-      .gte("appointment_date", format(monthStart, "yyyy-MM-dd"))
-      .lte("appointment_date", format(monthEnd, "yyyy-MM-dd"));
+      .gte("appointment_date", format(monthStart, "yyyy-MM-dd"));
 
     if (appointments && appointments.length > 0) {
+      // All booked dates for weekly tracking (prevents double-booking same week)
       const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
       setSubscriptionBookedWeeks(bookedDates);
       
-      // Calculate usage per service
+      // Calculate usage per service for CURRENT MONTH only (limits are monthly)
       const usageMap: Record<string, number> = {};
+      const monthEnd = endOfMonth(today);
       
       for (const apt of appointments) {
-        // Count main service
-        if (apt.service_id) {
-          usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
-        }
-        
-        // Count additional services
-        const additionalServices = apt.appointment_services as { service_id: string }[] | null;
-        if (additionalServices && Array.isArray(additionalServices)) {
-          for (const svc of additionalServices) {
-            if (svc.service_id) {
-              usageMap[svc.service_id] = (usageMap[svc.service_id] || 0) + 1;
+        const aptDate = parseISO(apt.appointment_date);
+        // Only count appointments in current month for usage limits
+        if (isSameMonth(aptDate, today)) {
+          // Count main service
+          if (apt.service_id) {
+            usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
+          }
+          
+          // Count additional services
+          const additionalServices = apt.appointment_services as { service_id: string }[] | null;
+          if (additionalServices && Array.isArray(additionalServices)) {
+            for (const svc of additionalServices) {
+              if (svc.service_id) {
+                usageMap[svc.service_id] = (usageMap[svc.service_id] || 0) + 1;
+              }
             }
           }
         }
@@ -806,31 +812,22 @@ const Booking = () => {
     }
   };
 
-  // Disable days: past, Sundays, Saturdays for subscribers, and next month when using subscription
+  // Disable days: past, Sundays, Saturdays for subscribers
+  // Subscribers CAN book in future months (no longer restricted to current month only)
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
     
-    // If using subscription, block next month dates AND Saturdays
+    // If using subscription, block Saturdays only
     if (usingSubscription) {
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
-      const dateMonth = date.getMonth();
-      const dateYear = date.getFullYear();
-      
-      // Block if it's a different month or year (subscription only valid for current month)
-      if (dateMonth !== currentMonth || dateYear !== currentYear) {
-        return true;
-      }
-      
       // Block Saturdays for subscribers (dayOfWeek 6 = Saturday)
       if (dayOfWeek === 6) {
         return true;
       }
     }
     
-    // Apenas domingo (0) está fechado
+    // Apenas domingo (0) está fechado e dias passados
     return date < today || dayOfWeek === 0;
   };
 
