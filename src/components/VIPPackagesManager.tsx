@@ -84,6 +84,7 @@ const VIPPackagesManager = () => {
   const [packageBenefits, setPackageBenefits] = useState<PackageBenefit[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [packageSearchTerm, setPackageSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPackageEditor, setShowPackageEditor] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
@@ -543,8 +544,17 @@ const VIPPackagesManager = () => {
 
         {/* Packages Tab */}
         <TabsContent value="packages" className="space-y-4 mt-4">
-          {/* Add/Edit Package Button */}
-          <div className="flex justify-end">
+          {/* Search and Add Package */}
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar pacote..."
+                value={packageSearchTerm}
+                onChange={(e) => setPackageSearchTerm(e.target.value)}
+                className="pl-10 bg-muted/30 border-muted"
+              />
+            </div>
             <Button 
               onClick={() => {
                 setEditingPackage(null);
@@ -571,13 +581,24 @@ const VIPPackagesManager = () => {
           )}
 
           {/* Packages List */}
-          {packages.length === 0 && !showPackageEditor ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum pacote cadastrado
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {packages.map(pkg => {
+          {(() => {
+            const filteredPackages = packages.filter(pkg => 
+              packageSearchTerm === "" || 
+              pkg.name.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+              (pkg.description && pkg.description.toLowerCase().includes(packageSearchTerm.toLowerCase()))
+            );
+            
+            if (filteredPackages.length === 0 && !showPackageEditor) {
+              return (
+                <div className="text-center py-8 text-muted-foreground">
+                  {packageSearchTerm ? "Nenhum pacote encontrado" : "Nenhum pacote cadastrado"}
+                </div>
+              );
+            }
+            
+            return (
+              <div className="space-y-3">
+                {filteredPackages.map(pkg => {
                 const items = packageItems.filter(i => i.package_id === pkg.id);
                 const benefits = packageBenefits.filter(b => b.package_id === pkg.id);
                 
@@ -638,8 +659,9 @@ const VIPPackagesManager = () => {
                   </div>
                 );
               })}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* Subscribers Tab */}
