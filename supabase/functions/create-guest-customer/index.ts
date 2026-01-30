@@ -138,7 +138,25 @@ Deno.serve(async (req) => {
           timesToCheck.push(addMinutesToTime(appointment.appointment_time, i * 30));
         }
         
-        // Check if any of the required time slots are already booked
+        // Check if any of the required time slots are BLOCKED (manual blocks by admin)
+        const { data: blockedSlots } = await supabaseAdmin
+          .from("blocked_dates")
+          .select("blocked_time")
+          .eq("blocked_date", appointment.appointment_date)
+          .in("blocked_time", timesToCheck);
+
+        if (blockedSlots && blockedSlots.length > 0) {
+          console.log("Blocked slots found:", blockedSlots);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "Este horário está bloqueado e não pode ser agendado!" 
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Check if any of the required time slots are already booked by appointments
         const { data: existingAppointments } = await supabaseAdmin
           .from("appointments")
           .select("id, appointment_time")
