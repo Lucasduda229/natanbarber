@@ -97,6 +97,17 @@ export const AIAssistantPanel = () => {
     }
   };
 
+  // Map frontend payment method names to database values
+  const getPaymentMethodValue = (method: string): string | null => {
+    const mapping: Record<string, string | null> = {
+      'pix': 'pix',
+      'card': 'cartao',
+      'cash': 'dinheiro',
+      'pending': null
+    };
+    return mapping[method] ?? null;
+  };
+
   const confirmAppointment = async () => {
     if (!parsedData) return;
     setIsProcessing(true);
@@ -120,7 +131,7 @@ export const AIAssistantPanel = () => {
             appointment_date: parsedData.appointment_date,
             appointment_time: parsedData.appointment_time,
             notes: notesText,
-            payment_method: selectedPaymentMethod === 'pending' ? null : selectedPaymentMethod,
+            payment_method: getPaymentMethodValue(selectedPaymentMethod),
             check_availability: true,
             total_duration_minutes: parsedData.total_duration_minutes || 30,
           }
