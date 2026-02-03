@@ -29,6 +29,7 @@ import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/
 import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
 import { ServicesManager } from "@/components/ServicesManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
+import OperatingHoursEditor from "@/components/OperatingHoursEditor";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useWebPush } from "@/hooks/useWebPush";
@@ -2496,6 +2497,8 @@ const Admin = () => {
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="space-y-4 sm:space-y-6">
+            {/* Operating Hours Editor */}
+            <OperatingHoursEditor />
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
