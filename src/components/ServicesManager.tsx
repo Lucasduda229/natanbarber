@@ -226,7 +226,7 @@ export const ServicesManager = () => {
                 Novo Serviço
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl">
               <DialogHeader>
                 <DialogTitle className="text-foreground">
                   {editingService ? "Editar Serviço" : "Novo Serviço"}
