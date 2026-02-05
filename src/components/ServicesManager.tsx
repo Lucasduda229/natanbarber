@@ -123,7 +123,7 @@ export const ServicesManager = () => {
       return;
     }
 
-    if (!formData.duration_minutes || parseInt(formData.duration_minutes) < 1) {
+    if (formData.duration_minutes === "" || parseInt(formData.duration_minutes) < 0) {
       toast.error("Duração inválida");
       return;
     }
@@ -287,7 +287,7 @@ export const ServicesManager = () => {
                     <Input
                       id="duration"
                       type="number"
-                      min="1"
+                      min="0"
                       step="5"
                       placeholder="30"
                       value={formData.duration_minutes}
