@@ -372,6 +372,7 @@ const VIPPackagesManager = () => {
     const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
 
     try {
+      // Update subscription progress
       const { error } = await supabase
         .from("subscription_progress")
         .update({
@@ -397,6 +398,27 @@ const VIPPackagesManager = () => {
         .eq("id", sub.id);
 
       if (error) throw error;
+
+      // Register payment in financial records
+      if (sub.package) {
+        const { error: paymentError } = await supabase
+          .from("package_payments")
+          .insert({
+            user_id: sub.user_id,
+            package_id: sub.package_id,
+            package_name: sub.package_name || sub.package.name,
+            amount: sub.package.price,
+            payment_date: todayStr,
+            payment_method: "pix",
+            notes: `Renovação mês ${sub.consecutive_months + 1} - ${sub.profile?.full_name || "Cliente"}`
+          });
+
+        if (paymentError) {
+          console.error("Error registering payment:", paymentError);
+          // Don't fail the renewal if payment record fails
+          toast.warning("Assinatura renovada, mas houve erro ao registrar pagamento");
+        }
+      }
 
       toast.success(`Assinatura renovada! ${sub.profile?.full_name || "Cliente"} agora está no mês ${sub.consecutive_months + 1}`);
       fetchData();
