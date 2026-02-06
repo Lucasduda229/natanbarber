@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth } from "date-fns";
+import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -139,6 +139,8 @@ const Booking = () => {
     monthly_cuts_limit: number;
     cuts_used_this_month: number;
     weekly_credits_available: number;
+    subscription_start_date: Date;
+    subscription_end_date: Date;
   } | null>(null);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
@@ -241,13 +243,21 @@ const Booking = () => {
 
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available")
+      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available, subscription_start_date")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
 
     if (subscription) {
-      // Check if we need to reset monthly cuts (new month)
+      // Calculate subscription period based on start date
+      const startDate = subscription.subscription_start_date 
+        ? parseISO(subscription.subscription_start_date) 
+        : new Date();
+      
+      // Subscription is valid for 30 days from start date (can be adjusted per package)
+      const endDate = addDays(startDate, 30);
+      
+      // Check if we need to reset monthly cuts (based on subscription period)
       const subMonthStart = subscription.current_month_start ? new Date(subscription.current_month_start) : null;
       let cutsUsed = subscription.cuts_used_this_month;
       
@@ -265,6 +275,8 @@ const Booking = () => {
         cuts_used_this_month: cutsUsed,
         // IMPORTANT: 0 é um valor válido (sem créditos). Use ?? para não mascarar 0.
         weekly_credits_available: subscription.weekly_credits_available ?? Math.ceil(subscription.monthly_cuts_limit / 4),
+        subscription_start_date: startDate,
+        subscription_end_date: endDate,
       });
 
       // Fetch package items AND benefits for this subscription's package
@@ -324,7 +336,7 @@ const Booking = () => {
   };
 
   // Fetch user's subscription bookings
-  // Track usage per service for the CURRENT period (month where appointment is scheduled)
+  // Track usage per service for the CURRENT subscription period (based on subscription_start_date)
   // Also track weekly bookings for ONE-BOOKING-PER-WEEK rule
   const fetchSubscriptionBookings = async () => {
     if (!user) {
@@ -333,12 +345,20 @@ const Booking = () => {
       return;
     }
 
-    // Fetch all future and current subscription appointments (not just current month)
-    // This allows us to track weekly bookings across months
-    const today = new Date();
-    const monthStart = startOfMonth(today);
+    // First get the subscription to know the period
+    const { data: subscription } = await supabase
+      .from("subscription_progress")
+      .select("subscription_start_date")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
 
-    // Fetch appointments with their services - current month and future
+    const subscriptionStart = subscription?.subscription_start_date 
+      ? parseISO(subscription.subscription_start_date) 
+      : startOfMonth(new Date());
+    const subscriptionEnd = addDays(subscriptionStart, 30);
+
+    // Fetch appointments with their services - from subscription start date
     const { data: appointments } = await supabase
       .from("appointments")
       .select(`
@@ -350,21 +370,24 @@ const Booking = () => {
       .eq("user_id", user.id)
       .eq("payment_method", "subscription")
       .neq("status", "cancelled")
-      .gte("appointment_date", format(monthStart, "yyyy-MM-dd"));
+      .gte("appointment_date", format(subscriptionStart, "yyyy-MM-dd"));
 
     if (appointments && appointments.length > 0) {
       // All booked dates for weekly tracking (prevents double-booking same week)
       const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
       setSubscriptionBookedWeeks(bookedDates);
       
-      // Calculate usage per service for CURRENT MONTH only (limits are monthly)
+      // Calculate usage per service for the subscription period (not calendar month)
       const usageMap: Record<string, number> = {};
-      const monthEnd = endOfMonth(today);
       
       for (const apt of appointments) {
         const aptDate = parseISO(apt.appointment_date);
-        // Only count appointments in current month for usage limits
-        if (isSameMonth(aptDate, today)) {
+        // Only count appointments within the subscription period
+        const isWithinPeriod = 
+          (isAfter(aptDate, subscriptionStart) || isEqual(aptDate, subscriptionStart)) &&
+          (isBefore(aptDate, subscriptionEnd) || isEqual(aptDate, subscriptionEnd));
+        
+        if (isWithinPeriod) {
           // Count main service
           if (apt.service_id) {
             usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
@@ -666,11 +689,19 @@ const Booking = () => {
     if (usingSubscription && activeSubscription) {
       const today = new Date();
       
-      // Rule 1: Subscription only valid for current month
-      if (!isSameMonth(selectedDate, today)) {
+      // Rule 1: Subscription only valid within the subscription period (30 days from start date)
+      const isWithinSubscriptionPeriod = 
+        (isAfter(selectedDate, activeSubscription.subscription_start_date) || 
+         isEqual(selectedDate, activeSubscription.subscription_start_date)) &&
+        (isBefore(selectedDate, activeSubscription.subscription_end_date) || 
+         isEqual(selectedDate, activeSubscription.subscription_end_date));
+      
+      if (!isWithinSubscriptionPeriod) {
         setLoading(false);
-        toast.error("Assinatura só vale para o mês atual", { 
-          description: "Você só pode agendar com assinatura para datas deste mês." 
+        const startFormatted = format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR });
+        const endFormatted = format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR });
+        toast.error("Data fora do período da assinatura", { 
+          description: `Sua assinatura é válida de ${startFormatted} até ${endFormatted}.` 
         });
         return;
       }
