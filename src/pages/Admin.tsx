@@ -91,6 +91,9 @@ interface PackagePayment {
   payment_method: string | null;
   notes: string | null;
   created_at: string;
+  profiles?: {
+    full_name: string | null;
+  } | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -654,7 +657,21 @@ const Admin = () => {
       .order("payment_date", { ascending: false });
 
     if (!error && data) {
-      setPackagePayments(data as PackagePayment[]);
+      // Fetch profiles separately since there's no direct FK relation
+      const userIds = [...new Set(data.map(p => p.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+      
+      const paymentsWithProfiles = data.map(p => ({
+        ...p,
+        profiles: { full_name: profilesMap.get(p.user_id) || null }
+      }));
+      
+      setPackagePayments(paymentsWithProfiles as PackagePayment[]);
     }
   };
 
@@ -2115,9 +2132,9 @@ const Admin = () => {
                                   <Crown className="w-4 h-4 text-amber-500" />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium">{payment.package_name}</p>
+                                  <p className="text-sm font-medium">{payment.profiles?.full_name || 'Cliente'}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {format(parseISO(payment.payment_date), "dd/MM/yyyy", { locale: ptBR })}
+                                    {payment.package_name} • {format(parseISO(payment.payment_date), "dd/MM/yyyy", { locale: ptBR })}
                                     {payment.notes && ` - ${payment.notes}`}
                                   </p>
                                 </div>
