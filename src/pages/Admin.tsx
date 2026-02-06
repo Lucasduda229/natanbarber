@@ -737,6 +737,24 @@ const Admin = () => {
     fetchRevenueAdjustments();
   };
 
+  const deletePackagePayment = async (paymentId: string, packageName: string) => {
+    if (!confirm(`Excluir o pagamento de "${packageName}"?`)) return;
+
+    const { error } = await supabase
+      .from("package_payments")
+      .delete()
+      .eq("id", paymentId);
+
+    if (error) {
+      console.error("Error deleting package payment:", error);
+      toast.error("Erro ao excluir pagamento");
+      return;
+    }
+
+    toast.success("Pagamento excluído com sucesso!");
+    fetchPackagePayments();
+  };
+
   const updateAppointmentStatus = async (id: string, status: string) => {
     // Get appointment details for notification
     const appointment = appointments.find(a => a.id === id);
@@ -1602,7 +1620,7 @@ const Admin = () => {
                 )}
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {/* PIX Total */}
                   <Card className="bg-[#00D4AA]/10 border-[#00D4AA]/30">
                     <CardContent className="p-4 flex items-center gap-3">
@@ -1675,7 +1693,31 @@ const Admin = () => {
                     </CardContent>
                   </Card>
                   
-                  {/* Total Geral */}
+                  {/* Assinaturas/Pacotes */}
+                  <Card className="bg-amber-500/10 border-amber-500/30">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                        <Crown className="w-6 h-6 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-amber-500">
+                          R$ {(() => {
+                            const filteredPP = packagePayments.filter(p => {
+                              if (!reportStartDate || !reportEndDate) return true;
+                              const paymentDate = parseISO(p.payment_date);
+                              const afterStart = isAfter(paymentDate, reportStartDate) || isEqual(paymentDate, reportStartDate);
+                              const beforeEnd = isBefore(paymentDate, reportEndDate) || isEqual(paymentDate, reportEndDate);
+                              return afterStart && beforeEnd;
+                            });
+                            return filteredPP.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(0);
+                          })()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Assinaturas</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Total Geral (incluindo assinaturas) */}
                   <Card className="bg-primary/10 border-primary/30">
                     <CardContent className="p-4 flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
@@ -1683,12 +1725,25 @@ const Admin = () => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-primary">
-                          R$ {filteredReportAppointments
-                            .filter(a => (a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid') && a.payment_method !== 'subscription')
-                            .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
-                            .toFixed(0)}
+                          R$ {(() => {
+                            // Total de atendimentos
+                            const appointmentsTotal = filteredReportAppointments
+                              .filter(a => (a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid') && a.payment_method !== 'subscription')
+                              .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+                            
+                            // Total de assinaturas no período
+                            const packageTotal = packagePayments.filter(p => {
+                              if (!reportStartDate || !reportEndDate) return true;
+                              const paymentDate = parseISO(p.payment_date);
+                              const afterStart = isAfter(paymentDate, reportStartDate) || isEqual(paymentDate, reportStartDate);
+                              const beforeEnd = isBefore(paymentDate, reportEndDate) || isEqual(paymentDate, reportEndDate);
+                              return afterStart && beforeEnd;
+                            }).reduce((sum, p) => sum + (p.amount || 0), 0);
+                            
+                            return (appointmentsTotal + packageTotal).toFixed(0);
+                          })()}
                         </p>
-                        <p className="text-xs text-muted-foreground">Total Recebido</p>
+                        <p className="text-xs text-muted-foreground">Total Geral</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -2054,7 +2109,7 @@ const Admin = () => {
 
                           {/* Individual payments */}
                           {filteredPackagePayments.map((payment) => (
-                            <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-amber-500/20">
+                            <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-amber-500/20 group">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
                                   <Crown className="w-4 h-4 text-amber-500" />
@@ -2067,11 +2122,21 @@ const Admin = () => {
                                   </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-sm font-bold text-amber-500">R$ {payment.amount.toFixed(2)}</p>
-                                <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
-                                  {payment.payment_method === 'cartao' ? 'Cartão' : payment.payment_method === 'dinheiro' ? 'Dinheiro' : 'PIX'}
-                                </Badge>
+                              <div className="flex items-center gap-2">
+                                <div className="text-right">
+                                  <p className="text-sm font-bold text-amber-500">R$ {payment.amount.toFixed(2)}</p>
+                                  <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
+                                    {payment.payment_method === 'cartao' ? 'Cartão' : payment.payment_method === 'dinheiro' ? 'Dinheiro' : 'PIX'}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => deletePackagePayment(payment.id, payment.package_name)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
                           ))}
