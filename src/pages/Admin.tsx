@@ -81,6 +81,18 @@ interface RevenueAdjustment {
   adjustment_reason: string | null;
 }
 
+interface PackagePayment {
+  id: string;
+  user_id: string;
+  package_id: string | null;
+  package_name: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
   confirmed: "bg-blue-500/20 text-blue-500 border-blue-500/30",
@@ -236,6 +248,7 @@ const Admin = () => {
   const [cashClosingDay, setCashClosingDay] = useState<number>(15);
   const [editingClosingDay, setEditingClosingDay] = useState<boolean>(false);
   const [closingDayInput, setClosingDayInput] = useState<string>("15");
+  const [packagePayments, setPackagePayments] = useState<PackagePayment[]>([]);
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -412,7 +425,7 @@ const Admin = () => {
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay()]);
+      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay(), fetchPackagePayments()]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -631,6 +644,17 @@ const Admin = () => {
         setCashClosingDay(day);
         setClosingDayInput(day.toString());
       }
+    }
+  };
+
+  const fetchPackagePayments = async () => {
+    const { data, error } = await supabase
+      .from("package_payments")
+      .select("*")
+      .order("payment_date", { ascending: false });
+
+    if (!error && data) {
+      setPackagePayments(data as PackagePayment[]);
     }
   };
 
@@ -1982,6 +2006,78 @@ const Admin = () => {
                     {filteredReportAppointments.filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid').length === 0 && (
                       <p className="text-center text-muted-foreground py-8">Nenhum pagamento registrado no período</p>
                     )}
+                  </div>
+                </div>
+
+                {/* Package Payments Section */}
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-500" />
+                    Pagamentos de Pacotes/Assinaturas
+                  </h4>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {(() => {
+                      // Filter package payments by date range
+                      const filteredPackagePayments = packagePayments.filter(p => {
+                        if (!reportStartDate || !reportEndDate) return true;
+                        const paymentDate = parseISO(p.payment_date);
+                        const afterStart = isAfter(paymentDate, reportStartDate) || isEqual(paymentDate, reportStartDate);
+                        const beforeEnd = isBefore(paymentDate, reportEndDate) || isEqual(paymentDate, reportEndDate);
+                        return afterStart && beforeEnd;
+                      });
+
+                      const totalPackageRevenue = filteredPackagePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+                      if (filteredPackagePayments.length === 0) {
+                        return (
+                          <p className="text-center text-muted-foreground py-8">
+                            Nenhum pagamento de pacote no período
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <>
+                          {/* Summary card */}
+                          <Card className="bg-amber-500/10 border-amber-500/30 mb-3">
+                            <CardContent className="p-3 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Crown className="w-5 h-5 text-amber-500" />
+                                <span className="text-sm font-medium">Total de Assinaturas</span>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-amber-500">R$ {totalPackageRevenue.toFixed(2)}</p>
+                                <p className="text-xs text-muted-foreground">{filteredPackagePayments.length} pagamento(s)</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Individual payments */}
+                          {filteredPackagePayments.map((payment) => (
+                            <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-card/60 border border-amber-500/20">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                  <Crown className="w-4 h-4 text-amber-500" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">{payment.package_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(parseISO(payment.payment_date), "dd/MM/yyyy", { locale: ptBR })}
+                                    {payment.notes && ` - ${payment.notes}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-amber-500">R$ {payment.amount.toFixed(2)}</p>
+                                <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
+                                  {payment.payment_method === 'cartao' ? 'Cartão' : payment.payment_method === 'dinheiro' ? 'Dinheiro' : 'PIX'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardContent>
