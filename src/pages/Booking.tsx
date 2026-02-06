@@ -1192,7 +1192,15 @@ const Booking = () => {
                 </div>
 
                 <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-card/80 border-2 border-green-500/50 p-4">
-                  <p className="font-bold text-foreground mb-3">{activeSubscription.package_name}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
+                    <div className="flex items-center gap-1 text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded-full">
+                      <CalendarIcon className="w-3 h-3" />
+                      <span>
+                        {format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR })} - {format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
                   
                   {/* Service-by-service usage display */}
                   {subscriptionPackageItems.length > 0 && (
