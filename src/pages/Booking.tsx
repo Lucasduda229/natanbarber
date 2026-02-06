@@ -1918,69 +1918,48 @@ const Booking = () => {
         </div>
       )}
 
-      {/* Fixed Bottom Bar - Step 1 only - OUTSIDE all other content */}
-      {step === 1 && (
-        <div className="fixed bottom-0 left-0 right-0 z-[60] p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl safe-bottom">
+      {/* Fixed Bottom Bar - Step 1 only - Only shows when services are selected */}
+      {step === 1 && selectedServices.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-[60] p-3 bg-background/95 backdrop-blur-lg border-t border-border shadow-2xl safe-bottom animate-in slide-in-from-bottom-4 duration-300">
           <div className="max-w-5xl mx-auto">
-            {selectedServices.length > 0 ? (
-              <div className={`rounded-xl border p-3 ${
-                usingSubscription 
-                  ? "bg-green-500/10 border-green-500/30" 
-                  : "bg-primary/10 border-primary/30"
-              }`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${
-                      usingSubscription ? "bg-green-500/20" : "bg-primary/20"
-                    }`}>
-                      <Check className={`w-5 h-5 ${usingSubscription ? "text-green-500" : "text-primary"}`} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground truncate">
-                        {selectedServices.length} serviço(s) {usingSubscription && "- Assinatura"}
-                      </p>
-                      {usingSubscription ? (
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground line-through">R$ {totalPrice.toFixed(2)}</p>
-                          <p className="text-lg font-bold text-green-500">Grátis</p>
-                        </div>
-                      ) : (
-                        <p className="text-lg font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
-                      )}
-                    </div>
+            <div className={`rounded-xl border p-3 ${
+              usingSubscription 
+                ? "bg-green-500/10 border-green-500/30" 
+                : "bg-primary/10 border-primary/30"
+            }`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${
+                    usingSubscription ? "bg-green-500/20" : "bg-primary/20"
+                  }`}>
+                    <Check className={`w-5 h-5 ${usingSubscription ? "text-green-500" : "text-primary"}`} />
                   </div>
-                  <Button 
-                    onClick={handleContinueToDate}
-                    className={`font-semibold h-11 px-5 text-sm rounded-xl active:scale-[0.97] transition-transform flex-shrink-0 ${
-                      usingSubscription 
-                        ? "bg-green-500 hover:bg-green-600 text-background" 
-                        : "bg-gold-gradient hover:opacity-90 text-background"
-                    }`}
-                  >
-                    Continuar
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-muted bg-card/80 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted flex-shrink-0 flex items-center justify-center">
-                      <Scissors className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Selecione um serviço
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {selectedServices.length} serviço(s) {usingSubscription && "- Assinatura"}
                     </p>
+                    {usingSubscription ? (
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground line-through">R$ {totalPrice.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-green-500">Grátis</p>
+                      </div>
+                    ) : (
+                      <p className="text-lg font-bold text-primary">R$ {totalPrice.toFixed(2)}</p>
+                    )}
                   </div>
-                  <Button 
-                    disabled
-                    className="font-semibold h-11 px-5 text-sm rounded-xl opacity-50 cursor-not-allowed bg-muted text-muted-foreground flex-shrink-0"
-                  >
-                    Continuar
-                  </Button>
                 </div>
+                <Button 
+                  onClick={handleContinueToDate}
+                  className={`font-semibold h-11 px-5 text-sm rounded-xl active:scale-[0.97] transition-transform flex-shrink-0 ${
+                    usingSubscription 
+                      ? "bg-green-500 hover:bg-green-600 text-background" 
+                      : "bg-gold-gradient hover:opacity-90 text-background"
+                  }`}
+                >
+                  Continuar
+                </Button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
