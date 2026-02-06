@@ -1357,7 +1357,7 @@ const Booking = () => {
             )}
 
             {/* Package Benefits - Subscriber Rewards - Always visible */}
-            <div className="mt-6 space-y-4 mb-20 sm:mb-0">
+            <div className="mt-6 space-y-4 mb-28 sm:mb-0">
               <PackageBenefits />
               <SubscriptionProgress />
             </div>
