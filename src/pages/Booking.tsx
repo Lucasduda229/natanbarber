@@ -345,10 +345,10 @@ const Booking = () => {
       return;
     }
 
-    // First get the subscription to know the period
+    // First get the subscription to know the period and reset date
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("subscription_start_date")
+      .select("subscription_start_date, usage_reset_date")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
@@ -357,14 +357,22 @@ const Booking = () => {
       ? parseISO(subscription.subscription_start_date) 
       : startOfMonth(new Date());
     const subscriptionEnd = addDays(subscriptionStart, 30);
+    
+    // Usage reset date is used to filter out appointments from previous periods
+    // This is updated when admin renews the subscription
+    const usageResetDate = subscription?.usage_reset_date 
+      ? new Date(subscription.usage_reset_date) 
+      : subscriptionStart;
 
     // Fetch appointments with their services - from subscription start date
+    // Also fetch created_at to compare with usage_reset_date
     const { data: appointments } = await supabase
       .from("appointments")
       .select(`
         id,
         appointment_date,
         service_id,
+        created_at,
         appointment_services (service_id)
       `)
       .eq("user_id", user.id)
@@ -373,14 +381,21 @@ const Booking = () => {
       .gte("appointment_date", format(subscriptionStart, "yyyy-MM-dd"));
 
     if (appointments && appointments.length > 0) {
+      // Filter appointments created after the usage reset date
+      // This ensures that when subscription is renewed, old appointments don't count
+      const validAppointments = appointments.filter(apt => {
+        const createdAt = new Date(apt.created_at);
+        return createdAt >= usageResetDate;
+      });
+
       // All booked dates for weekly tracking (prevents double-booking same week)
-      const bookedDates = appointments.map(apt => parseISO(apt.appointment_date));
+      const bookedDates = validAppointments.map(apt => parseISO(apt.appointment_date));
       setSubscriptionBookedWeeks(bookedDates);
       
       // Calculate usage per service for the subscription period (not calendar month)
       const usageMap: Record<string, number> = {};
       
-      for (const apt of appointments) {
+      for (const apt of validAppointments) {
         const aptDate = parseISO(apt.appointment_date);
         // Only count appointments within the subscription period
         const isWithinPeriod = 
