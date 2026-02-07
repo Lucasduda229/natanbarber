@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -252,6 +252,7 @@ const Admin = () => {
   const [editingClosingDay, setEditingClosingDay] = useState<boolean>(false);
   const [closingDayInput, setClosingDayInput] = useState<string>("15");
   const [packagePayments, setPackagePayments] = useState<PackagePayment[]>([]);
+  const [clientSearch, setClientSearch] = useState<string>("");
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -1031,8 +1032,19 @@ const Admin = () => {
   };
 
   const filteredAppointments = appointments.filter((a) => {
-    if (!filterDate) return true;
-    return a.appointment_date === filterDate;
+    // Filter by date
+    if (filterDate && a.appointment_date !== filterDate) return false;
+    
+    // Filter by client name search
+    if (clientSearch.trim()) {
+      const searchTerm = clientSearch.trim().toLowerCase();
+      const clientInfo = getClientDisplayInfo(a);
+      const nameMatch = clientInfo.name.toLowerCase().includes(searchTerm);
+      const phoneMatch = clientInfo.phone.toLowerCase().includes(searchTerm);
+      if (!nameMatch && !phoneMatch) return false;
+    }
+    
+    return true;
   });
 
   // Separate active and completed/cancelled appointments
@@ -2382,24 +2394,58 @@ const Admin = () => {
             )}
 
             {/* All Appointments Section */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mb-4">
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2 text-foreground text-sm w-full sm:w-auto"
-              />
-              <Button variant="outline" onClick={() => setFilterDate("")} className="w-full sm:w-auto">
-                Ver Todos
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/admin/history")} 
-                className="w-full sm:w-auto gap-2"
-              >
-                <History className="w-4 h-4" />
-                Histórico Completo
-              </Button>
+            <div className="flex flex-col gap-3 mb-4">
+              {/* Client Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Pesquisar cliente por nome ou telefone..."
+                  value={clientSearch}
+                  onChange={(e) => setClientSearch(e.target.value)}
+                  className="pl-9 bg-card/40 border-primary/20 text-sm h-10"
+                />
+                {clientSearch && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => setClientSearch("")}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="bg-card/40 border border-primary/20 rounded-lg px-3 sm:px-4 py-2 text-foreground text-sm w-full sm:w-auto"
+                />
+                <Button variant="outline" onClick={() => { setFilterDate(""); setClientSearch(""); }} className="w-full sm:w-auto">
+                  Ver Todos
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/admin/history")} 
+                  className="w-full sm:w-auto gap-2"
+                >
+                  <History className="w-4 h-4" />
+                  Histórico Completo
+                </Button>
+              </div>
+
+              {/* Search results info */}
+              {clientSearch.trim() && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Search className="w-3.5 h-3.5" />
+                  <span>
+                    {filteredAppointments.length} resultado(s) para "<strong className="text-foreground">{clientSearch}</strong>"
+                  </span>
+                </div>
+              )}
             </div>
 
             {loading ? (
