@@ -418,17 +418,41 @@ const Admin = () => {
       )
       .subscribe();
 
+    // Auto-complete check every 5 minutes
+    const autoCompleteInterval = setInterval(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("auto-complete-appointments");
+        if (data?.completed > 0) {
+          fetchAppointments();
+          toast.success(`✅ ${data.completed} agendamento(s) concluído(s) automaticamente`);
+        }
+      } catch (e) {
+        console.error("Auto-complete interval error:", e);
+      }
+    }, 5 * 60 * 1000);
+
     // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(blockedDatesChannel);
       supabase.removeChannel(statusChannel);
+      clearInterval(autoCompleteInterval);
     };
   }, [isAdmin, authLoading, notifyNewAppointment]);
+
+  const autoCompleteAppointments = async () => {
+    try {
+      await supabase.functions.invoke("auto-complete-appointments");
+    } catch (error) {
+      console.error("Error auto-completing appointments:", error);
+    }
+  };
 
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
+      // Auto-complete appointments before fetching data
+      await autoCompleteAppointments();
       await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay(), fetchPackagePayments()]);
       setLastUpdate(new Date());
     } catch (error) {
