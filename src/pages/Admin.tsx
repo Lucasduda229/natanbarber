@@ -101,6 +101,7 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-blue-500/20 text-blue-500 border-blue-500/30",
   completed: "bg-green-500/20 text-green-500 border-green-500/30",
   cancelled: "bg-red-500/20 text-red-500 border-red-500/30",
+  no_show: "bg-orange-500/20 text-orange-500 border-orange-500/30",
 };
 
 const statusLabels: Record<string, string> = {
@@ -108,6 +109,7 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmado",
   completed: "Concluído",
   cancelled: "Cancelado",
+  no_show: "Falta",
 };
 
 // Helper function to extract client name and phone from AI-generated notes
@@ -581,7 +583,7 @@ const Admin = () => {
 
     // Sort: active appointments first (by date/time ascending), then completed/cancelled at the end
     const sortedAppointments = (appointmentsWithData as Appointment[]).sort((a, b) => {
-      const completedStatuses = ['completed', 'cancelled'];
+    const completedStatuses = ['completed', 'cancelled', 'no_show'];
       const aIsCompleted = completedStatuses.includes(a.status);
       const bIsCompleted = completedStatuses.includes(b.status);
       
@@ -2613,6 +2615,7 @@ const Admin = () => {
                               <SelectItem value="confirmed">Confirmado</SelectItem>
                               <SelectItem value="completed">Concluído</SelectItem>
                               <SelectItem value="cancelled">Cancelado</SelectItem>
+                              <SelectItem value="no_show">Falta</SelectItem>
                             </SelectContent>
                           </Select>
 
