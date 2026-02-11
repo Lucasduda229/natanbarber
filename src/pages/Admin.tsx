@@ -2701,7 +2701,7 @@ const Admin = () => {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                       <CheckCircle className="w-4 h-4" />
-                      <span>Concluídos/Cancelados ({completedAppointments.length})</span>
+                      <span>Finalizados ({completedAppointments.length})</span>
                     </div>
                     {completedAppointments.map((appointment) => (
                       <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-muted-foreground/10 opacity-70">
@@ -2732,9 +2732,42 @@ const Admin = () => {
                                   </span>
                                 </div>
                               </div>
-                              <Badge className={cn("text-[10px] sm:text-xs", statusColors[appointment.status as keyof typeof statusColors])}>
-                                {statusLabels[appointment.status as keyof typeof statusLabels]}
-                              </Badge>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge className={cn("text-[10px] sm:text-xs", statusColors[appointment.status as keyof typeof statusColors])}>
+                                  {statusLabels[appointment.status as keyof typeof statusLabels]}
+                                </Badge>
+                                {appointment.status === "completed" && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 h-7 px-2 text-[10px] sm:text-xs"
+                                      >
+                                        <XCircle className="w-3 h-3 mr-1" />
+                                        Falta
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-card border-orange-500/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-orange-500 text-base sm:text-lg">Marcar como Falta</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-sm">
+                                          Deseja marcar o agendamento de {getClientDisplayInfo(appointment).name} como falta? Isso indica que o cliente não compareceu.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                        <AlertDialogCancel className="w-full sm:w-auto">Voltar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => updateAppointmentStatus(appointment.id, "no_show")}
+                                          className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
+                                        >
+                                          Marcar Falta
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardContent>
