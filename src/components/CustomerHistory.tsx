@@ -49,6 +49,7 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmado",
   completed: "Concluído",
   cancelled: "Cancelado",
+  no_show: "Falta",
 };
 
 const statusColors: Record<string, string> = {
@@ -56,6 +57,7 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-blue-500/20 text-blue-500",
   completed: "bg-green-500/20 text-green-500",
   cancelled: "bg-red-500/20 text-red-500",
+  no_show: "bg-orange-500/20 text-orange-500",
 };
 
 export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProps) {
