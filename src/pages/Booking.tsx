@@ -1322,17 +1322,26 @@ const Booking = () => {
                       );
                     } else {
                       return (
-                        <div className="text-center bg-destructive/10 p-3 rounded-lg border border-destructive/30">
-                          <p className="text-destructive text-sm font-medium mb-1">
-                            {!hasWeeklySlots 
-                              ? "🚫 Limite de agendamentos semanais atingido!"
-                              : "🚫 Todos os benefícios foram utilizados!"}
-                          </p>
-                          <p className="text-destructive/80 text-xs">
-                            {!hasWeeklySlots 
-                              ? `Você já agendou ${subscriptionBookedWeeks.length}x este mês (máx: ${activeSubscription.monthly_cuts_limit}).`
-                              : "Você já usou todos os seus benefícios deste mês."}
-                          </p>
+                        <div className="space-y-3">
+                          <div className="text-center bg-destructive/10 p-3 rounded-lg border border-destructive/30">
+                            <p className="text-destructive text-sm font-medium mb-1">
+                              {!hasWeeklySlots 
+                                ? "🚫 Limite de agendamentos semanais atingido!"
+                                : "🚫 Todos os benefícios foram utilizados!"}
+                            </p>
+                            <p className="text-destructive/80 text-xs">
+                              {!hasWeeklySlots 
+                                ? `Você já agendou ${subscriptionBookedWeeks.length}x este mês (máx: ${activeSubscription.monthly_cuts_limit}).`
+                                : "Você já usou todos os seus benefícios deste mês."}
+                            </p>
+                          </div>
+                          <Button
+                            className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold h-12 rounded-xl"
+                            onClick={() => navigate("/buy-subscription")}
+                          >
+                            <Crown className="w-5 h-5 mr-2" />
+                            Renovar Assinatura
+                          </Button>
                         </div>
                       );
                     }
