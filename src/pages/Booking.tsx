@@ -389,8 +389,17 @@ const Booking = () => {
       });
 
       // All booked dates for weekly tracking (prevents double-booking same week)
-      const bookedDates = validAppointments.map(apt => parseISO(apt.appointment_date));
-      setSubscriptionBookedWeeks(bookedDates);
+      // IMPORTANT: Deduplicate by week so multiple services in the same booking
+      // don't count as multiple weeks used
+      const allBookedDates = validAppointments.map(apt => parseISO(apt.appointment_date));
+      const uniqueWeekDates: Date[] = [];
+      for (const date of allBookedDates) {
+        const alreadyHasWeek = uniqueWeekDates.some(d => isSameWeek(d, date, { weekStartsOn: 0 }));
+        if (!alreadyHasWeek) {
+          uniqueWeekDates.push(date);
+        }
+      }
+      setSubscriptionBookedWeeks(uniqueWeekDates);
       
       // Calculate usage per service for the subscription period (not calendar month)
       const usageMap: Record<string, number> = {};
