@@ -752,20 +752,17 @@ const Booking = () => {
       }
       
       // Rule 3: Check if user already has an appointment in this week
-      // Use weekly_credits_available as primary check (managed by cron and renewal)
-      // This ensures renewals properly reset the weekly limit
-      if (activeSubscription.weekly_credits_available <= 0) {
-        const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
-          isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
-        );
-        
-        if (isWeekAlreadyBooked) {
-          setLoading(false);
-          toast.error("Limite semanal atingido", { 
-            description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
-          });
-          return;
-        }
+      // Always check database for existing bookings in the selected week to prevent duplicates
+      const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
+        isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
+      );
+      
+      if (isWeekAlreadyBooked) {
+        setLoading(false);
+        toast.error("Limite semanal atingido", { 
+          description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
+        });
+        return;
       }
       
       // Rule 4: Verify each selected service has available credits
@@ -903,11 +900,7 @@ const Booking = () => {
   };
 
   // Check if a date is in a week that already has a subscription booking
-  // Only show as booked if weekly credits are exhausted
   const isWeekBooked = (date: Date): boolean => {
-    if (activeSubscription && activeSubscription.weekly_credits_available > 0) {
-      return false; // Credits available, don't mark as booked
-    }
     return subscriptionBookedWeeks.some(bookedDate => 
       isSameWeek(date, bookedDate, { weekStartsOn: 0 })
     );
