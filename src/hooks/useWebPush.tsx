@@ -48,7 +48,7 @@ export const useWebPush = () => {
         setRegistration(reg);
 
         // Check existing subscription
-        const subscription = await reg.pushManager.getSubscription();
+        const subscription = await (reg as any).pushManager.getSubscription();
         if (subscription) {
           console.log('Existing push subscription found');
           setIsSubscribed(true);
@@ -80,7 +80,7 @@ export const useWebPush = () => {
       }
 
       // Subscribe to push manager
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
@@ -136,7 +136,7 @@ export const useWebPush = () => {
     setIsLoading(true);
 
     try {
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       if (subscription) {
         await subscription.unsubscribe();
 
