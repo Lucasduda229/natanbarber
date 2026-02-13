@@ -171,17 +171,14 @@ const BuySubscription = () => {
 
     setLoading(true);
 
-    // Calculate monthly cuts based on package items
-    const totalCuts = selectedPackage.items.reduce((sum, item) => {
-      const serviceName = item.service_name.toLowerCase();
-      if (serviceName.includes('cabelo') || serviceName.includes('degradê') || serviceName.includes('corte')) {
-        return sum + item.quantity;
-      }
-      return sum;
+    // Calculate monthly cuts limit based on the maximum quantity across all package items
+    // This represents how many weekly bookings are possible (1 per week, each can include multiple services)
+    const maxBenefitQuantity = selectedPackage.items.reduce((max, item) => {
+      return Math.max(max, item.quantity);
     }, 0);
 
-    // Monthly cuts limit = total number of cuts in the package (no minimum)
-    const monthlyCutsLimit = totalCuts || 4; // fallback to 4 only if 0
+    // Monthly cuts limit = max quantity among benefits (e.g., if Barba=4, limit=4 bookings)
+    const monthlyCutsLimit = maxBenefitQuantity || 4; // fallback to 4 only if 0
 
     // Calculate weekly credits based on total cuts
     const weeklyCredits = Math.ceil(monthlyCutsLimit / 4);
