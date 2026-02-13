@@ -211,7 +211,7 @@ const BuySubscription = () => {
           usage_reset_date: new Date().toISOString(),
           consecutive_months: (existingSub.consecutive_months || 0) + 1,
           last_payment_date: today,
-          is_active: false, // Admin will activate after payment confirmation
+          is_active: true, // Ativa automaticamente
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingSub.id);
@@ -233,7 +233,7 @@ const BuySubscription = () => {
           weekly_credits_available: weeklyCredits,
           current_week_start: today,
           cuts_used_this_month: 0,
-          is_active: false,
+          is_active: true,
           consecutive_months: 0,
         });
 
