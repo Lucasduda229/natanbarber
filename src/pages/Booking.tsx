@@ -142,6 +142,7 @@ const Booking = () => {
     subscription_start_date: Date;
     subscription_end_date: Date;
   } | null>(null);
+  const [hasExpiredSubscription, setHasExpiredSubscription] = useState(false);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
   const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates that have subscription bookings
@@ -332,6 +333,17 @@ const Booking = () => {
     } else {
       setActiveSubscription(null);
       setSubscriptionPackageItems([]);
+      
+      // Check if user has an inactive/expired subscription
+      const { data: inactiveSub } = await supabase
+        .from("subscription_progress")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", false)
+        .limit(1)
+        .maybeSingle();
+      
+      setHasExpiredSubscription(!!inactiveSub);
     }
   };
 
@@ -1321,7 +1333,7 @@ const Booking = () => {
               </div>
             )}
 
-            {/* Subscribe CTA - Only show if no active subscription */}
+            {/* Subscribe/Renew CTA - Show if no active subscription */}
             {!activeSubscription && packages.length > 0 && (
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2">
@@ -1329,10 +1341,25 @@ const Booking = () => {
                     <Crown className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">Pacotes Mensais</h3>
-                    <p className="text-xs text-muted-foreground">Economize com nossas assinaturas</p>
+                    <h3 className="text-base font-bold text-foreground">
+                      {hasExpiredSubscription ? "Renovar Assinatura" : "Pacotes Mensais"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {hasExpiredSubscription 
+                        ? "Sua assinatura expirou. Renove para continuar aproveitando!" 
+                        : "Economize com nossas assinaturas"}
+                    </p>
                   </div>
                 </div>
+
+                {hasExpiredSubscription && (
+                  <div className="flex items-center gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                    <Crown className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <p className="text-xs text-amber-400">
+                      Renove agora e seus créditos semanais serão restaurados imediatamente!
+                    </p>
+                  </div>
+                )}
 
                 <div 
                   className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4 cursor-pointer active:scale-[0.98] transition-transform"
@@ -1343,21 +1370,27 @@ const Booking = () => {
                       <Crown className="w-7 h-7 text-background" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-foreground mb-1">Assine um Pacote</h4>
+                      <h4 className="font-bold text-foreground mb-1">
+                        {hasExpiredSubscription ? "Renovar Pacote" : "Assine um Pacote"}
+                      </h4>
                       <p className="text-xs text-muted-foreground mb-2">
-                        Pague mensalmente e agende seus cortes sem custo adicional
+                        {hasExpiredSubscription
+                          ? "Renove sua assinatura e volte a agendar com benefícios exclusivos"
+                          : "Pague mensalmente e agende seus cortes sem custo adicional"}
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-[10px] bg-amber-600/20 text-amber-600 px-2 py-0.5 rounded-full font-medium">
-                          Bronze a partir de R$ 65
-                        </span>
-                        <span className="text-[10px] bg-slate-400/20 text-slate-400 px-2 py-0.5 rounded-full font-medium">
-                          Prata
-                        </span>
-                        <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
-                          Ouro
-                        </span>
-                      </div>
+                      {!hasExpiredSubscription && (
+                        <div className="flex flex-wrap gap-2">
+                          <span className="text-[10px] bg-amber-600/20 text-amber-600 px-2 py-0.5 rounded-full font-medium">
+                            Bronze a partir de R$ 65
+                          </span>
+                          <span className="text-[10px] bg-slate-400/20 text-slate-400 px-2 py-0.5 rounded-full font-medium">
+                            Prata
+                          </span>
+                          <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded-full font-medium">
+                            Ouro
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Button 
@@ -1367,7 +1400,7 @@ const Booking = () => {
                       navigate("/buy-subscription");
                     }}
                   >
-                    Ver Pacotes e Assinar
+                    {hasExpiredSubscription ? "Renovar Assinatura" : "Ver Pacotes e Assinar"}
                   </Button>
                 </div>
               </div>
