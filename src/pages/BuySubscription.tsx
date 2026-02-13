@@ -184,32 +184,75 @@ const BuySubscription = () => {
     const monthlyCutsLimit = totalCuts || 4; // fallback to 4 only if 0
 
     // Calculate weekly credits based on total cuts
-    // 2 cuts = 1/week (2 weeks), 4 cuts = 1/week (4 weeks), etc.
     const weeklyCredits = Math.ceil(monthlyCutsLimit / 4);
+    const today = new Date().toISOString().split('T')[0];
 
-    // Create a pending subscription purchase (will be activated by admin)
-    const { error } = await supabase
+    // Check if user already has an existing subscription
+    const { data: existingSub } = await supabase
       .from("subscription_progress")
-      .insert({
-        user_id: user.id,
-        package_id: selectedPackage.id,
-        package_name: selectedPackage.name,
-        monthly_cuts_limit: monthlyCutsLimit,
-        weekly_credits_available: weeklyCredits,
-        current_week_start: new Date().toISOString().split('T')[0],
-        cuts_used_this_month: 0,
-        is_active: false, // Admin will activate after payment confirmation
-        consecutive_months: 0,
-      });
+      .select("id, consecutive_months, is_active")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
 
-    if (error) {
-      // If already exists, just show success (they can still pay)
-      if (!error.message.includes("duplicate")) {
+    if (existingSub) {
+      // Renew existing subscription: reset credits and usage
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({
+          package_id: selectedPackage.id,
+          package_name: selectedPackage.name,
+          monthly_cuts_limit: monthlyCutsLimit,
+          weekly_credits_available: weeklyCredits,
+          current_week_start: today,
+          cuts_used_this_month: 0,
+          credits_expired_this_month: 0,
+          subscription_start_date: today,
+          usage_reset_date: new Date().toISOString(),
+          consecutive_months: (existingSub.consecutive_months || 0) + 1,
+          last_payment_date: today,
+          is_active: false, // Admin will activate after payment confirmation
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingSub.id);
+
+      if (error) {
+        toast.error("Erro ao processar", { description: "Tente novamente." });
+        setLoading(false);
+        return;
+      }
+    } else {
+      // Create new subscription
+      const { error } = await supabase
+        .from("subscription_progress")
+        .insert({
+          user_id: user.id,
+          package_id: selectedPackage.id,
+          package_name: selectedPackage.name,
+          monthly_cuts_limit: monthlyCutsLimit,
+          weekly_credits_available: weeklyCredits,
+          current_week_start: today,
+          cuts_used_this_month: 0,
+          is_active: false,
+          consecutive_months: 0,
+        });
+
+      if (error) {
         toast.error("Erro ao processar", { description: "Tente novamente." });
         setLoading(false);
         return;
       }
     }
+
+    // Record payment in package_payments
+    await supabase.from("package_payments").insert({
+      user_id: user.id,
+      package_id: selectedPackage.id,
+      package_name: selectedPackage.name,
+      amount: selectedPackage.price,
+      payment_method: "pix",
+      notes: existingSub ? "Renovação pelo cliente" : "Nova assinatura pelo cliente",
+    });
 
     // Notify admins about new subscription purchase request
     const { data: admins } = await supabase
