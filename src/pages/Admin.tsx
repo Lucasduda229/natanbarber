@@ -255,6 +255,7 @@ const Admin = () => {
   const [closingDayInput, setClosingDayInput] = useState<string>("15");
   const [packagePayments, setPackagePayments] = useState<PackagePayment[]>([]);
   const [clientSearch, setClientSearch] = useState<string>("");
+  const [completedFilter, setCompletedFilter] = useState<string>("all");
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -1076,7 +1077,10 @@ const Admin = () => {
   // Separate active and completed/cancelled appointments
   const completedStatuses = ['completed', 'cancelled'];
   const activeAppointments = filteredAppointments.filter(a => !completedStatuses.includes(a.status));
-  const completedAppointments = filteredAppointments.filter(a => completedStatuses.includes(a.status));
+  const allCompletedAppointments = filteredAppointments.filter(a => completedStatuses.includes(a.status));
+  const completedAppointments = completedFilter === "all" 
+    ? allCompletedAppointments 
+    : allCompletedAppointments.filter(a => a.status === completedFilter);
 
   if (authLoading) {
     return (
@@ -2688,7 +2692,7 @@ const Admin = () => {
                 )}
 
                 {/* Divider between sections */}
-                {activeAppointments.length > 0 && completedAppointments.length > 0 && (
+                {activeAppointments.length > 0 && allCompletedAppointments.length > 0 && (
                   <div className="flex items-center gap-3 py-2">
                     <div className="flex-1 h-px bg-muted-foreground/20" />
                     <span className="text-xs text-muted-foreground">Finalizados</span>
@@ -2697,11 +2701,24 @@ const Admin = () => {
                 )}
 
                 {/* Completed/Cancelled Appointments Section */}
-                {completedAppointments.length > 0 && (
+                {allCompletedAppointments.length > 0 && (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Finalizados ({completedAppointments.length})</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Finalizados ({completedAppointments.length})</span>
+                      </div>
+                      <Select value={completedFilter} onValueChange={setCompletedFilter}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs bg-card/30 border-muted-foreground/20">
+                          <Filter className="w-3 h-3 mr-1" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos ({allCompletedAppointments.length})</SelectItem>
+                          <SelectItem value="completed">Concluídos ({allCompletedAppointments.filter(a => a.status === 'completed').length})</SelectItem>
+                          <SelectItem value="cancelled">Cancelados ({allCompletedAppointments.filter(a => a.status === 'cancelled').length})</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     {completedAppointments.map((appointment) => (
                       <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-muted-foreground/10 opacity-70">
