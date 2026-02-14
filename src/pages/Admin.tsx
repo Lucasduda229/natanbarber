@@ -256,6 +256,9 @@ const Admin = () => {
   const [packagePayments, setPackagePayments] = useState<PackagePayment[]>([]);
   const [clientSearch, setClientSearch] = useState<string>("");
   const [completedFilter, setCompletedFilter] = useState<string>("all");
+  const [completedDateFilter, setCompletedDateFilter] = useState<string>("today");
+  const [completedCustomDate, setCompletedCustomDate] = useState<Date | undefined>(undefined);
+  const [completedCustomMonth, setCompletedCustomMonth] = useState<string>("");
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -1077,7 +1080,47 @@ const Admin = () => {
   // Separate active and completed/cancelled appointments
   const completedStatuses = ['completed', 'cancelled'];
   const activeAppointments = filteredAppointments.filter(a => !completedStatuses.includes(a.status));
-  const allCompletedAppointments = filteredAppointments.filter(a => completedStatuses.includes(a.status));
+  const allCompletedAppointments = filteredAppointments.filter(a => {
+    if (!completedStatuses.includes(a.status)) return false;
+    
+    // Apply date filter
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    switch (completedDateFilter) {
+      case "today":
+        if (a.appointment_date !== todayStr) return false;
+        break;
+      case "7days": {
+        const start7 = subDays(new Date(), 7);
+        const aptDate = parseISO(a.appointment_date);
+        if (!(isAfter(aptDate, start7) || isEqual(aptDate, start7))) return false;
+        break;
+      }
+      case "30days": {
+        const start30 = subDays(new Date(), 30);
+        const aptDate = parseISO(a.appointment_date);
+        if (!(isAfter(aptDate, start30) || isEqual(aptDate, start30))) return false;
+        break;
+      }
+      case "month": {
+        if (completedCustomMonth) {
+          const [year, month] = completedCustomMonth.split("-");
+          const aptDate = parseISO(a.appointment_date);
+          if (format(aptDate, "yyyy-MM") !== completedCustomMonth) return false;
+        }
+        break;
+      }
+      case "custom": {
+        if (completedCustomDate) {
+          if (a.appointment_date !== format(completedCustomDate, "yyyy-MM-dd")) return false;
+        }
+        break;
+      }
+      case "all":
+        break;
+    }
+    
+    return true;
+  });
   const completedAppointments = completedFilter === "all" 
     ? allCompletedAppointments 
     : allCompletedAppointments.filter(a => a.status === completedFilter);
@@ -2701,22 +2744,87 @@ const Admin = () => {
                 )}
 
                 {/* Completed/Cancelled Appointments Section */}
-                {allCompletedAppointments.length > 0 && (
+                {(filteredAppointments.filter(a => completedStatuses.includes(a.status)).length > 0 || allCompletedAppointments.length > 0) && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                         <CheckCircle className="w-4 h-4" />
                         <span>Finalizados ({completedAppointments.length})</span>
                       </div>
+                    </div>
+                    
+                    {/* Filter bar */}
+                    <div className="flex flex-wrap gap-2">
+                      {/* Date period filter */}
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { value: "today", label: "Hoje" },
+                          { value: "7days", label: "7 dias" },
+                          { value: "30days", label: "30 dias" },
+                          { value: "all", label: "Todos" },
+                        ].map(opt => (
+                          <Button
+                            key={opt.value}
+                            variant={completedDateFilter === opt.value ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 text-xs px-2"
+                            onClick={() => setCompletedDateFilter(opt.value)}
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                        
+                        {/* Month picker */}
+                        <input
+                          type="month"
+                          value={completedDateFilter === "month" ? completedCustomMonth : ""}
+                          onChange={(e) => {
+                            setCompletedCustomMonth(e.target.value);
+                            setCompletedDateFilter("month");
+                          }}
+                          className="h-7 text-xs px-2 rounded-md border border-input bg-card/30 text-foreground"
+                          style={{ colorScheme: "dark" }}
+                        />
+                        
+                        {/* Day picker */}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={completedDateFilter === "custom" ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs px-2"
+                            >
+                              <CalendarIcon className="w-3 h-3 mr-1" />
+                              {completedDateFilter === "custom" && completedCustomDate
+                                ? format(completedCustomDate, "dd/MM")
+                                : "Dia"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={completedCustomDate}
+                              onSelect={(date) => {
+                                setCompletedCustomDate(date);
+                                setCompletedDateFilter("custom");
+                              }}
+                              initialFocus
+                              className="p-3 pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      
+                      {/* Status filter */}
                       <Select value={completedFilter} onValueChange={setCompletedFilter}>
-                        <SelectTrigger className="w-[140px] h-8 text-xs bg-card/30 border-muted-foreground/20">
+                        <SelectTrigger className="w-[130px] h-7 text-xs bg-card/30 border-muted-foreground/20">
                           <Filter className="w-3 h-3 mr-1" />
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Todos ({allCompletedAppointments.length})</SelectItem>
-                          <SelectItem value="completed">Concluídos ({allCompletedAppointments.filter(a => a.status === 'completed').length})</SelectItem>
-                          <SelectItem value="cancelled">Cancelados ({allCompletedAppointments.filter(a => a.status === 'cancelled').length})</SelectItem>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="completed">Concluídos</SelectItem>
+                          <SelectItem value="cancelled">Cancelados</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
