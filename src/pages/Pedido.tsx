@@ -220,7 +220,7 @@ const Pedido = () => {
     // Create or find the customer and appointment using the edge function
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
-    const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "card" ? "Cartão" : "Dinheiro";
+    const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Dinheiro";
     const notesText = customerNotes.trim() 
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}`
       : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}`;
@@ -537,8 +537,8 @@ const Pedido = () => {
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: "pix", label: "PIX", icon: pixIcon, bgSelected: "bg-[#32BCAD]/15", borderSelected: "border-[#32BCAD]" },
-                      { id: "card", label: "Cartão", icon: cardIcon, bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500" },
-                      { id: "cash", label: "Dinheiro", icon: cashIcon, bgSelected: "bg-green-500/15", borderSelected: "border-green-500" },
+                      { id: "cartao", label: "Cartão", icon: cardIcon, bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500" },
+                      { id: "dinheiro", label: "Dinheiro", icon: cashIcon, bgSelected: "bg-green-500/15", borderSelected: "border-green-500" },
                     ].map((method) => {
                       const isSelected = paymentMethod === method.id;
                       return (
