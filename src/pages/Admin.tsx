@@ -1520,7 +1520,7 @@ const Admin = () => {
                             .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
                             .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                           const pendingTotal = filteredReportAppointments
-                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription' && a.status !== 'cancelled')
                             .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                           
                           const periodLabel = reportStartDate && reportEndDate 
@@ -1786,7 +1786,7 @@ const Admin = () => {
                       <div>
                         <p className="text-2xl font-bold text-yellow-500">
                           R$ {filteredReportAppointments
-                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                            .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription' && a.status !== 'cancelled')
                             .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0)
                             .toFixed(0)}
                         </p>
@@ -1972,7 +1972,7 @@ const Admin = () => {
                           .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
                           .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const pendingTotal = filteredReportAppointments
-                          .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription')
+                          .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription' && a.status !== 'cancelled')
                           .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
                         const maxValue = Math.max(pixTotal, cashTotal, cardTotal, pendingTotal, 1);
                         
