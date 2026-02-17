@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search } from "lucide-react";
 import { gsap } from "gsap";
@@ -259,6 +260,8 @@ const Admin = () => {
   const [completedDateFilter, setCompletedDateFilter] = useState<string>("today");
   const [completedCustomDate, setCompletedCustomDate] = useState<Date | undefined>(undefined);
   const [completedCustomMonth, setCompletedCustomMonth] = useState<string>("");
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
 
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
@@ -804,20 +807,46 @@ const Admin = () => {
   };
 
   const updateAppointmentStatus = async (id: string, status: string) => {
-    // Get appointment details for notification
-    const appointment = appointments.find(a => a.id === id);
-    
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Erro ao atualizar status");
+    // Intercept "completed" to ask for payment method
+    if (status === "completed") {
+      setCompletionAppointmentId(id);
+      setCompletionDialogOpen(true);
       return;
     }
 
-    // Criar notificação push interna e WhatsApp quando confirmar ou cancelar
+    await executeStatusUpdate(id, status);
+  };
+
+  const handleCompleteWithPayment = async (paymentStatus: string) => {
+    if (!completionAppointmentId) return;
+    setCompletionDialogOpen(false);
+
+    // Update status to completed AND set payment
+    let payment_method: string | undefined;
+    if (paymentStatus === 'paid_pix') payment_method = 'pix';
+    else if (paymentStatus === 'paid_cash') payment_method = 'dinheiro';
+    else if (paymentStatus === 'paid_card') payment_method = 'cartao';
+
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: "completed", payment_status: paymentStatus, ...(payment_method ? { payment_method } : {}) })
+      .eq("id", completionAppointmentId);
+
+    if (error) {
+      toast.error("Erro ao concluir agendamento");
+      setCompletionAppointmentId(null);
+      return;
+    }
+
+    // Send notification
+    await executeStatusNotification(completionAppointmentId, "completed");
+    toast.success("Agendamento concluído e pagamento registrado!");
+    setCompletionAppointmentId(null);
+    fetchData();
+  };
+
+  const executeStatusNotification = async (id: string, status: string) => {
+    const appointment = appointments.find(a => a.id === id);
     if ((status === "confirmed" || status === "cancelled") && appointment) {
       const { data: appointmentData } = await supabase
         .from("appointments")
@@ -840,7 +869,6 @@ const Admin = () => {
           ? `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi confirmado! Valor: R$ ${servicePrice.toFixed(2)}`
           : `Seu agendamento de ${serviceName} para ${dateFormatted} às ${timeFormatted} foi cancelado.`;
 
-        // Criar notificação interna
         await supabase.from("notifications").insert({
           user_id: appointmentData.user_id,
           title,
@@ -848,11 +876,22 @@ const Admin = () => {
           type: status,
           appointment_id: id
         });
-
-        // WhatsApp manual - usar botão ao lado do agendamento
       }
     }
+  };
 
+  const executeStatusUpdate = async (id: string, status: string) => {
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao atualizar status");
+      return;
+    }
+
+    await executeStatusNotification(id, status);
     toast.success(`Status atualizado para ${statusLabels[status]}`);
     fetchData();
   };
@@ -3067,6 +3106,48 @@ const Admin = () => {
         isOpen={!!selectedCustomerId}
         onClose={() => setSelectedCustomerId(null)}
       />
+      {/* Payment Method Dialog on Completion */}
+      <Dialog open={completionDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setCompletionDialogOpen(false);
+          setCompletionAppointmentId(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>💰 Forma de Pagamento</DialogTitle>
+            <DialogDescription>
+              Como o cliente pagou este serviço?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="h-14 justify-start gap-3 text-base border-[#00D4AA]/30 hover:bg-[#00D4AA]/10 hover:border-[#00D4AA]"
+              onClick={() => handleCompleteWithPayment('paid_pix')}
+            >
+              <img src={pixIcon} alt="PIX" className="w-6 h-6" />
+              <span>PIX</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 justify-start gap-3 text-base border-green-500/30 hover:bg-green-500/10 hover:border-green-500"
+              onClick={() => handleCompleteWithPayment('paid_cash')}
+            >
+              <Banknote className="w-6 h-6 text-green-500" />
+              <span>Dinheiro</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 justify-start gap-3 text-base border-blue-500/30 hover:bg-blue-500/10 hover:border-blue-500"
+              onClick={() => handleCompleteWithPayment('paid_card')}
+            >
+              <CreditCard className="w-6 h-6 text-blue-500" />
+              <span>Cartão</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
