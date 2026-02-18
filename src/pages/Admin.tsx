@@ -1382,10 +1382,6 @@ const Admin = () => {
                 <Scissors className="w-4 h-4" />
                 <span>Agenda</span>
               </TabsTrigger>
-              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Relatórios">
-                <BarChart3 className="w-4 h-4" />
-                <span>Relatórios</span>
-              </TabsTrigger>
               <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assistente IA">
                 <img src={whatsappIcon} alt="WhatsApp" className="w-4 h-4" />
                 <span>IA</span>
@@ -1393,6 +1389,10 @@ const Admin = () => {
               <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Horários">
                 <Lock className="w-4 h-4" />
                 <span>Horários</span>
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Relatórios">
+                <BarChart3 className="w-4 h-4" />
+                <span>Relatórios</span>
               </TabsTrigger>
               <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Galeria">
                 <Image className="w-4 h-4" />
