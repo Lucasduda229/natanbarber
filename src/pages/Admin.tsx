@@ -460,9 +460,8 @@ const Admin = () => {
   const fetchData = async (showSyncing = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      // Auto-complete appointments before fetching data
-      await autoCompleteAppointments();
-      await Promise.all([fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay(), fetchPackagePayments()]);
+      // Run auto-complete in parallel with data fetches for faster refresh
+      await Promise.all([autoCompleteAppointments(), fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay(), fetchPackagePayments()]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
