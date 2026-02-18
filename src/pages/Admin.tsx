@@ -318,7 +318,7 @@ const Admin = () => {
   // Manual refresh function
   const handleManualRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchData();
+    await fetchData(false, true); // skip auto-complete for faster refresh
     setRefreshing(false);
     toast.success("Dashboard atualizado!", { duration: 2000 });
   }, []);
@@ -346,8 +346,7 @@ const Admin = () => {
         (payload) => {
           console.log('📡 Realtime event received:', payload.eventType);
           setLastUpdate(new Date());
-          // Refresh all data when any appointment changes
-          fetchData(true);
+          fetchData(true, true); // skip auto-complete on realtime updates
           
           // Show notification and play sound for new appointments
           if (payload.eventType === 'INSERT') {
@@ -457,11 +456,25 @@ const Admin = () => {
     }
   };
 
-  const fetchData = async (showSyncing = false) => {
+  const fetchData = async (showSyncing = false, skipAutoComplete = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      // Run auto-complete in parallel with data fetches for faster refresh
-      await Promise.all([autoCompleteAppointments(), fetchAppointments(), fetchBlockedDates(), fetchStats(), fetchActiveSubscriptions(), fetchRevenueAdjustments(), fetchCashClosingDay(), fetchPackagePayments()]);
+      // Skip auto-complete on manual refresh and realtime updates for speed
+      // Auto-complete already runs on a 5-minute interval
+      const tasks: Promise<any>[] = [
+        fetchAppointments(),
+        fetchBlockedDates(),
+        fetchStats(),
+        fetchActiveSubscriptions(),
+        fetchRevenueAdjustments(),
+        fetchCashClosingDay(),
+        fetchPackagePayments(),
+      ];
+      if (!skipAutoComplete) {
+        // Fire-and-forget: don't wait for edge function
+        autoCompleteAppointments();
+      }
+      await Promise.all(tasks);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -521,35 +534,34 @@ const Admin = () => {
     const userIds = [...new Set(appointmentsData.map(a => a.user_id))];
     const appointmentIds = appointmentsData.map(a => a.id);
 
-    // Fetch profiles for these users
-    const { data: profilesData, error: profilesError } = await supabase
-      .from("profiles")
-      .select("user_id, full_name, phone")
-      .in("user_id", userIds);
+    // Fetch profiles AND additional services IN PARALLEL
+    const [profilesResult, appointmentServicesResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, phone")
+        .in("user_id", userIds),
+      supabase
+        .from("appointment_services")
+        .select(`
+          appointment_id,
+          services (
+            name,
+            price
+          )
+        `)
+        .in("appointment_id", appointmentIds),
+    ]);
 
-    if (profilesError) {
-      console.error("Error fetching profiles:", profilesError);
+    if (profilesResult.error) {
+      console.error("Error fetching profiles:", profilesResult.error);
     }
-
-    // Fetch additional services for these appointments via appointment_services
-    const { data: appointmentServicesData, error: appointmentServicesError } = await supabase
-      .from("appointment_services")
-      .select(`
-        appointment_id,
-        services (
-          name,
-          price
-        )
-      `)
-      .in("appointment_id", appointmentIds);
-
-    if (appointmentServicesError) {
-      console.error("Error fetching appointment services:", appointmentServicesError);
+    if (appointmentServicesResult.error) {
+      console.error("Error fetching appointment services:", appointmentServicesResult.error);
     }
 
     // Create a map of appointment_id to additional services array
     const additionalServicesMap = new Map<string, AppointmentService[]>();
-    (appointmentServicesData || []).forEach(as => {
+    (appointmentServicesResult.data || []).forEach(as => {
       const existing = additionalServicesMap.get(as.appointment_id) || [];
       if (as.services) {
         existing.push({
@@ -562,7 +574,7 @@ const Admin = () => {
 
     // Create a map of user_id to profile
     const profilesMap = new Map(
-      (profilesData || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
+      (profilesResult.data || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
     );
 
     // Combine appointments with profiles and all services (primary + additional)
@@ -620,40 +632,22 @@ const Admin = () => {
   const fetchStats = async () => {
     const today = format(new Date(), "yyyy-MM-dd");
 
-    const { data: todayData } = await supabase
-      .from("appointments")
-      .select("id")
-      .eq("appointment_date", today)
-      .neq("status", "cancelled")
-      .neq("status", "archived");
+    // Run all stats queries in parallel
+    const [todayResult, pendingResult, confirmedResult, completedResult] = await Promise.all([
+      supabase.from("appointments").select("id").eq("appointment_date", today).neq("status", "cancelled").neq("status", "archived"),
+      supabase.from("appointments").select("id").eq("status", "pending"),
+      supabase.from("appointments").select("services(price), payment_method").eq("status", "confirmed"),
+      supabase.from("appointments").select("services(price), payment_method").eq("status", "completed"),
+    ]);
 
-    const { data: pendingData } = await supabase
-      .from("appointments")
-      .select("id")
-      .eq("status", "pending");
-
-    // Count all confirmed appointments (excluding subscriptions for revenue)
-    const { data: confirmedData } = await supabase
-      .from("appointments")
-      .select("services(price), payment_method")
-      .eq("status", "confirmed");
-
-    // Count completed appointments for revenue (excluding subscriptions)
-    const { data: completedData } = await supabase
-      .from("appointments")
-      .select("services(price), payment_method")
-      .eq("status", "completed");
-
-    // Exclude subscription appointments from revenue calculation
-    const confirmedRevenue = confirmedData?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : (a.services?.price || 0)), 0) || 0;
-    const completedRevenue = completedData?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : (a.services?.price || 0)), 0) || 0;
-    const totalRevenue = confirmedRevenue + completedRevenue;
+    const confirmedRevenue = confirmedResult.data?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : ((a.services as any)?.price || 0)), 0) || 0;
+    const completedRevenue = completedResult.data?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : ((a.services as any)?.price || 0)), 0) || 0;
 
     setStats({
-      today: todayData?.length || 0,
-      pending: pendingData?.length || 0,
-      confirmed: confirmedData?.length || 0,
-      revenue: totalRevenue,
+      today: todayResult.data?.length || 0,
+      pending: pendingResult.data?.length || 0,
+      confirmed: confirmedResult.data?.length || 0,
+      revenue: confirmedRevenue + completedRevenue,
     });
   };
 
