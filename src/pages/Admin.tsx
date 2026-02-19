@@ -1312,7 +1312,7 @@ const Admin = () => {
             </SelectContent>
           </Select>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -1357,7 +1357,21 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
+          <Card className="bg-card/40 backdrop-blur-xl border-orange-500/20">
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
+                  {filteredStatsAppointments.filter(a => a.status === 'no_show').length}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Faltas</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/40 backdrop-blur-xl border-primary/20 col-span-2 sm:col-span-1">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />

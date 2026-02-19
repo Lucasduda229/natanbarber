@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight, Trophy, Trash2 } from "lucide-react";
+import { Search, Users, Phone, Calendar, DollarSign, Star, History, ChevronRight, Trophy, Trash2, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ interface ClientProfile {
   totalVisits: number;
   totalSpent: number;
   lastVisit: string | null;
+  noShows: number;
 }
 
 export function ClientsList() {
@@ -71,7 +72,7 @@ export function ClientsList() {
         return;
       }
 
-      // Fetch all appointments with confirmed/completed status
+      // Fetch all appointments with confirmed/completed/no_show status
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
@@ -82,7 +83,7 @@ export function ClientsList() {
             price
           )
         `)
-        .in("status", ["confirmed", "completed"]);
+        .in("status", ["confirmed", "completed", "no_show"]);
 
       if (appointmentsError) {
         console.error("Error fetching appointments:", appointmentsError);
@@ -94,12 +95,14 @@ export function ClientsList() {
           (a) => a.user_id === profile.user_id
         ) || [];
 
-        const totalVisits = clientAppointments.length;
-        const totalSpent = clientAppointments.reduce(
+        const visitAppointments = clientAppointments.filter(a => a.status === "confirmed" || a.status === "completed");
+        const noShowAppointments = clientAppointments.filter(a => a.status === "no_show");
+        const totalVisits = visitAppointments.length;
+        const totalSpent = visitAppointments.reduce(
           (sum, a) => sum + (a.services?.price || 0),
           0
         );
-        const sortedAppointments = [...clientAppointments].sort(
+        const sortedAppointments = [...visitAppointments].sort(
           (a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()
         );
         const lastVisit = sortedAppointments[0]?.appointment_date || null;
@@ -112,6 +115,7 @@ export function ClientsList() {
           totalVisits,
           totalSpent,
           lastVisit,
+          noShows: noShowAppointments.length,
         };
       });
 
@@ -338,6 +342,12 @@ export function ClientsList() {
                               <DollarSign className="w-3 h-3" />
                               R$ {client.totalSpent.toFixed(2)}
                             </span>
+                            {client.noShows > 0 && (
+                              <span className="flex items-center gap-1 text-orange-500 font-medium">
+                                <XCircle className="w-3 h-3" />
+                                {client.noShows} {client.noShows === 1 ? 'falta' : 'faltas'}
+                              </span>
+                            )}
                             {client.lastVisit && (
                               <span className="text-muted-foreground">
                                 Última: {format(parseISO(client.lastVisit), "dd/MM/yyyy", { locale: ptBR })}
