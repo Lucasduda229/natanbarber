@@ -156,6 +156,7 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
 
   // Calculate stats - include confirmed and completed appointments
   const confirmedOrCompleted = appointments.filter(a => a.status === "completed" || a.status === "confirmed");
+  const noShowCount = appointments.filter(a => a.status === "no_show").length;
   const totalSpent = confirmedOrCompleted.reduce((sum, a) => sum + (a.services?.price || 0), 0);
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) 
@@ -208,7 +209,7 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
             </Card>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
               <Card className="bg-primary/10 border-primary/20">
                 <CardContent className="p-3 text-center">
                   <div className="text-2xl font-bold text-primary">{confirmedOrCompleted.length}</div>
@@ -221,6 +222,12 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
                   <div className="text-xs text-muted-foreground">Total gasto</div>
                 </CardContent>
               </Card>
+              <Card className="bg-orange-500/10 border-orange-500/20">
+                <CardContent className="p-3 text-center">
+                  <div className="text-2xl font-bold text-orange-500">{noShowCount}</div>
+                  <div className="text-xs text-muted-foreground">Faltas</div>
+                </CardContent>
+              </Card>
               <Card className="bg-yellow-500/10 border-yellow-500/20">
                 <CardContent className="p-3 text-center">
                   <div className="text-2xl font-bold text-yellow-500 flex items-center justify-center gap-1">
@@ -230,7 +237,7 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
                   <div className="text-xs text-muted-foreground">Avaliação média</div>
                 </CardContent>
               </Card>
-              <Card className="bg-blue-500/10 border-blue-500/20">
+              <Card className="bg-blue-500/10 border-blue-500/20 col-span-2 md:col-span-2">
                 <CardContent className="p-3 text-center">
                   <div className="text-lg font-bold text-blue-500 truncate">{favoriteService}</div>
                   <div className="text-xs text-muted-foreground">Favorito</div>
