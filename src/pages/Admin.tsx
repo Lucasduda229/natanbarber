@@ -245,7 +245,7 @@ const Admin = () => {
   const [syncing, setSyncing] = useState(false);
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
-  const [statsPeriod, setStatsPeriod] = useState<string>("today");
+  const [statsPeriod, setStatsPeriod] = useState<string>("7days");
   const [reportStartDate, setReportStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [reportEndDate, setReportEndDate] = useState<Date | undefined>(new Date());
   const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
