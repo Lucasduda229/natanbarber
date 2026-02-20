@@ -1124,7 +1124,7 @@ const Admin = () => {
   });
 
   // Separate active and completed/cancelled appointments
-  const completedStatuses = ['completed', 'cancelled'];
+  const completedStatuses = ['completed', 'cancelled', 'no_show'];
   const activeAppointments = filteredAppointments.filter(a => !completedStatuses.includes(a.status));
   const allCompletedAppointments = filteredAppointments.filter(a => {
     if (!completedStatuses.includes(a.status)) return false;
@@ -2928,6 +2928,7 @@ const Admin = () => {
                           <SelectItem value="all">Todos</SelectItem>
                           <SelectItem value="completed">Concluídos</SelectItem>
                           <SelectItem value="cancelled">Cancelados</SelectItem>
+                          <SelectItem value="no_show">Faltas</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
