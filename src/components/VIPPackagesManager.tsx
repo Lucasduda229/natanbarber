@@ -342,12 +342,15 @@ const VIPPackagesManager = () => {
   const resetBenefitsUsage = async (subId: string) => {
     // Use full timestamp to properly filter appointments created after this moment
     const now = new Date().toISOString();
+    const todayStr = new Date().toISOString().split('T')[0];
     
     try {
       const { error } = await supabase
         .from("subscription_progress")
         .update({ 
-          usage_reset_date: now
+          usage_reset_date: now,
+          subscription_start_date: todayStr,
+          cuts_used_this_month: 0,
         })
         .eq("id", subId);
 
