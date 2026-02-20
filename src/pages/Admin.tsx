@@ -246,6 +246,8 @@ const Admin = () => {
   const [blockDateInput, setBlockDateInput] = useState<string>("");
   const [blockTimeInput, setBlockTimeInput] = useState<string>("");
   const [statsPeriod, setStatsPeriod] = useState<string>("7days");
+  const [statsCustomStartDate, setStatsCustomStartDate] = useState<Date | undefined>(undefined);
+  const [statsCustomEndDate, setStatsCustomEndDate] = useState<Date | undefined>(undefined);
   const [reportStartDate, setReportStartDate] = useState<Date | undefined>(subDays(new Date(), 30));
   const [reportEndDate, setReportEndDate] = useState<Date | undefined>(new Date());
   const [revenueAdjustments, setRevenueAdjustments] = useState<RevenueAdjustment[]>([]);
@@ -306,10 +308,22 @@ const Admin = () => {
           const appointmentDate = parseISO(a.appointment_date);
           return isAfter(appointmentDate, start30) || isEqual(appointmentDate, start30);
         });
+      case "custom":
+        if (!statsCustomStartDate || !statsCustomEndDate) return appointments;
+        return appointments.filter(a => {
+          const appointmentDate = parseISO(a.appointment_date);
+          const start = new Date(statsCustomStartDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(statsCustomEndDate);
+          end.setHours(23, 59, 59, 999);
+          return appointmentDate >= start && appointmentDate <= end;
+        });
+      case "all":
+        return appointments;
       default:
         return appointments.filter(a => a.appointment_date === todayStr);
     }
-  }, [appointments, statsPeriod]);
+  }, [appointments, statsPeriod, statsCustomStartDate, statsCustomEndDate]);
 
   const filteredStatsAppointments = getFilteredAppointmentsForStats();
 
@@ -1301,16 +1315,59 @@ const Admin = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <h2 className="text-sm sm:text-base font-semibold text-foreground">Resumo Financeiro</h2>
-          <Select value={statsPeriod} onValueChange={setStatsPeriod}>
-            <SelectTrigger className="w-[160px] h-8 text-xs border-primary/30 bg-card/60">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hoje</SelectItem>
-              <SelectItem value="7days">Últimos 7 dias</SelectItem>
-              <SelectItem value="30days">Últimos 30 dias</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={statsPeriod} onValueChange={setStatsPeriod}>
+              <SelectTrigger className="w-[170px] h-8 text-xs border-primary/30 bg-card/60">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="7days">Últimos 7 dias</SelectItem>
+                <SelectItem value="30days">Últimos 30 dias</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+                <SelectItem value="all">Todo Período</SelectItem>
+              </SelectContent>
+            </Select>
+            {statsPeriod === "custom" && (
+              <div className="flex items-center gap-1.5">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/30 bg-card/60 px-2">
+                      <CalendarIcon className="w-3 h-3 mr-1" />
+                      {statsCustomStartDate ? format(statsCustomStartDate, "dd/MM/yy") : "Início"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={statsCustomStartDate}
+                      onSelect={setStatsCustomStartDate}
+                      locale={ptBR}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs text-muted-foreground">até</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs border-primary/30 bg-card/60 px-2">
+                      <CalendarIcon className="w-3 h-3 mr-1" />
+                      {statsCustomEndDate ? format(statsCustomEndDate, "dd/MM/yy") : "Fim"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={statsCustomEndDate}
+                      onSelect={setStatsCustomEndDate}
+                      locale={ptBR}
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
@@ -1323,7 +1380,7 @@ const Admin = () => {
                   {filteredStatsAppointments.filter(a => a.status !== 'cancelled').length}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {statsPeriod === 'today' ? 'Hoje' : statsPeriod === '7days' ? '7 dias' : '30 dias'}
+                  {statsPeriod === 'today' ? 'Hoje' : statsPeriod === '7days' ? '7 dias' : statsPeriod === '30days' ? '30 dias' : statsPeriod === 'all' ? 'Total' : 'Personalizado'}
                 </p>
               </div>
             </CardContent>
