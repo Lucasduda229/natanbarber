@@ -276,20 +276,50 @@ const VIPPackagesManager = () => {
     }
   };
 
-  const toggleSubscriptionStatus = async (subId: string, currentActive: boolean) => {
+  const toggleSubscriptionStatus = async (subId: string, currentActive: boolean, sub?: SubscriberWithUsage) => {
     try {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const nowTimestamp = today.toISOString();
+
+      // When activating (from inactive to active), reset dates and counters
+      const updateData: Record<string, unknown> = { is_active: !currentActive };
+      
+      if (!currentActive) {
+        // Reactivating: update subscription_start_date to today (new 30-day window)
+        const weeklyCredits = sub ? Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4)) : 1;
+        updateData.subscription_start_date = todayStr;
+        updateData.usage_reset_date = nowTimestamp;
+        updateData.cuts_used_this_month = 0;
+        updateData.credits_expired_this_month = 0;
+        updateData.current_month_start = todayStr;
+        updateData.weekly_credits_available = weeklyCredits;
+        updateData.current_week_start = todayStr;
+        updateData.last_payment_date = todayStr;
+        updateData.updated_at = nowTimestamp;
+      }
+
       const { error } = await supabase
         .from("subscription_progress")
-        .update({ is_active: !currentActive })
+        .update(updateData)
         .eq("id", subId);
 
       if (error) throw error;
 
       setSubscribers(prev => 
-        prev.map(s => s.id === subId ? { ...s, is_active: !currentActive } : s)
+        prev.map(s => s.id === subId ? { 
+          ...s, 
+          is_active: !currentActive,
+          ...((!currentActive) ? {
+            subscription_start_date: todayStr,
+            usage_reset_date: nowTimestamp,
+            cuts_used_this_month: 0,
+            credits_expired_this_month: 0,
+          } : {})
+        } : s)
       );
 
-      toast.success(currentActive ? "Assinatura cancelada" : "Assinatura reativada");
+      toast.success(currentActive ? "Assinatura pausada" : "Assinatura reativada (período renovado para 30 dias)");
     } catch (error) {
       console.error("Error toggling status:", error);
       toast.error("Erro ao atualizar status");
@@ -876,7 +906,7 @@ const VIPPackagesManager = () => {
                             size="sm" 
                             variant="outline"
                             className="gap-1 text-xs"
-                            onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active)}
+                             onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active, sub)}
                           >
                             <X className="w-3 h-3" />
                             Pausar
@@ -886,7 +916,7 @@ const VIPPackagesManager = () => {
                             size="sm" 
                             variant="default"
                             className="gap-1 text-xs bg-green-600 hover:bg-green-700"
-                            onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active)}
+                            onClick={() => toggleSubscriptionStatus(sub.id, sub.is_active, sub)}
                           >
                             <Check className="w-3 h-3" />
                             Ativar
