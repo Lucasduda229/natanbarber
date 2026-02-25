@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Trophy, Gift, Star, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Trophy, Gift, Star, CheckCircle2, MessageCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface LoyaltyProgram {
@@ -169,6 +170,23 @@ const CustomerLoyaltyCard = () => {
                   </p>
                 </div>
               </div>
+
+              {/* Claim via WhatsApp */}
+              {canClaim && (
+                <a
+                  href={`https://wa.me/554891824897?text=${encodeURIComponent(
+                    `Olá! Completei o programa de fidelidade "${program.name}" com ${currentVisits} visitas e gostaria de resgatar minha recompensa: ${program.reward_description}. 🎉`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Resgatar Prêmio Fidelidade
+                  </Button>
+                </a>
+              )}
 
               {/* Stats */}
               {rewardsClaimed > 0 && (
