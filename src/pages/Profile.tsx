@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import SubscriptionProgress from "@/components/SubscriptionProgress";
+import CustomerLoyaltyCard from "@/components/CustomerLoyaltyCard";
 
 interface Profile {
   full_name: string | null;
@@ -218,6 +220,16 @@ const Profile = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Subscription Progress (Premiações) */}
+        <Card className="bg-card/80 backdrop-blur-sm border-border">
+          <CardContent className="py-4">
+            <SubscriptionProgress />
+          </CardContent>
+        </Card>
+
+        {/* Loyalty Program */}
+        <CustomerLoyaltyCard />
 
         {/* Logout */}
         <Card className="bg-card/80 backdrop-blur-sm border-border">
