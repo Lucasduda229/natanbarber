@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { generatePixPayload } from "@/lib/pix";
 import { QRCodeSVG } from "qrcode.react";
 import logoImage from "@/assets/logo-barbershop.png";
+import natanHeroImage from "@/assets/natan-barber-hero.png";
 import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
@@ -947,11 +948,12 @@ const Booking = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 text-center py-6 sm:py-8 px-4">
-        <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2 leading-tight">
-          <span className="text-foreground">Natan </span>
-          <span className="text-transparent bg-clip-text bg-gold-gradient">BarberShop</span>
-        </h1>
+      <section className="relative z-10 text-center py-4 sm:py-8 px-4">
+        <img 
+          src={natanHeroImage} 
+          alt="Natan Barber" 
+          className="w-40 xs:w-48 sm:w-56 h-auto mx-auto object-contain drop-shadow-2xl mb-2" 
+        />
         <p className="text-muted-foreground text-xs sm:text-base mb-3 sm:mb-4">
           Experiência premium em cortes masculinos
         </p>
