@@ -27,6 +27,7 @@ import natanHeroImage from "@/assets/natan-barber-hero.png";
 import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
+import whatsappIcon from "@/assets/whatsapp-icon.svg";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -952,26 +953,27 @@ const Booking = () => {
         <img 
           src={natanHeroImage} 
           alt="Natan Barber" 
-          className="w-40 xs:w-48 sm:w-56 h-auto mx-auto object-contain drop-shadow-2xl mb-2" 
+          className="w-40 xs:w-48 sm:w-56 h-auto mx-auto object-contain drop-shadow-2xl mb-3" 
         />
-        <p className="text-muted-foreground text-xs sm:text-base mb-3 sm:mb-4">
-          Experiência premium em cortes masculinos
-        </p>
         
         {/* Contact Info */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6 text-muted-foreground text-xs sm:text-sm">
-          <a href={`tel:${PHONE.replace(/\D/g, "")}`} className="flex items-center gap-1 sm:gap-1.5 hover:text-primary transition-colors touch-target">
-            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">{PHONE}</span>
-            <span className="xs:hidden">Ligar</span>
+        <div className="flex items-center justify-center gap-4 sm:gap-6 text-muted-foreground text-xs sm:text-sm">
+          <a 
+            href="https://wa.me/554891824897" 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 sm:gap-2 hover:text-[#25D366] transition-colors touch-target"
+          >
+            <img src={whatsappIcon} alt="WhatsApp" className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>(48) 9182-4897</span>
           </a>
           <a 
             href="https://www.instagram.com/_natan_barber_/" 
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 sm:gap-1.5 hover:text-primary transition-colors touch-target"
+            className="flex items-center gap-1.5 sm:gap-2 hover:text-primary transition-colors touch-target"
           >
-            <Instagram className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Instagram className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{INSTAGRAM}</span>
           </a>
         </div>
