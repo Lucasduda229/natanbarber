@@ -752,6 +752,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriber_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          required_months: number
+          reward_description: string
+          target_audience: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          required_months: number
+          reward_description: string
+          target_audience?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          required_months?: number
+          reward_description?: string
+          target_audience?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_progress: {
         Row: {
           consecutive_months: number
