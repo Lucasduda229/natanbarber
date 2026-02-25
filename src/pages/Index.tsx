@@ -7,7 +7,6 @@ import { ServiceGallery } from "@/components/ServiceGallery";
 import { ReviewsDisplay } from "@/components/ReviewsDisplay";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import logoImage from "@/assets/logo-barbershop.png";
-import heroImage from "@/assets/natan-barber-hero.png";
 
 const Index = () => {
   return (
@@ -22,11 +21,11 @@ const Index = () => {
       {/* Hero Section */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[65vh] sm:min-h-[70vh] text-center px-4 py-8 sm:py-12">
         <div className="space-y-3 sm:space-y-4 w-full max-w-lg mx-auto">
-          <div className="flex justify-center mb-2 sm:mb-4">
+          <div className="flex justify-center mb-4 sm:mb-6">
             <img 
-              src={heroImage} 
-              alt="Natan Barber" 
-              className="w-48 h-auto xs:w-56 sm:w-64 md:w-72 object-contain animate-fade-in drop-shadow-2xl" 
+              src={logoImage} 
+              alt="Natan Barbershop Logo" 
+              className="w-24 h-24 xs:w-28 xs:h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" 
             />
           </div>
           
@@ -44,8 +43,12 @@ const Index = () => {
             <OpenClosedBadge />
           </div>
           
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-bold text-foreground animate-fade-in leading-tight">
+            Natan Barbershop
+          </h1>
+          
           <p className="text-base xs:text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto animate-fade-in px-2">
-            Experiência premium em cortes masculinos
+            Agende seu horário de forma rápida e exclusiva
           </p>
         </div>
 
