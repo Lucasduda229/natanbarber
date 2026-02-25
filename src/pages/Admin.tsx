@@ -27,7 +27,7 @@ import { CustomerHistory } from "@/components/CustomerHistory";
 import { ClientsList } from "@/components/ClientsList";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getConfirmationMessage, getCancellationMessage, openWhatsApp } from "@/lib/whatsapp";
-import LoyaltyProgramManager from "@/components/LoyaltyProgramManager";
+import RewardsManager from "@/components/RewardsManager";
 import { ServicesManager } from "@/components/ServicesManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import OperatingHoursEditor from "@/components/OperatingHoursEditor";
@@ -1477,9 +1477,9 @@ const Admin = () => {
                 <UserCheck className="w-4 h-4" />
                 <span>Clientes</span>
               </TabsTrigger>
-              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Fidelidade">
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Premiações">
                 <Trophy className="w-4 h-4" />
-                <span>Fidelidade</span>
+                <span>Premiações</span>
               </TabsTrigger>
               <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Serviços">
                 <Settings className="w-4 h-4" />
@@ -3148,9 +3148,9 @@ const Admin = () => {
             <ClientsList />
           </TabsContent>
 
-          {/* Loyalty Tab */}
+          {/* Rewards Tab */}
           <TabsContent value="loyalty">
-            <LoyaltyProgramManager />
+            <RewardsManager />
           </TabsContent>
 
           {/* Subscriptions Tab */}
