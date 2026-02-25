@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Trophy, Plus, Edit2, Trash2, Gift, Users, Crown, Star, Award } from "lucide-react";
+import { Trophy, Plus, Edit2, Trash2, Gift, Users, Crown, Star, Award, Check, X, Clock, Package } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,40 +24,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // ---- Types ----
-interface SubscriberReward {
+interface Reward {
   id: string;
   name: string;
   description: string | null;
   required_months: number;
+  required_visits: number | null;
   reward_description: string;
   is_active: boolean;
   target_audience: string;
+  requirement_type: string;
   created_at: string;
 }
 
-interface LoyaltyProgram {
+interface RewardClaim {
   id: string;
-  name: string;
-  description: string | null;
-  required_visits: number;
+  reward_id: string | null;
+  user_id: string;
+  reward_name: string;
   reward_description: string;
-  is_active: boolean;
-  created_at: string;
+  claimed_at: string;
+  delivered_at: string | null;
+  status: string;
+  admin_notes: string | null;
+  profiles?: {
+    full_name: string | null;
+    phone: string | null;
+  } | null;
 }
 
-// ---- Subscriber Rewards Section ----
-const SubscriberRewardsSection = () => {
-  const [rewards, setRewards] = useState<SubscriberReward[]>([]);
+// ---- Rewards CRUD Section ----
+const RewardsCRUDSection = () => {
+  const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<SubscriberReward | null>(null);
+  const [editing, setEditing] = useState<Reward | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
+    requirement_type: "months" as "months" | "visits",
     required_months: 6,
+    required_visits: 10,
     reward_description: "",
+    target_audience: "subscribers" as "subscribers" | "all_clients",
     is_active: true,
   });
 
@@ -68,25 +81,27 @@ const SubscriberRewardsSection = () => {
     const { data, error } = await supabase
       .from("subscriber_rewards")
       .select("*")
-      .eq("target_audience", "subscribers")
-      .order("required_months", { ascending: true });
+      .order("created_at", { ascending: false });
     if (!error) setRewards(data || []);
     setLoading(false);
   };
 
   const resetForm = () => {
-    setForm({ name: "", description: "", required_months: 6, reward_description: "", is_active: true });
+    setForm({ name: "", description: "", requirement_type: "months", required_months: 6, required_visits: 10, reward_description: "", target_audience: "subscribers", is_active: true });
     setEditing(null);
     setDialogOpen(false);
   };
 
-  const handleEdit = (r: SubscriberReward) => {
+  const handleEdit = (r: Reward) => {
     setEditing(r);
     setForm({
       name: r.name,
       description: r.description || "",
+      requirement_type: r.requirement_type as "months" | "visits",
       required_months: r.required_months,
+      required_visits: r.required_visits || 10,
       reward_description: r.reward_description,
+      target_audience: r.target_audience as "subscribers" | "all_clients",
       is_active: r.is_active,
     });
     setDialogOpen(true);
@@ -98,7 +113,17 @@ const SubscriberRewardsSection = () => {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-    const payload = { ...form, target_audience: "subscribers" };
+    const payload = {
+      name: form.name,
+      description: form.description || null,
+      requirement_type: form.requirement_type,
+      required_months: form.requirement_type === "months" ? form.required_months : 0,
+      required_visits: form.requirement_type === "visits" ? form.required_visits : null,
+      reward_description: form.reward_description,
+      target_audience: form.target_audience,
+      is_active: form.is_active,
+    };
+
     if (editing) {
       const { error } = await supabase.from("subscriber_rewards").update(payload).eq("id", editing.id);
       if (error) { toast.error("Erro ao atualizar"); return; }
@@ -120,7 +145,7 @@ const SubscriberRewardsSection = () => {
     fetchRewards();
   };
 
-  const toggleActive = async (r: SubscriberReward) => {
+  const toggleActive = async (r: Reward) => {
     await supabase.from("subscriber_rewards").update({ is_active: !r.is_active }).eq("id", r.id);
     fetchRewards();
   };
@@ -136,20 +161,19 @@ const SubscriberRewardsSection = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Crown className="h-5 w-5 text-primary" />
-          <h3 className="text-base sm:text-lg font-bold text-foreground">Premiações por Meses Recorrentes</h3>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Crie premiações para assinantes recorrentes ou clientes em geral.
+        </p>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => resetForm()} size="sm" className="bg-gold-gradient w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-1" /> Nova Premiação
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-primary/20 mx-3 sm:mx-0 max-w-[calc(100%-1.5rem)] sm:max-w-lg">
+          <DialogContent className="bg-card border-primary/20 mx-3 sm:mx-0 max-w-[calc(100%-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-foreground">
-                {editing ? "Editar Premiação" : "Nova Premiação para Assinantes"}
+                {editing ? "Editar Premiação" : "Nova Premiação"}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -169,18 +193,67 @@ const SubscriberRewardsSection = () => {
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="bg-background/50 border-primary/20"
+                  rows={2}
                 />
               </div>
+
+              {/* Audience */}
               <div className="space-y-2">
-                <Label>Meses Consecutivos Necessários *</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.required_months}
-                  onChange={(e) => setForm({ ...form, required_months: parseInt(e.target.value) || 1 })}
-                  className="bg-background/50 border-primary/20"
-                />
+                <Label>Público-alvo *</Label>
+                <Select value={form.target_audience} onValueChange={(v) => setForm({ ...form, target_audience: v as any })}>
+                  <SelectTrigger className="bg-background/50 border-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="subscribers">
+                      <span className="flex items-center gap-2"><Crown className="h-3 w-3" /> Somente Assinantes</span>
+                    </SelectItem>
+                    <SelectItem value="all_clients">
+                      <span className="flex items-center gap-2"><Users className="h-3 w-3" /> Todos os Clientes</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Requirement Type */}
+              <div className="space-y-2">
+                <Label>Tipo de Requisito *</Label>
+                <Select value={form.requirement_type} onValueChange={(v) => setForm({ ...form, requirement_type: v as any })}>
+                  <SelectTrigger className="bg-background/50 border-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="months">Meses Consecutivos</SelectItem>
+                    <SelectItem value="visits">Número de Visitas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Conditional fields */}
+              {form.requirement_type === "months" ? (
+                <div className="space-y-2">
+                  <Label>Meses Consecutivos Necessários *</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.required_months}
+                    onChange={(e) => setForm({ ...form, required_months: parseInt(e.target.value) || 1 })}
+                    className="bg-background/50 border-primary/20"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Visitas Necessárias *</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.required_visits}
+                    onChange={(e) => setForm({ ...form, required_visits: parseInt(e.target.value) || 1 })}
+                    className="bg-background/50 border-primary/20"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Recompensa *</Label>
                 <Input
@@ -206,15 +279,12 @@ const SubscriberRewardsSection = () => {
         </Dialog>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Premiações automáticas para assinantes que mantêm a assinatura ativa por meses consecutivos.
-      </p>
-
       {rewards.length === 0 ? (
         <Card className="bg-card/40 border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <Crown className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">Nenhuma premiação de assinante criada</p>
+            <Gift className="h-12 w-12 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">Nenhuma premiação criada</p>
+            <p className="text-xs text-muted-foreground mt-1">Crie sua primeira premiação</p>
           </CardContent>
         </Card>
       ) : (
@@ -232,11 +302,22 @@ const SubscriberRewardsSection = () => {
                 {r.description && <CardDescription className="text-xs line-clamp-2 mt-1">{r.description}</CardDescription>}
               </CardHeader>
               <CardContent className="space-y-3 px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge variant="outline" className="border-primary/30 text-primary">
-                    <Crown className="h-3 w-3 mr-1" /> {r.required_months} {r.required_months === 1 ? "mês" : "meses"}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <Badge variant="outline" className="border-primary/30 text-primary text-[10px]">
+                    {r.target_audience === "subscribers" ? (
+                      <><Crown className="h-3 w-3 mr-1" /> Assinantes</>
+                    ) : (
+                      <><Users className="h-3 w-3 mr-1" /> Todos</>
+                    )}
                   </Badge>
-                  <Badge variant="outline" className="border-green-500/30 text-green-400">
+                  <Badge variant="outline" className="border-blue-500/30 text-blue-400 text-[10px]">
+                    {r.requirement_type === "months" ? (
+                      <><Clock className="h-3 w-3 mr-1" /> {r.required_months} {r.required_months === 1 ? "mês" : "meses"}</>
+                    ) : (
+                      <><Star className="h-3 w-3 mr-1" /> {r.required_visits} visitas</>
+                    )}
+                  </Badge>
+                  <Badge variant="outline" className="border-green-500/30 text-green-400 text-[10px]">
                     <Gift className="h-3 w-3 mr-1" /> {r.reward_description}
                   </Badge>
                 </div>
@@ -257,81 +338,60 @@ const SubscriberRewardsSection = () => {
   );
 };
 
-// ---- Visit Loyalty Section (reuses existing loyalty_programs table) ----
-const VisitRewardsSection = () => {
-  const [programs, setPrograms] = useState<LoyaltyProgram[]>([]);
+// ---- Claims Management Section ----
+const ClaimsManagementSection = () => {
+  const [claims, setClaims] = useState<RewardClaim[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<LoyaltyProgram | null>(null);
-  const [audienceFilter, setAudienceFilter] = useState<string>("all");
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    required_visits: 10,
-    reward_description: "",
-    is_active: true,
-  });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  useEffect(() => { fetchPrograms(); }, []);
+  useEffect(() => { fetchClaims(); }, []);
 
-  const fetchPrograms = async () => {
+  const fetchClaims = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("loyalty_programs")
+      .from("reward_claims")
       .select("*")
-      .order("required_visits", { ascending: true });
-    if (!error) setPrograms(data || []);
+      .order("claimed_at", { ascending: false });
+
+    if (!error && data) {
+      // Fetch profiles for each claim
+      const userIds = [...new Set(data.map(c => c.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, phone")
+        .in("user_id", userIds);
+
+      const profileMap: Record<string, { full_name: string | null; phone: string | null }> = {};
+      profiles?.forEach(p => { profileMap[p.user_id] = p; });
+
+      setClaims(data.map(c => ({ ...c, profiles: profileMap[c.user_id] || null })));
+    }
     setLoading(false);
   };
 
-  const resetForm = () => {
-    setForm({ name: "", description: "", required_visits: 10, reward_description: "", is_active: true });
-    setEditing(null);
-    setDialogOpen(false);
-  };
-
-  const handleEdit = (p: LoyaltyProgram) => {
-    setEditing(p);
-    setForm({
-      name: p.name,
-      description: p.description || "",
-      required_visits: p.required_visits,
-      reward_description: p.reward_description,
-      is_active: p.is_active,
-    });
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.reward_description.trim()) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
+  const updateClaimStatus = async (claimId: string, status: string) => {
+    const updateData: any = { status };
+    if (status === "delivered") {
+      updateData.delivered_at = new Date().toISOString();
     }
-    if (editing) {
-      const { error } = await supabase.from("loyalty_programs").update(form).eq("id", editing.id);
-      if (error) { toast.error("Erro ao atualizar"); return; }
-      toast.success("Programa atualizado!");
-    } else {
-      const { error } = await supabase.from("loyalty_programs").insert([form]);
-      if (error) { toast.error("Erro ao criar"); return; }
-      toast.success("Programa criado!");
-    }
-    fetchPrograms();
-    resetForm();
+    const { error } = await supabase.from("reward_claims").update(updateData).eq("id", claimId);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    toast.success(status === "delivered" ? "Premiação marcada como entregue!" : "Status atualizado!");
+    fetchClaims();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este programa?")) return;
-    const { error } = await supabase.from("loyalty_programs").delete().eq("id", id);
-    if (error) { toast.error("Erro ao excluir"); return; }
-    toast.success("Programa excluído!");
-    fetchPrograms();
+  const filteredClaims = statusFilter === "all" ? claims : claims.filter(c => c.status === statusFilter);
+
+  const statusColors: Record<string, string> = {
+    pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    delivered: "bg-green-500/20 text-green-400 border-green-500/30",
+    cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
   };
 
-  const toggleActive = async (p: LoyaltyProgram) => {
-    await supabase.from("loyalty_programs").update({ is_active: !p.is_active }).eq("id", p.id);
-    fetchPrograms();
+  const statusLabels: Record<string, string> = {
+    pending: "Pendente",
+    delivered: "Entregue",
+    cancelled: "Cancelado",
   };
 
   if (loading) {
@@ -345,118 +405,81 @@ const VisitRewardsSection = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-primary" />
-          <h3 className="text-base sm:text-lg font-bold text-foreground">Premiações por Visitas</h3>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()} size="sm" className="bg-gold-gradient w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-1" /> Novo Programa
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-primary/20 mx-3 sm:mx-0 max-w-[calc(100%-1.5rem)] sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">
-                {editing ? "Editar Programa" : "Novo Programa de Visitas"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome do Programa *</Label>
-                <Input
-                  placeholder="Ex: Cartão Fidelidade VIP"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="bg-background/50 border-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  placeholder="Detalhes do programa..."
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="bg-background/50 border-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Visitas Necessárias *</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.required_visits}
-                  onChange={(e) => setForm({ ...form, required_visits: parseInt(e.target.value) || 1 })}
-                  className="bg-background/50 border-primary/20"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Recompensa *</Label>
-                <Input
-                  placeholder="Ex: 1 corte grátis"
-                  value={form.reward_description}
-                  onChange={(e) => setForm({ ...form, reward_description: e.target.value })}
-                  className="bg-background/50 border-primary/20"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={form.is_active}
-                  onCheckedChange={(checked) => setForm({ ...form, is_active: checked })}
-                />
-                <Label>Ativo</Label>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={resetForm} className="flex-1">Cancelar</Button>
-                <Button type="submit" className="flex-1 bg-gold-gradient">{editing ? "Salvar" : "Criar"}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <p className="text-xs text-muted-foreground">
+          Gerencie as premiações solicitadas pelos clientes.
+        </p>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40 bg-background/50 border-primary/20">
+            <SelectValue placeholder="Filtrar" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="delivered">Entregues</SelectItem>
+            <SelectItem value="cancelled">Cancelados</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Programas de fidelidade baseados em número de visitas. Válido para todos os clientes.
-      </p>
-
-      {programs.length === 0 ? (
+      {filteredClaims.length === 0 ? (
         <Card className="bg-card/40 border-primary/20">
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <Star className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">Nenhum programa de visitas criado</p>
-            <p className="text-xs text-muted-foreground mt-1">Crie programas para fidelizar seus clientes</p>
+            <Package className="h-12 w-12 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">
+              {statusFilter === "all" ? "Nenhuma premiação solicitada ainda" : `Nenhuma premiação ${statusLabels[statusFilter]?.toLowerCase()}`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Quando clientes resgatarem prêmios, aparecerão aqui
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {programs.map((p) => (
-            <Card key={p.id} className={`bg-card/40 border-primary/20 transition-all ${!p.is_active && "opacity-50"}`}>
-              <CardHeader className="pb-2 px-3 sm:px-4 pt-3 sm:pt-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Trophy className={`h-4 w-4 flex-shrink-0 ${p.is_active ? "text-primary" : "text-muted-foreground"}`} />
-                    <CardTitle className="text-sm sm:text-base text-foreground truncate">{p.name}</CardTitle>
+        <div className="space-y-3">
+          {filteredClaims.map((claim) => (
+            <Card key={claim.id} className="bg-card/40 border-primary/20">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground">
+                        {claim.profiles?.full_name || "Cliente"}
+                      </span>
+                      <Badge variant="outline" className={`text-[10px] ${statusColors[claim.status]}`}>
+                        {statusLabels[claim.status]}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="text-primary font-medium">{claim.reward_name}</span> — {claim.reward_description}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Solicitado em {format(new Date(claim.claimed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {claim.delivered_at && (
+                        <> · Entregue em {format(new Date(claim.delivered_at), "dd/MM/yyyy", { locale: ptBR })}</>
+                      )}
+                    </p>
+                    {claim.profiles?.phone && (
+                      <p className="text-[10px] text-muted-foreground">Tel: {claim.profiles.phone}</p>
+                    )}
                   </div>
-                  <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />
-                </div>
-                {p.description && <CardDescription className="text-xs line-clamp-2 mt-1">{p.description}</CardDescription>}
-              </CardHeader>
-              <CardContent className="space-y-3 px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Badge variant="outline" className="border-blue-500/30 text-blue-400">
-                    <Users className="h-3 w-3 mr-1" /> {p.required_visits} visitas
-                  </Badge>
-                  <Badge variant="outline" className="border-green-500/30 text-green-400">
-                    <Gift className="h-3 w-3 mr-1" /> {p.reward_description}
-                  </Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(p)} className="flex-1 text-xs">
-                    <Edit2 className="h-3 w-3 mr-1" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(p.id)} className="text-destructive hover:text-destructive text-xs">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {claim.status === "pending" && (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        onClick={() => updateClaimStatus(claim.id, "delivered")}
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
+                      >
+                        <Check className="h-3 w-3" /> Entregue
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateClaimStatus(claim.id, "cancelled")}
+                        className="text-destructive hover:text-destructive text-xs gap-1"
+                      >
+                        <X className="h-3 w-3" /> Cancelar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -477,28 +500,28 @@ const RewardsManager = () => {
         </div>
         <div>
           <h2 className="text-lg sm:text-2xl font-bold text-foreground">Premiações</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">Configure premiações para assinantes e clientes</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">Configure e gerencie premiações para seus clientes</p>
         </div>
       </div>
 
-      <Tabs defaultValue="subscribers" className="w-full">
+      <Tabs defaultValue="rewards" className="w-full">
         <TabsList className="bg-card/60 border border-primary/20 w-full">
-          <TabsTrigger value="subscribers" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm gap-1.5">
-            <Crown className="w-4 h-4" />
-            Assinantes
+          <TabsTrigger value="rewards" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm gap-1.5">
+            <Award className="w-4 h-4" />
+            Premiações
           </TabsTrigger>
-          <TabsTrigger value="visits" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm gap-1.5">
-            <Star className="w-4 h-4" />
-            Visitas
+          <TabsTrigger value="claims" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm gap-1.5">
+            <Package className="w-4 h-4" />
+            Entregas
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="subscribers" className="mt-4">
-          <SubscriberRewardsSection />
+        <TabsContent value="rewards" className="mt-4">
+          <RewardsCRUDSection />
         </TabsContent>
 
-        <TabsContent value="visits" className="mt-4">
-          <VisitRewardsSection />
+        <TabsContent value="claims" className="mt-4">
+          <ClaimsManagementSection />
         </TabsContent>
       </Tabs>
     </div>

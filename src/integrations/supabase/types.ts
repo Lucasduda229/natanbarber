@@ -684,6 +684,50 @@ export type Database = {
           },
         ]
       }
+      reward_claims: {
+        Row: {
+          admin_notes: string | null
+          claimed_at: string
+          delivered_at: string | null
+          id: string
+          reward_description: string
+          reward_id: string | null
+          reward_name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          claimed_at?: string
+          delivered_at?: string | null
+          id?: string
+          reward_description: string
+          reward_id?: string | null
+          reward_name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          claimed_at?: string
+          delivered_at?: string | null
+          id?: string
+          reward_description?: string
+          reward_id?: string | null
+          reward_name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_claims_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "subscriber_rewards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_gallery: {
         Row: {
           created_at: string
@@ -760,6 +804,8 @@ export type Database = {
           is_active: boolean
           name: string
           required_months: number
+          required_visits: number | null
+          requirement_type: string
           reward_description: string
           target_audience: string
           updated_at: string
@@ -771,6 +817,8 @@ export type Database = {
           is_active?: boolean
           name: string
           required_months: number
+          required_visits?: number | null
+          requirement_type?: string
           reward_description: string
           target_audience?: string
           updated_at?: string
@@ -782,6 +830,8 @@ export type Database = {
           is_active?: boolean
           name?: string
           required_months?: number
+          required_visits?: number | null
+          requirement_type?: string
           reward_description?: string
           target_audience?: string
           updated_at?: string
