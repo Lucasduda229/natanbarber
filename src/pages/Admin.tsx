@@ -31,6 +31,7 @@ import RewardsManager from "@/components/RewardsManager";
 import { ServicesManager } from "@/components/ServicesManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import OperatingHoursEditor from "@/components/OperatingHoursEditor";
+import DataManager from "@/components/DataManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useWebPush } from "@/hooks/useWebPush";
@@ -1490,6 +1491,10 @@ const Admin = () => {
               <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Serviços">
                 <Settings className="w-4 h-4" />
                 <span>Serviços</span>
+              </TabsTrigger>
+              <TabsTrigger value="data" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Dados">
+                <Download className="w-4 h-4" />
+                <span>Dados</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -3180,6 +3185,11 @@ const Admin = () => {
           {/* Services Tab */}
           <TabsContent value="services">
             <ServicesManager />
+          </TabsContent>
+
+          {/* Data Export/Import Tab */}
+          <TabsContent value="data">
+            <DataManager />
           </TabsContent>
         </Tabs>
       </main>
