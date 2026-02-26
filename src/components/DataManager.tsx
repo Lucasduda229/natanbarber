@@ -29,7 +29,8 @@ const DataManager = () => {
       URL.revokeObjectURL(url);
 
       const totalRows = Object.values(data.row_counts as Record<string, number>).reduce((sum: number, count: number) => sum + count, 0);
-      toast.success(`Exportação concluída! ${totalRows} registros exportados.`);
+      const authCount = data.auth_users_count || 0;
+      toast.success(`Exportação concluída! ${totalRows} registros + ${authCount} usuários exportados.`);
     } catch (error: any) {
       console.error("Export error:", error);
       toast.error("Erro ao exportar: " + (error.message || "Erro desconhecido"));
@@ -106,6 +107,7 @@ const DataManager = () => {
             Baixa um arquivo JSON com <strong>todos os dados</strong> do sistema: agendamentos, clientes, serviços, assinaturas, pacotes, avaliações, configurações e mais.
           </p>
           <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+            <li><strong>Usuários (auth.users)</strong> — contas e credenciais</li>
             <li>Profiles, roles e configurações de admin</li>
             <li>Todos os agendamentos e serviços adicionais</li>
             <li>Assinaturas e progresso de fidelidade</li>

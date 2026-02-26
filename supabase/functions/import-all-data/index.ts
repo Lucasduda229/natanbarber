@@ -57,6 +57,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Import auth.users first (if present)
+    let authUsersImported = 0;
+    const authErrors: string[] = [];
+    if (importData.auth_users && Array.isArray(importData.auth_users)) {
+      for (const authUser of importData.auth_users) {
+        try {
+          // Try to create user with original ID and metadata
+          const { error: createError } = await supabase.auth.admin.createUser({
+            email: authUser.email,
+            phone: authUser.phone || undefined,
+            password: undefined, // User will need to reset password
+            email_confirm: true,
+            user_metadata: authUser.user_metadata || {},
+            app_metadata: authUser.app_metadata || {},
+          });
+          if (createError) {
+            // User might already exist
+            if (!createError.message?.includes("already been registered")) {
+              authErrors.push(`${authUser.email}: ${createError.message}`);
+            }
+          } else {
+            authUsersImported++;
+          }
+        } catch (e) {
+          authErrors.push(`${authUser.email}: ${e.message}`);
+        }
+      }
+    }
+
     // Import order matters due to foreign key constraints
     const importOrder = [
       "admin_settings",
@@ -123,8 +152,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         summary: {
-          total_inserted: totalInserted,
-          total_errors: totalErrors,
+          total_inserted: totalInserted + authUsersImported,
+          total_errors: totalErrors + authErrors.length,
+          auth_users_imported: authUsersImported,
+          auth_users_errors: authErrors,
           tables: results,
         },
       }),
