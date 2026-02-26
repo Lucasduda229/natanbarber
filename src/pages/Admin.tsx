@@ -473,23 +473,19 @@ const Admin = () => {
   const fetchData = async (showSyncing = false, skipAutoComplete = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      // CRITICAL PATH: Only fetch what's needed for initial render (Agenda tab)
-      // Fetch appointments + stats + subscriptions first (visible on screen)
-      const criticalTasks: Promise<any>[] = [
-        fetchAppointments(),
-        fetchStats(),
-        fetchActiveSubscriptions(),
-      ];
+      // CRITICAL PATH: Only fetch appointments + subscriptions (stats calculated from appointments)
       if (!skipAutoComplete) {
-        // Fire-and-forget: don't wait for edge function
-        autoCompleteAppointments();
+        autoCompleteAppointments(); // Fire-and-forget
       }
-      await Promise.all(criticalTasks);
+      await Promise.all([
+        fetchAppointments(),
+        fetchActiveSubscriptions(),
+      ]);
       setLastUpdate(new Date());
       setLoading(false);
       if (showSyncing) setSyncing(false);
 
-      // DEFERRED: Fetch non-critical data in background (other tabs)
+      // DEFERRED: Fetch non-critical data in background
       Promise.all([
         fetchBlockedDates(),
         fetchRevenueAdjustments(),
@@ -655,27 +651,21 @@ const Admin = () => {
     }
   };
 
-  const fetchStats = async () => {
+  // Stats are now calculated from appointments data - no separate queries needed
+  useEffect(() => {
+    if (appointments.length === 0 && !loading) {
+      setStats({ today: 0, pending: 0, confirmed: 0, revenue: 0 });
+      return;
+    }
     const today = format(new Date(), "yyyy-MM-dd");
-
-    // Run all stats queries in parallel
-    const [todayResult, pendingResult, confirmedResult, completedResult] = await Promise.all([
-      supabase.from("appointments").select("id").eq("appointment_date", today).neq("status", "cancelled").neq("status", "archived"),
-      supabase.from("appointments").select("id").eq("status", "pending"),
-      supabase.from("appointments").select("services(price), payment_method").eq("status", "confirmed"),
-      supabase.from("appointments").select("services(price), payment_method").eq("status", "completed"),
-    ]);
-
-    const confirmedRevenue = confirmedResult.data?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : ((a.services as any)?.price || 0)), 0) || 0;
-    const completedRevenue = completedResult.data?.reduce((sum, a) => sum + (a.payment_method === 'subscription' ? 0 : ((a.services as any)?.price || 0)), 0) || 0;
-
-    setStats({
-      today: todayResult.data?.length || 0,
-      pending: pendingResult.data?.length || 0,
-      confirmed: confirmedResult.data?.length || 0,
-      revenue: confirmedRevenue + completedRevenue,
-    });
-  };
+    const todayCount = appointments.filter(a => a.appointment_date === today && a.status !== "cancelled").length;
+    const pendingCount = appointments.filter(a => a.status === "pending").length;
+    const confirmedCount = appointments.filter(a => a.status === "confirmed").length;
+    const revenue = appointments
+      .filter(a => a.status === "completed" || a.status === "confirmed")
+      .reduce((sum, a) => sum + getServicesTotalForRevenue(a.services, a.payment_method), 0);
+    setStats({ today: todayCount, pending: pendingCount, confirmed: confirmedCount, revenue });
+  }, [appointments, loading]);
 
   const fetchRevenueAdjustments = async () => {
     const { data, error } = await supabase
@@ -2641,8 +2631,21 @@ const Admin = () => {
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-12">
-                <span className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <Card key={i} className="bg-card/40 border-primary/10">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4 animate-pulse">
+                        <div className="h-10 w-10 rounded-full bg-muted" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-1/3" />
+                          <div className="h-3 bg-muted rounded w-1/4" />
+                        </div>
+                        <div className="h-8 w-20 bg-muted rounded" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : filteredAppointments.length === 0 ? (
               <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
