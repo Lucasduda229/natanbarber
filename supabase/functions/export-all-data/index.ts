@@ -48,6 +48,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Export auth.users via admin API
+    let authUsers: unknown[] = [];
+    try {
+      let page = 1;
+      const perPage = 1000;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+        if (usersError) throw usersError;
+        authUsers = authUsers.concat(users);
+        hasMore = users.length === perPage;
+        page++;
+      }
+    } catch (e) {
+      console.error("Error fetching auth users:", e);
+    }
+
     // List of all tables to export
     const tables = [
       "profiles",
@@ -116,7 +136,9 @@ Deno.serve(async (req) => {
 
     const exportPayload = {
       exported_at: new Date().toISOString(),
-      version: "1.0",
+      version: "2.0",
+      auth_users: authUsers,
+      auth_users_count: authUsers.length,
       tables: exportData,
       row_counts: Object.fromEntries(
         Object.entries(exportData).map(([k, v]) => [k, v.length])
