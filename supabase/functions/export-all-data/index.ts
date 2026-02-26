@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import postgres from "https://deno.land/x/postgresjs@v3.4.5/mod.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const dbUrl = Deno.env.get("SUPABASE_DB_URL")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify the caller is an admin
@@ -48,24 +50,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Export auth.users via admin API
+    // Export auth.users directly from DB to preserve encrypted_password
     let authUsers: unknown[] = [];
+    const sql = postgres(dbUrl);
     try {
-      let page = 1;
-      const perPage = 1000;
-      let hasMore = true;
-      while (hasMore) {
-        const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers({
-          page,
-          perPage,
-        });
-        if (usersError) throw usersError;
-        authUsers = authUsers.concat(users);
-        hasMore = users.length === perPage;
-        page++;
-      }
+      const rows = await sql`
+        SELECT 
+          id, email, encrypted_password, email_confirmed_at,
+          raw_user_meta_data, raw_app_meta_data, phone,
+          created_at, updated_at, confirmation_token,
+          recovery_token, aud, role
+        FROM auth.users
+        ORDER BY created_at
+      `;
+      authUsers = rows.map((r: any) => ({
+        id: r.id,
+        email: r.email,
+        encrypted_password: r.encrypted_password,
+        email_confirmed_at: r.email_confirmed_at,
+        raw_user_meta_data: r.raw_user_meta_data,
+        raw_app_meta_data: r.raw_app_meta_data,
+        phone: r.phone,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        aud: r.aud || "authenticated",
+        role: r.role || "authenticated",
+      }));
     } catch (e) {
-      console.error("Error fetching auth users:", e);
+      console.error("Error fetching auth users via SQL:", e);
+    } finally {
+      await sql.end();
     }
 
     // List of all tables to export
@@ -104,7 +118,6 @@ Deno.serve(async (req) => {
     // Fetch all tables in parallel
     const results = await Promise.all(
       tables.map(async (table) => {
-        // Fetch all rows (handle pagination for large tables)
         let allRows: unknown[] = [];
         let from = 0;
         const pageSize = 1000;
@@ -136,7 +149,7 @@ Deno.serve(async (req) => {
 
     const exportPayload = {
       exported_at: new Date().toISOString(),
-      version: "2.0",
+      version: "3.0",
       auth_users: authUsers,
       auth_users_count: authUsers.length,
       tables: exportData,

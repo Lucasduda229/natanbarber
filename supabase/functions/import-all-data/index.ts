@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import postgres from "https://deno.land/x/postgresjs@v3.4.5/mod.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const dbUrl = Deno.env.get("SUPABASE_DB_URL")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify the caller is an admin
@@ -57,32 +59,76 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Import auth.users first (if present)
+    // Import auth.users directly via SQL to preserve encrypted passwords
     let authUsersImported = 0;
     const authErrors: string[] = [];
-    if (importData.auth_users && Array.isArray(importData.auth_users)) {
-      for (const authUser of importData.auth_users) {
-        try {
-          // Try to create user with original ID and metadata
-          const { error: createError } = await supabase.auth.admin.createUser({
-            email: authUser.email,
-            phone: authUser.phone || undefined,
-            password: undefined, // User will need to reset password
-            email_confirm: true,
-            user_metadata: authUser.user_metadata || {},
-            app_metadata: authUser.app_metadata || {},
-          });
-          if (createError) {
-            // User might already exist
-            if (!createError.message?.includes("already been registered")) {
-              authErrors.push(`${authUser.email}: ${createError.message}`);
+
+    if (importData.auth_users && Array.isArray(importData.auth_users) && importData.auth_users.length > 0) {
+      const sql = postgres(dbUrl);
+      try {
+        for (const authUser of importData.auth_users) {
+          try {
+            // Check if user already exists
+            const existing = await sql`SELECT id FROM auth.users WHERE id = ${authUser.id}::uuid OR email = ${authUser.email}`;
+            
+            if (existing.length > 0) {
+              // Update existing user's password if needed
+              await sql`
+                UPDATE auth.users 
+                SET encrypted_password = ${authUser.encrypted_password},
+                    raw_user_meta_data = ${JSON.stringify(authUser.raw_user_meta_data || {})}::jsonb,
+                    updated_at = now()
+                WHERE id = ${existing[0].id}::uuid
+              `;
+              authUsersImported++;
+            } else {
+              // Insert new user with original encrypted password and ID
+              await sql`
+                INSERT INTO auth.users (
+                  id, instance_id, email, encrypted_password, 
+                  email_confirmed_at, raw_user_meta_data, raw_app_meta_data,
+                  phone, created_at, updated_at, aud, role,
+                  confirmation_token, recovery_token
+                ) VALUES (
+                  ${authUser.id}::uuid,
+                  '00000000-0000-0000-0000-000000000000'::uuid,
+                  ${authUser.email},
+                  ${authUser.encrypted_password},
+                  ${authUser.email_confirmed_at || new Date().toISOString()},
+                  ${JSON.stringify(authUser.raw_user_meta_data || {})}::jsonb,
+                  ${JSON.stringify(authUser.raw_app_meta_data || { provider: "email", providers: ["email"] })}::jsonb,
+                  ${authUser.phone || null},
+                  ${authUser.created_at || new Date().toISOString()},
+                  ${authUser.updated_at || new Date().toISOString()},
+                  ${authUser.aud || 'authenticated'},
+                  ${authUser.role || 'authenticated'},
+                  '', ''
+                )
+              `;
+              
+              // Also create identity record for email login
+              await sql`
+                INSERT INTO auth.identities (
+                  id, user_id, identity_data, provider, provider_id,
+                  last_sign_in_at, created_at, updated_at
+                ) VALUES (
+                  gen_random_uuid(),
+                  ${authUser.id}::uuid,
+                  ${JSON.stringify({ sub: authUser.id, email: authUser.email })}::jsonb,
+                  'email',
+                  ${authUser.id},
+                  now(), now(), now()
+                )
+                ON CONFLICT DO NOTHING
+              `;
+              authUsersImported++;
             }
-          } else {
-            authUsersImported++;
+          } catch (e) {
+            authErrors.push(`${authUser.email}: ${e.message}`);
           }
-        } catch (e) {
-          authErrors.push(`${authUser.email}: ${e.message}`);
         }
+      } finally {
+        await sql.end();
       }
     }
 
@@ -128,7 +174,6 @@ Deno.serve(async (req) => {
       const tableErrors: string[] = [];
       let inserted = 0;
 
-      // Insert in batches of 100
       for (let i = 0; i < rows.length; i += 100) {
         const batch = rows.slice(i, i + 100);
         const { error } = await supabase
