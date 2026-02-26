@@ -959,6 +959,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_blocked_dates: { Args: never; Returns: undefined }
       get_reviewer_profiles: {
         Args: { reviewer_user_ids: string[] }
         Returns: {
