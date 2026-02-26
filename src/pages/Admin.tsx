@@ -473,26 +473,31 @@ const Admin = () => {
   const fetchData = async (showSyncing = false, skipAutoComplete = false) => {
     if (showSyncing) setSyncing(true);
     try {
-      // Skip auto-complete on manual refresh and realtime updates for speed
-      // Auto-complete already runs on a 5-minute interval
-      const tasks: Promise<any>[] = [
+      // CRITICAL PATH: Only fetch what's needed for initial render (Agenda tab)
+      // Fetch appointments + stats + subscriptions first (visible on screen)
+      const criticalTasks: Promise<any>[] = [
         fetchAppointments(),
-        fetchBlockedDates(),
         fetchStats(),
         fetchActiveSubscriptions(),
-        fetchRevenueAdjustments(),
-        fetchCashClosingDay(),
-        fetchPackagePayments(),
       ];
       if (!skipAutoComplete) {
         // Fire-and-forget: don't wait for edge function
         autoCompleteAppointments();
       }
-      await Promise.all(tasks);
+      await Promise.all(criticalTasks);
       setLastUpdate(new Date());
+      setLoading(false);
+      if (showSyncing) setSyncing(false);
+
+      // DEFERRED: Fetch non-critical data in background (other tabs)
+      Promise.all([
+        fetchBlockedDates(),
+        fetchRevenueAdjustments(),
+        fetchCashClosingDay(),
+        fetchPackagePayments(),
+      ]).catch(err => console.error("Error fetching deferred data:", err));
     } catch (error) {
       console.error("Error fetching data:", error);
-    } finally {
       setLoading(false);
       if (showSyncing) setSyncing(false);
     }
@@ -513,6 +518,9 @@ const Admin = () => {
   };
 
   const fetchAppointments = async () => {
+    // Only fetch last 60 days of appointments for performance
+    const cutoffDate = format(subDays(new Date(), 60), "yyyy-MM-dd");
+    
     // Fetch appointments with primary service
     const { data: appointmentsData, error: appointmentsError } = await supabase
       .from("appointments")
@@ -531,6 +539,7 @@ const Admin = () => {
           price
         )
       `)
+      .gte("appointment_date", cutoffDate)
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
 
@@ -633,9 +642,12 @@ const Admin = () => {
   };
 
   const fetchBlockedDates = async () => {
+    // Only fetch future and recent blocked dates
+    const cutoffDate = format(subDays(new Date(), 7), "yyyy-MM-dd");
     const { data, error } = await supabase
       .from("blocked_dates")
       .select("*")
+      .gte("blocked_date", cutoffDate)
       .order("blocked_date", { ascending: true });
 
     if (!error && data) {
@@ -668,7 +680,8 @@ const Admin = () => {
   const fetchRevenueAdjustments = async () => {
     const { data, error } = await supabase
       .from("revenue_adjustments")
-      .select("*");
+      .select("*")
+      .limit(200);
 
     if (!error && data) {
       setRevenueAdjustments(data as RevenueAdjustment[]);
@@ -692,10 +705,13 @@ const Admin = () => {
   };
 
   const fetchPackagePayments = async () => {
+    const cutoffDate = format(subDays(new Date(), 90), "yyyy-MM-dd");
     const { data, error } = await supabase
       .from("package_payments")
       .select("*")
-      .order("payment_date", { ascending: false });
+      .gte("payment_date", cutoffDate)
+      .order("payment_date", { ascending: false })
+      .limit(100);
 
     if (!error && data) {
       // Fetch profiles separately since there's no direct FK relation
