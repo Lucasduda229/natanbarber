@@ -913,6 +913,28 @@ const VIPPackagesManager = () => {
                             </Button>
                           </div>
                         )}
+
+                        {!isPending && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              if (!confirm(`Excluir registro de ${order.profile?.full_name || "Cliente"}?`)) return;
+                              try {
+                                const { error } = await supabase.from("package_payments").delete().eq("id", order.id);
+                                if (error) throw error;
+                                setOrders(prev => prev.filter(o => o.id !== order.id));
+                                toast.success("Registro excluído");
+                              } catch {
+                                toast.error("Erro ao excluir");
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Excluir
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
