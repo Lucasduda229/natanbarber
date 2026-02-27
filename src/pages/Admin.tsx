@@ -263,6 +263,7 @@ const Admin = () => {
   const [completedDateFilter, setCompletedDateFilter] = useState<string>("today");
   const [completedCustomDate, setCompletedCustomDate] = useState<Date | undefined>(undefined);
   const [completedCustomMonth, setCompletedCustomMonth] = useState<string>("");
+  const [completedShowCount, setCompletedShowCount] = useState(10);
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
 
@@ -2876,91 +2877,47 @@ const Admin = () => {
                   </div>
                 )}
 
-                {/* Divider between sections */}
-                {activeAppointments.length > 0 && allCompletedAppointments.length > 0 && (
-                  <div className="flex items-center gap-3 py-2">
-                    <div className="flex-1 h-px bg-muted-foreground/20" />
-                    <span className="text-xs text-muted-foreground">Finalizados</span>
-                    <div className="flex-1 h-px bg-muted-foreground/20" />
-                  </div>
-                )}
-
-                {/* Completed/Cancelled Appointments Section */}
-                {(filteredAppointments.filter(a => completedStatuses.includes(a.status)).length > 0 || allCompletedAppointments.length > 0) && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Finalizados ({completedAppointments.length})</span>
-                      </div>
+                {/* Finalizados Section - Compact */}
+                {allCompletedAppointments.length > 0 && (
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center gap-3 py-1">
+                      <div className="flex-1 h-px bg-muted-foreground/20" />
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle className="w-3 h-3" />
+                        Finalizados ({completedAppointments.length})
+                      </span>
+                      <div className="flex-1 h-px bg-muted-foreground/20" />
                     </div>
-                    
-                    {/* Filter bar */}
-                    <div className="flex flex-wrap gap-2">
-                      {/* Date period filter */}
-                      <div className="flex flex-wrap gap-1">
-                        {[
-                          { value: "today", label: "Hoje" },
-                          { value: "7days", label: "7 dias" },
-                          { value: "30days", label: "30 dias" },
-                          { value: "all", label: "Todos" },
-                        ].map(opt => (
-                          <Button
-                            key={opt.value}
-                            variant={completedDateFilter === opt.value ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 text-xs px-2"
-                            onClick={() => setCompletedDateFilter(opt.value)}
-                          >
-                            {opt.label}
-                          </Button>
-                        ))}
-                        
-                        {/* Month picker */}
-                        <input
-                          type="month"
-                          value={completedDateFilter === "month" ? completedCustomMonth : ""}
-                          onChange={(e) => {
-                            setCompletedCustomMonth(e.target.value);
-                            setCompletedDateFilter("month");
-                          }}
-                          className="h-7 text-xs px-2 rounded-md border border-input bg-card/30 text-foreground"
-                          style={{ colorScheme: "dark" }}
-                        />
-                        
-                        {/* Day picker */}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={completedDateFilter === "custom" ? "default" : "outline"}
-                              size="sm"
-                              className="h-7 text-xs px-2"
-                            >
-                              <CalendarIcon className="w-3 h-3 mr-1" />
-                              {completedDateFilter === "custom" && completedCustomDate
-                                ? format(completedCustomDate, "dd/MM")
-                                : "Dia"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={completedCustomDate}
-                              onSelect={(date) => {
-                                setCompletedCustomDate(date);
-                                setCompletedDateFilter("custom");
-                              }}
-                              initialFocus
-                              className="p-3 pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      
-                      {/* Status filter */}
+
+                    {/* Compact filter bar */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { value: "today", label: "Hoje" },
+                        { value: "7days", label: "7d" },
+                        { value: "30days", label: "30d" },
+                      ].map(opt => (
+                        <Button
+                          key={opt.value}
+                          variant={completedDateFilter === opt.value ? "default" : "ghost"}
+                          size="sm"
+                          className="h-6 text-[10px] px-2 rounded-full"
+                          onClick={() => setCompletedDateFilter(opt.value)}
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                      <input
+                        type="month"
+                        value={completedDateFilter === "month" ? completedCustomMonth : ""}
+                        onChange={(e) => {
+                          setCompletedCustomMonth(e.target.value);
+                          setCompletedDateFilter("month");
+                        }}
+                        className="h-6 text-[10px] px-2 rounded-full border border-input bg-card/30 text-foreground w-[100px]"
+                        style={{ colorScheme: "dark" }}
+                      />
                       <Select value={completedFilter} onValueChange={setCompletedFilter}>
-                        <SelectTrigger className="w-[130px] h-7 text-xs bg-card/30 border-muted-foreground/20">
-                          <Filter className="w-3 h-3 mr-1" />
+                        <SelectTrigger className="w-[90px] h-6 text-[10px] bg-card/30 border-muted-foreground/20 rounded-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2971,76 +2928,59 @@ const Admin = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    {completedAppointments.map((appointment) => (
-                      <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-muted-foreground/10 opacity-70">
-                        <CardContent className="p-3 sm:p-4">
-                          <div className="flex flex-col gap-3 sm:gap-4">
-                            <div className="flex items-start gap-3">
-                              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-muted/20 flex flex-col items-center justify-center flex-shrink-0">
-                                <span className="text-base sm:text-lg font-bold text-muted-foreground">
-                                  {format(parseISO(appointment.appointment_date), "dd")}
-                                </span>
-                                <span className="text-[10px] sm:text-xs text-muted-foreground uppercase">
-                                  {format(parseISO(appointment.appointment_date), "MMM", { locale: ptBR })}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-muted-foreground flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base flex-wrap">
-                                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                  <span className="truncate">{getClientDisplayInfo(appointment).name}</span>
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-xs sm:text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    {appointment.appointment_time.slice(0, 5)}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    <span className="truncate max-w-[150px] sm:max-w-none">{getServicesNames(appointment.services)}</span>
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Badge className={cn("text-[10px] sm:text-xs", statusColors[appointment.status as keyof typeof statusColors])}>
-                                  {statusLabels[appointment.status as keyof typeof statusLabels]}
-                                </Badge>
-                                {appointment.status === "completed" && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-orange-500/50 text-orange-500 hover:bg-orange-500/10 h-7 px-2 text-[10px] sm:text-xs"
-                                      >
-                                        <XCircle className="w-3 h-3 mr-1" />
-                                        Falta
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="bg-card border-orange-500/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-orange-500 text-base sm:text-lg">Marcar como Falta</AlertDialogTitle>
-                                        <AlertDialogDescription className="text-sm">
-                                          Deseja marcar o agendamento de {getClientDisplayInfo(appointment).name} como falta? Isso indica que o cliente não compareceu.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                        <AlertDialogCancel className="w-full sm:w-auto">Voltar</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => updateAppointmentStatus(appointment.id, "no_show")}
-                                          className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
-                                        >
-                                          Marcar Falta
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+
+                    {/* Compact list rows */}
+                    <div className="space-y-1">
+                      {completedAppointments.slice(0, completedShowCount).map((appointment) => (
+                        <div
+                          key={appointment.id}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/15 border border-muted-foreground/10 opacity-70 text-xs"
+                        >
+                          <span className="text-muted-foreground font-medium w-10 flex-shrink-0">
+                            {format(parseISO(appointment.appointment_date), "dd/MM")}
+                          </span>
+                          <span className="text-muted-foreground w-10 flex-shrink-0">
+                            {appointment.appointment_time.slice(0, 5)}
+                          </span>
+                          <span className="flex-1 truncate text-foreground/70">
+                            {getClientDisplayInfo(appointment).name}
+                          </span>
+                          <span className="truncate max-w-[80px] text-muted-foreground hidden sm:inline">
+                            {getServicesNames(appointment.services)}
+                          </span>
+                          <Badge className={cn("text-[9px] px-1.5 py-0 h-4", statusColors[appointment.status as keyof typeof statusColors])}>
+                            {statusLabels[appointment.status as keyof typeof statusLabels]}
+                          </Badge>
+                          {appointment.status === "completed" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 w-5 p-0 text-orange-500 hover:bg-orange-500/10"
+                              onClick={() => updateAppointmentStatus(appointment.id, "no_show")}
+                              title="Marcar falta"
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Show more / less */}
+                    {completedAppointments.length > 10 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full h-7 text-xs text-muted-foreground"
+                        onClick={() => setCompletedShowCount(prev => 
+                          prev >= completedAppointments.length ? 10 : prev + 20
+                        )}
+                      >
+                        {completedShowCount >= completedAppointments.length 
+                          ? "Mostrar menos" 
+                          : `Ver mais (${completedAppointments.length - completedShowCount} restantes)`}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
