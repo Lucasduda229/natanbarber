@@ -488,16 +488,12 @@ const Booking = () => {
     setPackages(packagesWithItems);
   };
 
-  // Subscriber duration override: barber-defined combination rules
+  // Subscriber duration override: all subscriber bookings use a single 30-min slot
   const getEffectiveDuration = (services: Service[], isSubscriber: boolean): number => {
     if (!isSubscriber || services.length === 0) {
       return services.reduce((sum, s) => sum + s.duration_minutes, 0);
     }
-    const names = services.map(s => s.name.toLowerCase());
-    const hasCorte = names.some(n => n.includes('corte'));
-    // Corte + Barba + Sobrancelha = 60 min
-    if (hasCorte) return 60;
-    // Barba + Sobrancelha (+ Pezinho) = 30 min
+    // Assinantes sempre ocupam apenas 1 slot de 30 minutos
     return 30;
   };
 
