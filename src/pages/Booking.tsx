@@ -572,8 +572,10 @@ const Booking = () => {
       if (currentRequiredSlots > 1) {
         for (let i = 1; i < currentRequiredSlots; i++) {
           const nextSlotTime = addMinutesToTime(slot.slot_time, i * 30);
-          // Check if next slot exists and is available
-          if (!allSlotTimes.includes(nextSlotTime) || occupiedTimes.has(nextSlotTime)) {
+          // Only check if the next time is occupied (blocked).
+          // Don't require it to exist in time_slots - the schedule may have gaps
+          // but the barber still needs that time free.
+          if (occupiedTimes.has(nextSlotTime)) {
             return false;
           }
           // Check if next slot is not in the past for today
