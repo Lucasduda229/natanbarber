@@ -1723,130 +1723,143 @@ const Booking = () => {
                   Formas de Pagamento
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Escolha como deseja pagar seu serviço
+                  {usingSubscription ? "Pagamento incluso no seu pacote" : "Escolha como deseja pagar seu serviço"}
                 </p>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4">
-                {/* PIX Option */}
-                <Collapsible open={selectedPaymentMethod === "pix"} onOpenChange={(open) => open && setSelectedPaymentMethod("pix")}>
-                  <CollapsibleTrigger asChild>
+                {usingSubscription ? (
+                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-primary bg-primary/10 ring-2 ring-primary/30">
+                    <div className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center flex-shrink-0">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Crown className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm sm:text-base font-semibold text-foreground">Pacote</h4>
+                      <p className="text-xs text-primary">✓ Incluso na sua assinatura</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* PIX Option */}
+                    <Collapsible open={selectedPaymentMethod === "pix"} onOpenChange={(open) => open && setSelectedPaymentMethod("pix")}>
+                      <CollapsibleTrigger asChild>
+                        <div 
+                          onClick={() => setSelectedPaymentMethod("pix")}
+                          className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
+                            selectedPaymentMethod === "pix" 
+                              ? "border-[#00D4AA] bg-[#00D4AA]/10 ring-2 ring-[#00D4AA]/30" 
+                              : "border-[#00D4AA]/30 bg-[#00D4AA]/5 hover:bg-[#00D4AA]/10"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                            selectedPaymentMethod === "pix" ? "border-[#00D4AA] bg-[#00D4AA]" : "border-muted-foreground"
+                          }`}>
+                            {selectedPaymentMethod === "pix" && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
+                            <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm sm:text-base font-semibold text-foreground">PIX</h4>
+                            <p className="text-xs text-[#00D4AA]">Clique para ver QR Code</p>
+                          </div>
+                          <ChevronDown className={`w-5 h-5 text-[#00D4AA] transition-transform ${selectedPaymentMethod === "pix" ? "rotate-180" : ""}`} />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="mt-3 p-3 sm:p-4 bg-[#00D4AA]/5 rounded-xl border border-[#00D4AA]/20">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="bg-white p-3 rounded-xl shadow-lg">
+                              <QRCodeSVG
+                                value={generatePixPayload({
+                                  pixKey: PIX_KEY,
+                                  merchantName: "NATAN BARBER",
+                                  merchantCity: "LAURO MULLER",
+                                  amount: selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0),
+                                })}
+                                size={180}
+                                level="M"
+                                includeMargin={true}
+                              />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Escaneie o QR Code para pagar via PIX</p>
+                              <p className="text-sm sm:text-lg font-bold text-[#00D4AA] mt-1">
+                                R$ {(selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0)).toFixed(2)}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 border-[#00D4AA]/30 text-[#00D4AA] hover:bg-[#00D4AA]/10"
+                              onClick={() => {
+                                const payload = generatePixPayload({
+                                  pixKey: PIX_KEY,
+                                  merchantName: "NATAN BARBER",
+                                  merchantCity: "LAURO MULLER",
+                                  amount: selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0),
+                                });
+                                navigator.clipboard.writeText(payload);
+                                toast.success("Código PIX copiado!");
+                              }}
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copiar código PIX
+                            </Button>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Dinheiro Option */}
                     <div 
-                      onClick={() => setSelectedPaymentMethod("pix")}
+                      onClick={() => setSelectedPaymentMethod("dinheiro")}
                       className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                        selectedPaymentMethod === "pix" 
-                          ? "border-[#00D4AA] bg-[#00D4AA]/10 ring-2 ring-[#00D4AA]/30" 
-                          : "border-[#00D4AA]/30 bg-[#00D4AA]/5 hover:bg-[#00D4AA]/10"
+                        selectedPaymentMethod === "dinheiro" 
+                          ? "border-green-500 bg-green-500/10 ring-2 ring-green-500/30" 
+                          : "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
                       }`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedPaymentMethod === "pix" ? "border-[#00D4AA] bg-[#00D4AA]" : "border-muted-foreground"
+                        selectedPaymentMethod === "dinheiro" ? "border-green-500 bg-green-500" : "border-muted-foreground"
                       }`}>
-                        {selectedPaymentMethod === "pix" && <Check className="w-3 h-3 text-white" />}
+                        {selectedPaymentMethod === "dinheiro" && <Check className="w-3 h-3 text-white" />}
                       </div>
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                        <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
+                        <img src={cashIcon} alt="Dinheiro" className="w-full h-full object-contain" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm sm:text-base font-semibold text-foreground">PIX</h4>
-                        <p className="text-xs text-[#00D4AA]">Clique para ver QR Code</p>
-                      </div>
-                      <ChevronDown className={`w-5 h-5 text-[#00D4AA] transition-transform ${selectedPaymentMethod === "pix" ? "rotate-180" : ""}`} />
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3">
-                    <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5">
-                      <div className="p-2 sm:p-3 bg-white rounded-xl">
-                        <QRCodeSVG
-                          value={generatePixPayload({
-                            pixKey: PIX_KEY,
-                            merchantName: "NATAN BARBER",
-                            merchantCity: "LAURO MULLER",
-                            amount: totalPrice,
-                            description: selectedServices.map(s => s.name).join(", ").substring(0, 25),
-                          })}
-                          size={140}
-                          level="M"
-                          includeMargin={false}
-                          bgColor="#ffffff"
-                          fgColor="#000000"
-                        />
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                        Escaneie o QR Code com seu app de banco
-                      </p>
-                      <div className="bg-gradient-to-r from-[#00D4AA]/20 via-[#00D4AA]/30 to-[#00D4AA]/20 border-2 border-[#00D4AA] rounded-xl px-4 py-3 text-center w-full">
-                        <p className="text-[#00D4AA] font-bold text-base">
-                          💰 Pague agora para garantir seu horário!
-                        </p>
-                        <p className="text-[#00D4AA]/80 text-sm mt-1 font-semibold">
-                          Total: R$ {totalPrice.toFixed(2).replace('.', ',')}
-                        </p>
-                      </div>
-                      
-                      {/* PIX Copia e Cola */}
-                      <div className="flex items-center gap-3 sm:gap-4 p-3 rounded-xl border border-[#00D4AA]/30 bg-[#00D4AA]/5 w-full">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-medium text-[#00D4AA]">PIX Copia e Cola</h4>
-                          <p className="text-sm text-muted-foreground">Clique para copiar o código com valor</p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => copyPixCode(totalPrice, selectedServices.map(s => s.name).join(", "))}
-                          className="border-[#00D4AA]/30 hover:bg-[#00D4AA]/10 flex-shrink-0 text-[#00D4AA]"
-                        >
-                          <Copy className="w-3.5 h-3.5 mr-1" />
-                          Copiar
-                        </Button>
+                        <h4 className="text-sm sm:text-base font-semibold text-foreground">Dinheiro</h4>
+                        <p className="text-xs text-green-500">💵 Pague diretamente na barbearia</p>
                       </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
 
-                {/* Dinheiro Option */}
-                <div 
-                  onClick={() => setSelectedPaymentMethod("dinheiro")}
-                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                    selectedPaymentMethod === "dinheiro" 
-                      ? "border-green-500 bg-green-500/10 ring-2 ring-green-500/30" 
-                      : "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    selectedPaymentMethod === "dinheiro" ? "border-green-500 bg-green-500" : "border-muted-foreground"
-                  }`}>
-                    {selectedPaymentMethod === "dinheiro" && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                    <img src={cashIcon} alt="Dinheiro" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm sm:text-base font-semibold text-foreground">Dinheiro</h4>
-                    <p className="text-xs text-green-500">💵 Pague após o corte na barbearia</p>
-                  </div>
-                </div>
-
-                {/* Cartão Option */}
-                <div 
-                  onClick={() => setSelectedPaymentMethod("cartao")}
-                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                    selectedPaymentMethod === "cartao" 
-                      ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30" 
-                      : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    selectedPaymentMethod === "cartao" ? "border-blue-500 bg-blue-500" : "border-muted-foreground"
-                  }`}>
-                    {selectedPaymentMethod === "cartao" && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                    <img src={cardIcon} alt="Cartão" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm sm:text-base font-semibold text-foreground">Cartão</h4>
-                    <p className="text-xs text-blue-500">💳 Pague após o corte na barbearia</p>
-                  </div>
-                </div>
+                    {/* Cartão Option */}
+                    <div 
+                      onClick={() => setSelectedPaymentMethod("cartao")}
+                      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
+                        selectedPaymentMethod === "cartao" 
+                          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30" 
+                          : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selectedPaymentMethod === "cartao" ? "border-blue-500 bg-blue-500" : "border-muted-foreground"
+                      }`}>
+                        {selectedPaymentMethod === "cartao" && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
+                        <img src={cardIcon} alt="Cartão" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm sm:text-base font-semibold text-foreground">Cartão</h4>
+                        <p className="text-xs text-blue-500">💳 Pague após o corte na barbearia</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
