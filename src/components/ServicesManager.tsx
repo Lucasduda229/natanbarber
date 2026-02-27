@@ -456,7 +456,7 @@ export const ServicesManager = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
-                       <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                       <AlertDialogContent>
                          <AlertDialogHeader>
                            <AlertDialogTitle>
                              Excluir Serviço

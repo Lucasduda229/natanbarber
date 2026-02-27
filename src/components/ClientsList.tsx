@@ -379,9 +379,9 @@ export function ClientsList() {
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-card border-destructive/20">
+                            <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle className="text-foreground">Excluir Cliente</AlertDialogTitle>
+                                <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Tem certeza que deseja excluir <strong>{client.full_name || "este cliente"}</strong>?
                                   <br /><br />
@@ -395,13 +395,12 @@ export function ClientsList() {
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
                                 <AlertDialogAction 
                                   onClick={() => deleteClient(client.user_id, client.full_name || "Cliente")}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   Excluir
                                 </AlertDialogAction>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
