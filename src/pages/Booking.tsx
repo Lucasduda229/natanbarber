@@ -534,21 +534,60 @@ const Booking = () => {
       return;
     }
 
-    const { data: blockedDates } = await supabase
+    // Fetch only MANUAL blocks (not auto-generated from appointments)
+    const { data: manualBlocks } = await supabase
       .from("blocked_dates")
       .select("blocked_time")
-      .eq("blocked_date", dateStr);
+      .eq("blocked_date", dateStr)
+      .neq("reason", "Horário reservado");
 
-    const blockedTimes = blockedDates?.map((b) => b.blocked_time) || [];
+    const manualBlockedTimes = manualBlocks?.map((b) => b.blocked_time) || [];
 
+    // Fetch all active appointments WITH their services to calculate real duration
     const { data: appointments } = await supabase
       .from("appointments")
-      .select("appointment_time")
+      .select(`
+        appointment_time,
+        payment_method,
+        service_id,
+        services!appointments_service_id_fkey(name, duration_minutes),
+        appointment_services(service_id, services!appointment_services_service_id_fkey(name, duration_minutes))
+      `)
       .eq("appointment_date", dateStr)
       .neq("status", "cancelled");
 
     const bookedTimesArray = appointments?.map((a) => a.appointment_time) || [];
     setBookedTimes(bookedTimesArray);
+
+    // Calculate all occupied time slots from existing appointments
+    const occupiedTimes = new Set<string>(manualBlockedTimes);
+    
+    appointments?.forEach((appt: any) => {
+      const isSubscription = appt.payment_method === 'subscription';
+      let duration: number;
+      
+      if (isSubscription) {
+        // Subscription rules: corte = 60min, otherwise 30min
+        const allServiceNames: string[] = [];
+        if (appt.services?.name) allServiceNames.push(appt.services.name.toLowerCase());
+        appt.appointment_services?.forEach((as: any) => {
+          if (as.services?.name) allServiceNames.push(as.services.name.toLowerCase());
+        });
+        const hasCorte = allServiceNames.some((n: string) => n.includes('corte'));
+        duration = hasCorte ? 60 : 30;
+      } else {
+        // Normal: sum all service durations
+        duration = appt.services?.duration_minutes || 30;
+        appt.appointment_services?.forEach((as: any) => {
+          duration += as.services?.duration_minutes || 0;
+        });
+      }
+      
+      const slotsNeeded = Math.ceil(duration / 30);
+      for (let i = 0; i < slotsNeeded; i++) {
+        occupiedTimes.add(addMinutesToTime(appt.appointment_time, i * 30));
+      }
+    });
 
     // Filtrar horários que já passaram (para o dia atual)
     const now = new Date();
@@ -557,13 +596,13 @@ const Booking = () => {
 
     // Get all slot times for checking consecutive availability
     const allSlotTimes = slots?.map(s => s.slot_time) || [];
-    const unavailableTimes = new Set([...blockedTimes, ...bookedTimesArray]);
 
     console.log(`Multi-slot blocking: duration=${currentTotalDuration}min, slots=${currentRequiredSlots}`);
+    console.log(`Occupied times:`, Array.from(occupiedTimes));
 
     const availableSlots = slots?.filter((slot) => {
-      // Excluir horários bloqueados ou já reservados
-      if (unavailableTimes.has(slot.slot_time)) {
+      // Excluir horários ocupados
+      if (occupiedTimes.has(slot.slot_time)) {
         return false;
       }
       // Se for hoje, excluir horários que já passaram
@@ -576,7 +615,7 @@ const Booking = () => {
         for (let i = 1; i < currentRequiredSlots; i++) {
           const nextSlotTime = addMinutesToTime(slot.slot_time, i * 30);
           // Check if next slot exists and is available
-          if (!allSlotTimes.includes(nextSlotTime) || unavailableTimes.has(nextSlotTime)) {
+          if (!allSlotTimes.includes(nextSlotTime) || occupiedTimes.has(nextSlotTime)) {
             return false;
           }
           // Check if next slot is not in the past for today
