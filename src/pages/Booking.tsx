@@ -488,8 +488,21 @@ const Booking = () => {
     setPackages(packagesWithItems);
   };
 
+  // Subscriber duration override: barber-defined combination rules
+  const getEffectiveDuration = (services: Service[], isSubscriber: boolean): number => {
+    if (!isSubscriber || services.length === 0) {
+      return services.reduce((sum, s) => sum + s.duration_minutes, 0);
+    }
+    const names = services.map(s => s.name.toLowerCase());
+    const hasCorte = names.some(n => n.includes('corte'));
+    // Corte + Barba + Sobrancelha = 60 min
+    if (hasCorte) return 60;
+    // Barba + Sobrancelha (+ Pezinho) = 30 min
+    return 30;
+  };
+
   // Calculate total duration and required slots
-  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+  const totalDuration = getEffectiveDuration(selectedServices, usingSubscription);
   const requiredSlots = Math.ceil(totalDuration / 30);
 
   // Helper function to add minutes to a time string (HH:mm:ss)
@@ -506,7 +519,7 @@ const Booking = () => {
     const dateStr = format(date, "yyyy-MM-dd");
 
     // Calculate required slots inside function to ensure fresh value
-    const currentTotalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+    const currentTotalDuration = getEffectiveDuration(selectedServices, usingSubscription);
     const currentRequiredSlots = Math.ceil(currentTotalDuration / 30) || 1;
 
     const { data: slots, error: slotsError } = await supabase
