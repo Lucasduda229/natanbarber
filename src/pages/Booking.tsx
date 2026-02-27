@@ -488,13 +488,14 @@ const Booking = () => {
     setPackages(packagesWithItems);
   };
 
-  // Subscriber duration override: all subscriber bookings use a single 30-min slot
+  // Subscriber duration override:
+  // 1-2 serviços = 30 min (1 slot)
+  // 3+ serviços = 60 min (2 slots consecutivos)
   const getEffectiveDuration = (services: Service[], isSubscriber: boolean): number => {
     if (!isSubscriber || services.length === 0) {
       return services.reduce((sum, s) => sum + s.duration_minutes, 0);
     }
-    // Assinantes sempre ocupam apenas 1 slot de 30 minutos
-    return 30;
+    return services.length >= 3 ? 60 : 30;
   };
 
   // Calculate total duration and required slots
