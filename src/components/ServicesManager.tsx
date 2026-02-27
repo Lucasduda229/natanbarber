@@ -118,7 +118,7 @@ export const ServicesManager = () => {
       return;
     }
 
-    if (!formData.price || parseFloat(formData.price) < 0) {
+    if (formData.price === "" || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0) {
       toast.error("Preço inválido");
       return;
     }
