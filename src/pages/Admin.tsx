@@ -3011,8 +3011,7 @@ const Admin = () => {
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="space-y-4 sm:space-y-6">
-            {/* Operating Hours Editor */}
-            <OperatingHoursEditor />
+            {/* Block Date/Time */}
             <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
@@ -3136,6 +3135,9 @@ const Admin = () => {
                 })()}
               </CardContent>
             </Card>
+
+            {/* Operating Hours Editor */}
+            <OperatingHoursEditor />
           </TabsContent>
 
           {/* Gallery Tab */}
