@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,16 +75,32 @@ interface Profile {
   phone: string | null;
 }
 
+interface PaymentOrder {
+  id: string;
+  user_id: string;
+  package_id: string | null;
+  package_name: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string | null;
+  payment_status: string;
+  notes: string | null;
+  created_at: string;
+  profile?: Profile | null;
+}
+
 const VIPPackagesManager = () => {
-  const [activeTab, setActiveTab] = useState("subscribers");
+  const [activeTab, setActiveTab] = useState("orders");
   const [packages, setPackages] = useState<Package[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriberWithUsage[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [packageItems, setPackageItems] = useState<PackageItem[]>([]);
   const [packageBenefits, setPackageBenefits] = useState<PackageBenefit[]>([]);
+  const [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [packageSearchTerm, setPackageSearchTerm] = useState("");
+  const [orderSearchTerm, setOrderSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPackageEditor, setShowPackageEditor] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
@@ -103,7 +119,7 @@ const VIPPackagesManager = () => {
     setLoading(true);
     try {
       // Fetch all in parallel
-      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult, appointmentServicesResult] = await Promise.all([
+      const [subsResult, packagesResult, profilesResult, itemsResult, benefitsResult, appointmentsResult, appointmentServicesResult, ordersResult] = await Promise.all([
         supabase.from("subscription_progress").select("*").order("is_active", { ascending: false }),
         supabase.from("packages").select("*").eq("active", true).order("name"),
         supabase.from("profiles").select("user_id, full_name, phone"),
@@ -113,7 +129,8 @@ const VIPPackagesManager = () => {
           .from("appointments")
           .select("id, user_id, service_id, appointment_date, status, created_at")
           .in("status", ["completed", "confirmed"]),
-        supabase.from("appointment_services").select("appointment_id, service_id")
+        supabase.from("appointment_services").select("appointment_id, service_id"),
+        supabase.from("package_payments").select("*").order("created_at", { ascending: false })
       ]);
 
       if (subsResult.error) throw subsResult.error;
@@ -127,6 +144,15 @@ const VIPPackagesManager = () => {
       setPackages(packagesResult.data || []);
       setProfiles(profilesResult.data || []);
       setPackageItems(itemsResult.data || []);
+      
+      // Process orders with profile data
+      const allProfiles = profilesResult.data || [];
+      const ordersWithProfiles = (ordersResult.data || []).map(order => ({
+        ...order,
+        payment_status: (order as any).payment_status || 'confirmed',
+        profile: allProfiles.find(p => p.user_id === order.user_id) || null
+      }));
+      setOrders(ordersWithProfiles);
       
       // Process benefits with service names
       const processedBenefits = (benefitsResult.data || []).map(b => ({
@@ -461,6 +487,62 @@ const VIPPackagesManager = () => {
     }
   };
 
+  const confirmPaymentAndActivate = async (order: PaymentOrder, paymentMethod: string) => {
+    try {
+      // 1. Update payment status
+      await supabase
+        .from("package_payments")
+        .update({ payment_status: "confirmed", payment_method: paymentMethod })
+        .eq("id", order.id);
+
+      // 2. Find and activate the subscriber's subscription
+      const { data: sub } = await supabase
+        .from("subscription_progress")
+        .select("*")
+        .eq("user_id", order.user_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (sub) {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const nowTimestamp = today.toISOString();
+        const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+
+        await supabase
+          .from("subscription_progress")
+          .update({
+            is_active: true,
+            subscription_start_date: todayStr,
+            usage_reset_date: nowTimestamp,
+            cuts_used_this_month: 0,
+            credits_expired_this_month: 0,
+            current_month_start: todayStr,
+            weekly_credits_available: weeklyCredits,
+            current_week_start: todayStr,
+            last_payment_date: todayStr,
+            consecutive_months: sub.consecutive_months + 1,
+            updated_at: nowTimestamp,
+          })
+          .eq("id", sub.id);
+      }
+
+      // 3. Notify client
+      await supabase.from("notifications").insert({
+        user_id: order.user_id,
+        title: "Assinatura Ativada! 🎉",
+        message: `Seu ${order.package_name} foi ativado com sucesso. Você já pode agendar usando seus benefícios!`,
+        type: "subscription_activated",
+      });
+
+      toast.success(`Pagamento confirmado e assinatura ativada!`);
+      fetchData();
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      toast.error("Erro ao confirmar pagamento");
+    }
+  };
+
   const openUsageModal = (subscriber: SubscriberWithUsage) => {
     setSelectedSubscriber(subscriber);
     setSelectedBenefits(new Set());
@@ -588,14 +670,146 @@ const VIPPackagesManager = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/30">
-          <TabsTrigger value="packages" className="data-[state=active]:bg-background">
-            Pacotes
+        <TabsList className="grid w-full grid-cols-3 bg-muted/30">
+          <TabsTrigger value="orders" className="data-[state=active]:bg-background gap-1">
+            <CreditCard className="w-3.5 h-3.5" />
+            Pedidos
+            {orders.filter(o => o.payment_status === 'pending').length > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                {orders.filter(o => o.payment_status === 'pending').length}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="subscribers" className="data-[state=active]:bg-background">
             Assinantes
           </TabsTrigger>
+          <TabsTrigger value="packages" className="data-[state=active]:bg-background">
+            Pacotes
+          </TabsTrigger>
         </TabsList>
+
+        {/* Orders Tab */}
+        <TabsContent value="orders" className="space-y-4 mt-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar pedido por nome..."
+              value={orderSearchTerm}
+              onChange={(e) => setOrderSearchTerm(e.target.value)}
+              className="pl-10 bg-muted/30 border-muted"
+            />
+          </div>
+
+          {(() => {
+            const filteredOrders = orders.filter(o =>
+              orderSearchTerm === "" ||
+              (o.profile?.full_name || "").toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
+              o.package_name.toLowerCase().includes(orderSearchTerm.toLowerCase())
+            );
+
+            // Show pending first
+            const sortedOrders = [...filteredOrders].sort((a, b) => {
+              if (a.payment_status === 'pending' && b.payment_status !== 'pending') return -1;
+              if (a.payment_status !== 'pending' && b.payment_status === 'pending') return 1;
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            });
+
+            if (sortedOrders.length === 0) {
+              return (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum pedido encontrado
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {sortedOrders.map(order => {
+                  const isPending = order.payment_status === 'pending';
+                  const isRenewal = order.notes?.includes('Renovação');
+
+                  return (
+                    <div 
+                      key={order.id} 
+                      className={`bg-card border rounded-lg p-4 ${
+                        isPending ? 'border-amber-500/50 bg-amber-500/5' : 'border-border'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-foreground">
+                              {order.profile?.full_name || "Cliente"}
+                            </span>
+                            <Badge variant={isPending ? "outline" : "default"} className={
+                              isPending 
+                                ? "border-amber-500 text-amber-500" 
+                                : "bg-green-600 hover:bg-green-600 text-white"
+                            }>
+                              {isPending ? (
+                                <><Clock className="w-3 h-3 mr-1" /> Aguardando</>
+                              ) : (
+                                <><CheckCircle className="w-3 h-3 mr-1" /> Confirmado</>
+                              )}
+                            </Badge>
+                            {isRenewal && (
+                              <Badge variant="secondary" className="text-xs">
+                                <RefreshCw className="w-3 h-3 mr-1" /> Renovação
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {order.profile?.phone || "Sem telefone"}
+                          </p>
+                          <p className="text-sm text-primary font-medium mt-1">
+                            {order.package_name} • <span className="text-foreground font-bold">R$ {order.amount.toFixed(2)}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                        
+                        {isPending && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-xs text-muted-foreground text-center font-medium">Confirmar pagamento:</p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="gap-1 text-xs bg-green-600 hover:bg-green-700"
+                                onClick={() => confirmPaymentAndActivate(order, "pix")}
+                              >
+                                <DollarSign className="w-3 h-3" />
+                                PIX
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                onClick={() => confirmPaymentAndActivate(order, "dinheiro")}
+                              >
+                                <DollarSign className="w-3 h-3" />
+                                Dinheiro
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                onClick={() => confirmPaymentAndActivate(order, "cartao")}
+                              >
+                                <CreditCard className="w-3 h-3" />
+                                Cartão
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </TabsContent>
 
         {/* Packages Tab */}
         <TabsContent value="packages" className="space-y-4 mt-4">

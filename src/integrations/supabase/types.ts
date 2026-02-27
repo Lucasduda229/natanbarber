@@ -481,6 +481,7 @@ export type Database = {
           package_name: string
           payment_date: string
           payment_method: string | null
+          payment_status: string
           user_id: string
         }
         Insert: {
@@ -492,6 +493,7 @@ export type Database = {
           package_name: string
           payment_date?: string
           payment_method?: string | null
+          payment_status?: string
           user_id: string
         }
         Update: {
@@ -503,6 +505,7 @@ export type Database = {
           package_name?: string
           payment_date?: string
           payment_method?: string | null
+          payment_status?: string
           user_id?: string
         }
         Relationships: [

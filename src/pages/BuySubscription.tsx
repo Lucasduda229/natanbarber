@@ -193,22 +193,19 @@ const BuySubscription = () => {
       .maybeSingle();
 
     if (existingSub) {
-      // Renew existing subscription: reset credits and usage
+      // Renew existing subscription: keep inactive until admin confirms payment
       const { error } = await supabase
         .from("subscription_progress")
         .update({
           package_id: selectedPackage.id,
           package_name: selectedPackage.name,
           monthly_cuts_limit: monthlyCutsLimit,
-          weekly_credits_available: weeklyCredits,
+          weekly_credits_available: 0,
           current_week_start: today,
           cuts_used_this_month: 0,
           credits_expired_this_month: 0,
-          subscription_start_date: today,
           usage_reset_date: new Date().toISOString(),
-          consecutive_months: (existingSub.consecutive_months || 0) + 1,
-          last_payment_date: today,
-          is_active: true, // Ativa automaticamente
+          is_active: false, // Aguarda ativação do admin após pagamento
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingSub.id);
@@ -219,7 +216,7 @@ const BuySubscription = () => {
         return;
       }
     } else {
-      // Create new subscription
+      // Create new subscription - inactive until admin confirms payment
       const { error } = await supabase
         .from("subscription_progress")
         .insert({
@@ -227,10 +224,10 @@ const BuySubscription = () => {
           package_id: selectedPackage.id,
           package_name: selectedPackage.name,
           monthly_cuts_limit: monthlyCutsLimit,
-          weekly_credits_available: weeklyCredits,
+          weekly_credits_available: 0,
           current_week_start: today,
           cuts_used_this_month: 0,
-          is_active: true,
+          is_active: false, // Aguarda ativação do admin após pagamento
           consecutive_months: 0,
         });
 
@@ -248,7 +245,8 @@ const BuySubscription = () => {
       package_name: selectedPackage.name,
       amount: selectedPackage.price,
       payment_method: "pix",
-      notes: existingSub ? "Renovação pelo cliente" : "Nova assinatura pelo cliente",
+      payment_status: "pending",
+      notes: existingSub ? "Renovação pelo cliente - aguardando pagamento" : "Nova assinatura - aguardando pagamento",
     });
 
     // Notify admins about new subscription purchase request
