@@ -87,6 +87,12 @@ interface PaymentOrder {
   notes: string | null;
   created_at: string;
   profile?: Profile | null;
+  subscriber?: {
+    is_active: boolean;
+    consecutive_months: number;
+    subscription_start_date: string;
+    package_name: string | null;
+  } | null;
 }
 
 const VIPPackagesManager = () => {
@@ -146,13 +152,23 @@ const VIPPackagesManager = () => {
       setProfiles(profilesResult.data || []);
       setPackageItems(itemsResult.data || []);
       
-      // Process orders with profile data
+      // Process orders with profile + subscriber data
       const allProfiles = profilesResult.data || [];
-      const ordersWithProfiles = (ordersResult.data || []).map(order => ({
-        ...order,
-        payment_status: (order as any).payment_status || 'confirmed',
-        profile: allProfiles.find(p => p.user_id === order.user_id) || null
-      }));
+      const allSubs = subsResult.data || [];
+      const ordersWithProfiles = (ordersResult.data || []).map(order => {
+        const sub = allSubs.find(s => s.user_id === order.user_id);
+        return {
+          ...order,
+          payment_status: (order as any).payment_status || 'confirmed',
+          profile: allProfiles.find(p => p.user_id === order.user_id) || null,
+          subscriber: sub ? {
+            is_active: sub.is_active,
+            consecutive_months: sub.consecutive_months,
+            subscription_start_date: sub.subscription_start_date,
+            package_name: sub.package_name,
+          } : null,
+        };
+      });
       setOrders(ordersWithProfiles);
       
       // Process benefits with service names
@@ -519,7 +535,10 @@ const VIPPackagesManager = () => {
         .update({ payment_status: "confirmed", payment_method: paymentMethod })
         .eq("id", order.id);
 
-      // 2. Find and activate the subscriber's subscription
+      // 2. Determine if this is a renewal or first purchase
+      const isRenewal = order.notes?.includes('Renovação');
+
+      // 3. Find and activate the subscriber's subscription
       const { data: sub } = await supabase
         .from("subscription_progress")
         .select("*")
@@ -533,6 +552,11 @@ const VIPPackagesManager = () => {
         const nowTimestamp = today.toISOString();
         const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
 
+        // For renewals: increment consecutive_months. For first purchase: set to 1 if it was 0
+        const newConsecutiveMonths = isRenewal 
+          ? sub.consecutive_months + 1 
+          : (sub.consecutive_months === 0 ? 1 : sub.consecutive_months);
+
         await supabase
           .from("subscription_progress")
           .update({
@@ -545,17 +569,18 @@ const VIPPackagesManager = () => {
             weekly_credits_available: weeklyCredits,
             current_week_start: todayStr,
             last_payment_date: todayStr,
-            consecutive_months: sub.consecutive_months + 1,
+            consecutive_months: newConsecutiveMonths,
             updated_at: nowTimestamp,
           })
           .eq("id", sub.id);
       }
 
-      // 3. Notify client
+      // 4. Notify client
+      const monthInfo = sub ? ` (Mês ${isRenewal ? (sub.consecutive_months + 1) : 1})` : '';
       await supabase.from("notifications").insert({
         user_id: order.user_id,
-        title: "Assinatura Ativada! 🎉",
-        message: `Seu ${order.package_name} foi ativado com sucesso. Você já pode agendar usando seus benefícios!`,
+        title: isRenewal ? "Assinatura Renovada! 🔄" : "Assinatura Ativada! 🎉",
+        message: `Seu ${order.package_name} foi ${isRenewal ? 'renovado' : 'ativado'} com sucesso${monthInfo}. Você já pode agendar usando seus benefícios!`,
         type: "subscription_activated",
       });
 
@@ -828,10 +853,11 @@ const VIPPackagesManager = () => {
                         isPending ? 'border-amber-500/50 bg-amber-500/5' : 'border-border'
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="font-semibold text-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="flex-1 space-y-1.5">
+                          {/* Name + Badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-foreground text-base">
                               {order.profile?.full_name || "Cliente"}
                             </span>
                             <Badge variant={isPending ? "outline" : "default"} className={
@@ -854,20 +880,53 @@ const VIPPackagesManager = () => {
                                 <ShoppingCart className="w-3 h-3 mr-1" /> Compra
                               </Badge>
                             )}
+                            {/* Subscriber active status */}
+                            {order.subscriber && (
+                              <Badge variant="outline" className={`text-xs ${
+                                order.subscriber.is_active 
+                                  ? "border-green-500/50 text-green-500" 
+                                  : "border-muted text-muted-foreground"
+                              }`}>
+                                {order.subscriber.is_active ? "Assinatura Ativa" : "Assinatura Inativa"}
+                              </Badge>
+                            )}
                           </div>
+                          
+                          {/* Phone */}
                           <p className="text-sm text-muted-foreground">
-                            {order.profile?.phone || "Sem telefone"}
+                            📱 {order.profile?.phone || "Sem telefone"}
                           </p>
-                          <p className="text-sm text-primary font-medium mt-1">
-                            {order.package_name} • <span className="text-foreground font-bold">R$ {order.amount.toFixed(2)}</span>
+                          
+                          {/* Package + Price */}
+                          <p className="text-sm text-primary font-medium">
+                            📦 {order.package_name} • <span className="text-foreground font-bold">R$ {order.amount.toFixed(2)}</span>
                           </p>
+
+                          {/* Consecutive months */}
+                          {order.subscriber && (
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <div className="flex items-center gap-1 bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full text-xs font-bold border border-amber-500/30">
+                                <Crown className="w-3 h-3" />
+                                {order.subscriber.consecutive_months} {order.subscriber.consecutive_months === 1 ? "mês" : "meses"} consecutivo{order.subscriber.consecutive_months !== 1 ? "s" : ""}
+                              </div>
+                              {isRenewal && order.notes && (
+                                <span className="text-xs text-muted-foreground italic">
+                                  {order.notes}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Payment method */}
                           {order.payment_method && order.payment_status === 'confirmed' && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="text-xs text-muted-foreground">
                               💳 Pago via {order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'cartao' ? 'Cartão' : order.payment_method}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+
+                          {/* Date */}
+                          <p className="text-xs text-muted-foreground">
+                            🕐 {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                         
