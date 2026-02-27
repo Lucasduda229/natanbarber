@@ -488,6 +488,29 @@ const VIPPackagesManager = () => {
     }
   };
 
+  const deletePendingOrder = async (order: PaymentOrder) => {
+    if (!confirm(`Excluir pedido pendente de ${order.profile?.full_name || "Cliente"}?`)) return;
+    try {
+      const { error } = await supabase
+        .from("package_payments")
+        .delete()
+        .eq("id", order.id);
+      if (error) throw error;
+
+      // Also deactivate subscription if exists
+      await supabase
+        .from("subscription_progress")
+        .update({ is_active: false })
+        .eq("user_id", order.user_id);
+
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      toast.success("Pedido excluído");
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Erro ao excluir pedido");
+    }
+  };
+
   const confirmPaymentAndActivate = async (order: PaymentOrder, paymentMethod: string) => {
     try {
       // 1. Update payment status
@@ -879,6 +902,15 @@ const VIPPackagesManager = () => {
                                 Cartão
                               </Button>
                             </div>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="gap-1 text-xs w-full"
+                              onClick={() => deletePendingOrder(order)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Excluir Pedido
+                            </Button>
                           </div>
                         )}
                       </div>
