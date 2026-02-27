@@ -103,7 +103,8 @@ EXEMPLOS:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        temperature: 0.3,
+        temperature: 0.1,
+        max_tokens: 1024,
       }),
     });
 
@@ -145,8 +146,12 @@ EXEMPLOS:
     // Parse the JSON response from AI
     let parsedData;
     try {
-      // Extract JSON from the response (in case there's extra text)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Strip markdown code blocks if present (```json ... ```)
+      let cleanContent = content.trim();
+      cleanContent = cleanContent.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+      
+      // Extract JSON from the response
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsedData = JSON.parse(jsonMatch[0]);
       } else {
