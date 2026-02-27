@@ -52,42 +52,16 @@ serve(async (req) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    const systemPrompt = `Você é um assistente de barbearia que interpreta mensagens para criar agendamentos.
+    const systemPrompt = `Você interpreta mensagens de agendamento de barbearia e retorna JSON puro (sem markdown).
 
-SERVIÇOS DISPONÍVEIS:
+SERVIÇOS:
 ${servicesList}
 
-DATA DE HOJE: ${today}
+HOJE: ${today}
 
-INSTRUÇÕES:
-1. Extraia da mensagem: nome do cliente, telefone (se houver), TODOS os serviços mencionados, data e horário
-2. A data deve estar no formato YYYY-MM-DD
-3. O horário deve estar no formato HH:MM (24h)
-4. IMPORTANTE: Extraia TODOS os serviços mencionados (ex: "corte e barba" = 2 serviços, "corte + sobrancelha" = 2 serviços)
-5. O primeiro serviço é o principal, os demais são adicionais
-6. Se não conseguir identificar algum campo obrigatório, retorne um erro explicativo
-
-RESPONDA SEMPRE em JSON válido com esta estrutura:
-{
-  "success": true/false,
-  "data": {
-    "client_name": "Nome do Cliente",
-    "client_phone": "Telefone ou null",
-    "services": [
-      {"service_id": "uuid", "service_name": "nome", "price": valor},
-      {"service_id": "uuid", "service_name": "nome", "price": valor}
-    ],
-    "appointment_date": "YYYY-MM-DD",
-    "appointment_time": "HH:MM",
-    "notes": "observações extraídas da mensagem"
-  },
-  "error": "mensagem de erro se success=false"
-}
-
-EXEMPLOS:
-- "Corte e barba para João amanhã às 14h" -> 2 serviços: corte + barba
-- "Pedro dia 15 às 10h corte + sobrancelha + pezinho" -> 3 serviços
-- "Agendamento Carlos corte degradê e barba sexta 16h" -> 2 serviços: corte degradê + barba`;
+Extraia: client_name, client_phone (ou null), services (array com service_id, service_name, price), appointment_date (YYYY-MM-DD), appointment_time (HH:MM), notes.
+Se "27/02" e ano atual é 2026, use "2026-02-27".
+Responda APENAS com JSON puro, sem blocos de código.`;
 
     console.log('Sending message to Lovable AI:', message);
 
@@ -98,13 +72,13 @@ EXEMPLOS:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        temperature: 0.1,
-        max_tokens: 1024,
+        temperature: 0.0,
+        max_tokens: 512,
       }),
     });
 
@@ -166,6 +140,11 @@ EXEMPLOS:
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Normalize: if AI returned flat format (no success/data wrapper), wrap it
+    if (!parsedData.hasOwnProperty('success')) {
+      parsedData = { success: true, data: parsedData };
     }
 
     // Validate services - make sure they exist and get correct prices
