@@ -554,14 +554,20 @@ const Admin = () => {
     const userIds = [...new Set(appointmentsData.map(a => a.user_id))];
     const appointmentIds = appointmentsData.map(a => a.id);
 
-    // Batch profile queries in chunks of 50 to avoid massive URL
-    const profileChunks: string[][] = [];
-    for (let i = 0; i < userIds.length; i += 50) {
-      profileChunks.push(userIds.slice(i, i + 50));
-    }
+    // Batch ALL queries in chunks of 50 to avoid massive URLs
+    const chunkArray = (arr: string[], size: number) => {
+      const chunks: string[][] = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
 
-    // Fetch profiles in batches AND additional services IN PARALLEL
-    const [profilesResults, appointmentServicesResult] = await Promise.all([
+    const profileChunks = chunkArray(userIds, 50);
+    const appointmentChunks = chunkArray(appointmentIds, 50);
+
+    // Fetch profiles AND appointment_services in batched parallel
+    const [profilesResults, appointmentServicesResults] = await Promise.all([
       Promise.all(
         profileChunks.map(chunk =>
           supabase
@@ -570,27 +576,27 @@ const Admin = () => {
             .in("user_id", chunk)
         )
       ),
-      supabase
-        .from("appointment_services")
-        .select(`
-          appointment_id,
-          services (
-            name,
-            price
-          )
-        `)
-        .in("appointment_id", appointmentIds),
+      Promise.all(
+        appointmentChunks.map(chunk =>
+          supabase
+            .from("appointment_services")
+            .select(`
+              appointment_id,
+              services (
+                name,
+                price
+              )
+            `)
+            .in("appointment_id", chunk)
+        )
+      ),
     ]);
 
     const allProfiles = profilesResults.flatMap(r => r.data || []);
+    const allAppointmentServices = appointmentServicesResults.flatMap(r => r.data || []);
 
-    if (appointmentServicesResult.error) {
-      console.error("Error fetching appointment services:", appointmentServicesResult.error);
-    }
-
-    // Create a map of appointment_id to additional services array
     const additionalServicesMap = new Map<string, AppointmentService[]>();
-    (appointmentServicesResult.data || []).forEach(as => {
+    allAppointmentServices.forEach(as => {
       const existing = additionalServicesMap.get(as.appointment_id) || [];
       if (as.services) {
         existing.push({
