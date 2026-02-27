@@ -456,32 +456,31 @@ export const ServicesManager = () => {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-md">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-destructive">
-                            Excluir Serviço
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir{" "}
-                            <strong>"{service.name}"</strong>?
-                            <br />
-                            <br />
-                            Esta ação não pode ser desfeita. Se houver
-                            agendamentos vinculados, a exclusão será bloqueada.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                          <AlertDialogCancel className="w-full sm:w-auto">
-                            Cancelar
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteService(service.id)}
-                            className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
+                       <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                         <AlertDialogHeader>
+                           <AlertDialogTitle>
+                             Excluir Serviço
+                           </AlertDialogTitle>
+                           <AlertDialogDescription>
+                             Tem certeza que deseja excluir{" "}
+                             <strong>"{service.name}"</strong>?
+                             <br />
+                             <br />
+                             Esta ação não pode ser desfeita. Se houver
+                             agendamentos vinculados, a exclusão será bloqueada.
+                           </AlertDialogDescription>
+                         </AlertDialogHeader>
+                         <AlertDialogFooter>
+                           <AlertDialogAction
+                             onClick={() => handleDeleteService(service.id)}
+                           >
+                             Excluir
+                           </AlertDialogAction>
+                           <AlertDialogCancel>
+                             Cancelar
+                           </AlertDialogCancel>
+                         </AlertDialogFooter>
+                       </AlertDialogContent>
                     </AlertDialog>
                   </div>
                 </div>

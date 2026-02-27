@@ -1307,10 +1307,10 @@ const Admin = () => {
                   <span className="hidden sm:inline">Reset</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-card border-destructive/20 mx-3 max-w-[calc(100vw-1.5rem)] sm:max-w-lg">
+              <AlertDialogContent className="mx-3 max-w-[calc(100vw-1.5rem)]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle className="text-destructive text-base sm:text-lg">⚠️ Resetar Sistema</AlertDialogTitle>
-                  <AlertDialogDescription className="text-sm max-h-[50vh] overflow-y-auto">
+                  <AlertDialogTitle>⚠️ Resetar Sistema</AlertDialogTitle>
+                  <AlertDialogDescription className="max-h-[50vh] overflow-y-auto">
                     Isso vai <strong>EXCLUIR PERMANENTEMENTE</strong> todos os dados:
                     <br /><br />
                     • {stats.pending} pendentes, {appointments.filter(a => a.status === "confirmed").length} confirmados
@@ -1322,14 +1322,13 @@ const Admin = () => {
                     <strong className="text-destructive">Esta ação NÃO pode ser desfeita!</strong>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                  <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                <AlertDialogFooter>
                   <AlertDialogAction 
                     onClick={resetStats}
-                    className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                   >
                     Confirmar Reset
                   </AlertDialogAction>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -2501,21 +2500,21 @@ const Admin = () => {
                               <span className="hidden sm:inline">Aceitar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
                             <AlertDialogHeader>
-                              <AlertDialogTitle className="text-base sm:text-lg">Confirmar Agendamento</AlertDialogTitle>
-                              <AlertDialogDescription className="text-sm">
+                              <AlertDialogTitle>Confirmar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription>
                                 Deseja confirmar o agendamento de {getClientDisplayInfo(appointment).name} para {format(parseISO(appointment.appointment_date), "dd/MM/yyyy")} às {appointment.appointment_time.slice(0, 5)}?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                            <AlertDialogFooter>
                               <AlertDialogAction 
                                 onClick={() => updateAppointmentStatus(appointment.id, "confirmed")}
-                                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                                className="text-green-500"
                               >
                                 Confirmar
                               </AlertDialogAction>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -2531,21 +2530,20 @@ const Admin = () => {
                               <span className="hidden sm:inline">Recusar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-primary/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
                             <AlertDialogHeader>
-                              <AlertDialogTitle className="text-base sm:text-lg">Recusar Agendamento</AlertDialogTitle>
-                              <AlertDialogDescription className="text-sm">
+                              <AlertDialogTitle>Recusar Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription>
                                 Tem certeza que deseja recusar o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Voltar</AlertDialogCancel>
+                            <AlertDialogFooter>
                               <AlertDialogAction 
                                 onClick={() => updateAppointmentStatus(appointment.id, "cancelled")}
-                                className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                               >
                                 Recusar
                               </AlertDialogAction>
+                              <AlertDialogCancel>Voltar</AlertDialogCancel>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -2560,21 +2558,20 @@ const Admin = () => {
                               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
                             <AlertDialogHeader>
-                              <AlertDialogTitle className="text-destructive text-base sm:text-lg">Excluir Agendamento</AlertDialogTitle>
-                              <AlertDialogDescription className="text-sm">
+                              <AlertDialogTitle>Excluir Agendamento</AlertDialogTitle>
+                              <AlertDialogDescription>
                                 Tem certeza que deseja excluir permanentemente o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                            <AlertDialogFooter>
                               <AlertDialogAction 
                                 onClick={() => deleteAppointment(appointment.id)}
-                                className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                               >
                                 Excluir
                               </AlertDialogAction>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -2851,21 +2848,20 @@ const Admin = () => {
                                 <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                            <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
                               <AlertDialogHeader>
-                                <AlertDialogTitle className="text-destructive text-base sm:text-lg">Excluir Agendamento</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm">
+                                <AlertDialogTitle>Excluir Agendamento</AlertDialogTitle>
+                                <AlertDialogDescription>
                                   Tem certeza que deseja excluir permanentemente o agendamento de {getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                              <AlertDialogFooter>
                                 <AlertDialogAction 
                                   onClick={() => deleteAppointment(appointment.id)}
-                                  className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                                 >
                                   Excluir
                                 </AlertDialogAction>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -2952,15 +2948,35 @@ const Admin = () => {
                             {statusLabels[appointment.status as keyof typeof statusLabels]}
                           </Badge>
                           {appointment.status === "completed" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 p-0 text-orange-500 hover:bg-orange-500/10"
-                              onClick={() => updateAppointmentStatus(appointment.id, "no_show")}
-                              title="Marcar falta"
-                            >
-                              <XCircle className="w-3 h-3" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0 text-orange-500 hover:bg-orange-500/10"
+                                  title="Marcar falta"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Marcar como Falta</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Deseja marcar o agendamento de {getClientDisplayInfo(appointment).name} como falta?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogAction 
+                                    onClick={() => updateAppointmentStatus(appointment.id, "no_show")}
+                                    className="text-orange-500"
+                                  >
+                                    Marcar Falta
+                                  </AlertDialogAction>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                         </div>
                       ))}
@@ -3046,10 +3062,10 @@ const Admin = () => {
                         Desbloquear Todos
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-card border-destructive/20 mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                    <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-destructive text-base sm:text-lg">Desbloquear Todos</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
+                        <AlertDialogTitle>Desbloquear Todos</AlertDialogTitle>
+                        <AlertDialogDescription>
                           Isso vai desbloquear <strong>{blockedDates.length} horário(s)</strong>, incluindo:
                           <br /><br />
                           • Horários bloqueados manualmente
@@ -3059,14 +3075,13 @@ const Admin = () => {
                           <strong>Atenção:</strong> Os horários ficarão disponíveis novamente.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
+                      <AlertDialogFooter>
                         <AlertDialogAction
                           onClick={unblockAllDates}
-                          className="bg-destructive hover:bg-destructive/90 w-full sm:w-auto"
                         >
                           Desbloquear Todos
                         </AlertDialogAction>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
