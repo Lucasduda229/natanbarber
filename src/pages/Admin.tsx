@@ -515,8 +515,8 @@ const Admin = () => {
   };
 
   const fetchAppointments = async () => {
-    // Only fetch last 60 days of appointments for performance
-    const cutoffDate = format(subDays(new Date(), 60), "yyyy-MM-dd");
+    // Only fetch last 30 days of appointments for performance
+    const cutoffDate = format(subDays(new Date(), 30), "yyyy-MM-dd");
     
     // Fetch appointments with primary service
     const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -554,12 +554,22 @@ const Admin = () => {
     const userIds = [...new Set(appointmentsData.map(a => a.user_id))];
     const appointmentIds = appointmentsData.map(a => a.id);
 
-    // Fetch profiles AND additional services IN PARALLEL
-    const [profilesResult, appointmentServicesResult] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("user_id, full_name, phone")
-        .in("user_id", userIds),
+    // Batch profile queries in chunks of 50 to avoid massive URL
+    const profileChunks: string[][] = [];
+    for (let i = 0; i < userIds.length; i += 50) {
+      profileChunks.push(userIds.slice(i, i + 50));
+    }
+
+    // Fetch profiles in batches AND additional services IN PARALLEL
+    const [profilesResults, appointmentServicesResult] = await Promise.all([
+      Promise.all(
+        profileChunks.map(chunk =>
+          supabase
+            .from("profiles")
+            .select("user_id, full_name, phone")
+            .in("user_id", chunk)
+        )
+      ),
       supabase
         .from("appointment_services")
         .select(`
@@ -572,9 +582,8 @@ const Admin = () => {
         .in("appointment_id", appointmentIds),
     ]);
 
-    if (profilesResult.error) {
-      console.error("Error fetching profiles:", profilesResult.error);
-    }
+    const allProfiles = profilesResults.flatMap(r => r.data || []);
+
     if (appointmentServicesResult.error) {
       console.error("Error fetching appointment services:", appointmentServicesResult.error);
     }
@@ -594,7 +603,7 @@ const Admin = () => {
 
     // Create a map of user_id to profile
     const profilesMap = new Map(
-      (profilesResult.data || []).map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
+      allProfiles.map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
     );
 
     // Combine appointments with profiles and all services (primary + additional)

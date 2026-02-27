@@ -597,8 +597,7 @@ const Booking = () => {
     // Get all slot times for checking consecutive availability
     const allSlotTimes = slots?.map(s => s.slot_time) || [];
 
-    console.log(`Multi-slot blocking: duration=${currentTotalDuration}min, slots=${currentRequiredSlots}`);
-    console.log(`Occupied times:`, Array.from(occupiedTimes));
+    // Debug logging removed for performance
 
     const availableSlots = slots?.filter((slot) => {
       // Excluir horários ocupados
