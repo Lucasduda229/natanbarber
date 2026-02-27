@@ -1307,7 +1307,7 @@ const Admin = () => {
                   <span className="hidden sm:inline">Reset</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="mx-3 max-w-[calc(100vw-1.5rem)]">
+              <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>⚠️ Resetar Sistema</AlertDialogTitle>
                   <AlertDialogDescription className="max-h-[50vh] overflow-y-auto">
@@ -2500,7 +2500,7 @@ const Admin = () => {
                               <span className="hidden sm:inline">Aceitar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                          <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Confirmar Agendamento</AlertDialogTitle>
                               <AlertDialogDescription>
@@ -2530,7 +2530,7 @@ const Admin = () => {
                               <span className="hidden sm:inline">Recusar</span>
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                          <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Recusar Agendamento</AlertDialogTitle>
                               <AlertDialogDescription>
@@ -2558,7 +2558,7 @@ const Admin = () => {
                               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                          <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Excluir Agendamento</AlertDialogTitle>
                               <AlertDialogDescription>
@@ -2848,7 +2848,7 @@ const Admin = () => {
                                 <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                            <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Agendamento</AlertDialogTitle>
                                 <AlertDialogDescription>
@@ -2959,7 +2959,7 @@ const Admin = () => {
                                   <XCircle className="w-3 h-3" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                              <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Marcar como Falta</AlertDialogTitle>
                                   <AlertDialogDescription>
@@ -3062,7 +3062,7 @@ const Admin = () => {
                         Desbloquear Todos
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="mx-4 max-w-[calc(100vw-2rem)]">
+                    <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Desbloquear Todos</AlertDialogTitle>
                         <AlertDialogDescription>

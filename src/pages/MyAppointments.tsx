@@ -242,21 +242,20 @@ const MyAppointments = () => {
                                   Cancelar
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-card border-border mx-4 max-w-[calc(100vw-2rem)] sm:max-w-lg">
+                              <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-foreground">Cancelar Agendamento?</AlertDialogTitle>
+                                  <AlertDialogTitle>Cancelar Agendamento?</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     Tem certeza que deseja cancelar este agendamento?
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                  <AlertDialogCancel className="border-border w-full sm:w-auto">Voltar</AlertDialogCancel>
+                                <AlertDialogFooter>
                                   <AlertDialogAction
                                     onClick={() => handleCancelAppointment(appointment.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
                                   >
                                     Sim, Cancelar
                                   </AlertDialogAction>
+                                  <AlertDialogCancel>Voltar</AlertDialogCancel>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
