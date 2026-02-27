@@ -416,30 +416,52 @@ const Booking = () => {
       }
       setSubscriptionBookedWeeks(uniqueWeekDates);
       
-      // Calculate usage per service for the subscription period (not calendar month)
-      const usageMap: Record<string, number> = {};
-      
+      // Count unique booking weeks within the subscription period
+      // Each weekly booking consumes 1 unit of ALL benefits equally
+      // (regardless of which specific services the client chose that week)
+      const validWeekDates: Date[] = [];
       for (const apt of validAppointments) {
         const aptDate = parseISO(apt.appointment_date);
-        // Only count appointments within the subscription period
         const isWithinPeriod = 
           (isAfter(aptDate, subscriptionStart) || isEqual(aptDate, subscriptionStart)) &&
           (isBefore(aptDate, subscriptionEnd) || isEqual(aptDate, subscriptionEnd));
         
         if (isWithinPeriod) {
-          // Count main service
-          if (apt.service_id) {
-            usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
+          const alreadyHasWeek = validWeekDates.some(d => isSameWeek(d, aptDate, { weekStartsOn: 0 }));
+          if (!alreadyHasWeek) {
+            validWeekDates.push(aptDate);
           }
+        }
+      }
+      
+      const totalBookingWeeks = validWeekDates.length;
+      
+      // Apply the same usage count to ALL package benefits
+      // This way, choosing only "cut" in a week still consumes 1 of each benefit
+      const usageMap: Record<string, number> = {};
+      
+      if (totalBookingWeeks > 0) {
+        // Get the package_id from the active subscription
+        const { data: activeSub } = await supabase
+          .from("subscription_progress")
+          .select("package_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        const packageId = activeSub?.package_id;
+        if (packageId) {
+          const [itemsRes, benefitsRes] = await Promise.all([
+            supabase.from("package_items").select("service_id").eq("package_id", packageId),
+            supabase.from("package_benefits").select("service_id").eq("package_id", packageId),
+          ]);
           
-          // Count additional services
-          const additionalServices = apt.appointment_services as { service_id: string }[] | null;
-          if (additionalServices && Array.isArray(additionalServices)) {
-            for (const svc of additionalServices) {
-              if (svc.service_id) {
-                usageMap[svc.service_id] = (usageMap[svc.service_id] || 0) + 1;
-              }
-            }
+          const allServiceIds = new Set<string>();
+          itemsRes.data?.forEach(i => { if (i.service_id) allServiceIds.add(i.service_id); });
+          benefitsRes.data?.forEach(b => { if (b.service_id) allServiceIds.add(b.service_id); });
+          
+          for (const serviceId of allServiceIds) {
+            usageMap[serviceId] = totalBookingWeeks;
           }
         }
       }
