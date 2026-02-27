@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign } from "lucide-react";
+import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign, Filter, ShoppingCart, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,7 @@ interface PaymentOrder {
 
 const VIPPackagesManager = () => {
   const [activeTab, setActiveTab] = useState("orders");
+  const [orderFilter, setOrderFilter] = useState<"all" | "pending" | "confirmed" | "renewal" | "purchase">("all");
   const [packages, setPackages] = useState<Package[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriberWithUsage[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -690,6 +691,64 @@ const VIPPackagesManager = () => {
 
         {/* Orders Tab */}
         <TabsContent value="orders" className="space-y-4 mt-4">
+          {/* Summary Stats */}
+          {(() => {
+            const pendingCount = orders.filter(o => o.payment_status === 'pending').length;
+            const confirmedCount = orders.filter(o => o.payment_status === 'confirmed').length;
+            const renewalCount = orders.filter(o => o.notes?.includes('Renovação')).length;
+            const purchaseCount = orders.filter(o => !o.notes?.includes('Renovação')).length;
+            const totalRevenue = orders.filter(o => o.payment_status === 'confirmed').reduce((sum, o) => sum + o.amount, 0);
+
+            return (
+              <>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-card border border-border rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-amber-500">{pendingCount}</p>
+                    <p className="text-xs text-muted-foreground">Pendentes</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-green-500">{confirmedCount}</p>
+                    <p className="text-xs text-muted-foreground">Confirmados</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-primary">{renewalCount}</p>
+                    <p className="text-xs text-muted-foreground">Renovações</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">R$ {totalRevenue.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">Receita Confirmada</p>
+                  </div>
+                </div>
+
+                {/* Filter Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: "all" as const, label: "Todos", count: orders.length },
+                    { key: "pending" as const, label: "Pendentes", count: pendingCount },
+                    { key: "confirmed" as const, label: "Confirmados", count: confirmedCount },
+                    { key: "renewal" as const, label: "Renovações", count: renewalCount },
+                    { key: "purchase" as const, label: "Compras", count: purchaseCount },
+                  ].map(filter => (
+                    <Button
+                      key={filter.key}
+                      size="sm"
+                      variant={orderFilter === filter.key ? "default" : "outline"}
+                      className="gap-1 text-xs"
+                      onClick={() => setOrderFilter(filter.key)}
+                    >
+                      {filter.label}
+                      <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] p-0 flex items-center justify-center text-[10px]">
+                        {filter.count}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -701,11 +760,22 @@ const VIPPackagesManager = () => {
           </div>
 
           {(() => {
-            const filteredOrders = orders.filter(o =>
+            let filteredOrders = orders.filter(o =>
               orderSearchTerm === "" ||
               (o.profile?.full_name || "").toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
               o.package_name.toLowerCase().includes(orderSearchTerm.toLowerCase())
             );
+
+            // Apply filter
+            if (orderFilter === "pending") {
+              filteredOrders = filteredOrders.filter(o => o.payment_status === 'pending');
+            } else if (orderFilter === "confirmed") {
+              filteredOrders = filteredOrders.filter(o => o.payment_status === 'confirmed');
+            } else if (orderFilter === "renewal") {
+              filteredOrders = filteredOrders.filter(o => o.notes?.includes('Renovação'));
+            } else if (orderFilter === "purchase") {
+              filteredOrders = filteredOrders.filter(o => !o.notes?.includes('Renovação'));
+            }
 
             // Show pending first
             const sortedOrders = [...filteredOrders].sort((a, b) => {
@@ -737,7 +807,7 @@ const VIPPackagesManager = () => {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-semibold text-foreground">
                               {order.profile?.full_name || "Cliente"}
                             </span>
@@ -752,9 +822,13 @@ const VIPPackagesManager = () => {
                                 <><CheckCircle className="w-3 h-3 mr-1" /> Confirmado</>
                               )}
                             </Badge>
-                            {isRenewal && (
-                              <Badge variant="secondary" className="text-xs">
+                            {isRenewal ? (
+                              <Badge variant="secondary" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/30">
                                 <RefreshCw className="w-3 h-3 mr-1" /> Renovação
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs bg-purple-500/20 text-purple-400 border-purple-500/30">
+                                <ShoppingCart className="w-3 h-3 mr-1" /> Compra
                               </Badge>
                             )}
                           </div>
@@ -764,6 +838,11 @@ const VIPPackagesManager = () => {
                           <p className="text-sm text-primary font-medium mt-1">
                             {order.package_name} • <span className="text-foreground font-bold">R$ {order.amount.toFixed(2)}</span>
                           </p>
+                          {order.payment_method && order.payment_status === 'confirmed' && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              💳 Pago via {order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'dinheiro' ? 'Dinheiro' : order.payment_method === 'cartao' ? 'Cartão' : order.payment_method}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground mt-1">
                             {format(new Date(order.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
