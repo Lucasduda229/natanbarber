@@ -31,7 +31,7 @@ import whatsappIcon from "@/assets/whatsapp-icon.svg";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
-  const steps = ["Serviços", "Data/Hora", "Dados", "Confirmar", "Concluído"];
+  const steps = ["Serviços", "Data/Hora", "Dados", "Concluído"];
   
   return (
     <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8">
@@ -656,18 +656,8 @@ const Booking = () => {
   const handleCustomerInfoSubmit = async () => {
     if (!validateCustomerInfo()) return;
     
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ 
-          full_name: customerName.trim(), 
-          phone: customerWhatsApp.replace(/\D/g, "") 
-        })
-        .eq("user_id", user.id);
-    }
-    
-    animateStepTransition("forward");
-    setTimeout(() => setStep(4), 200);
+    // Create the appointment directly - no extra confirmation step needed
+    await handleConfirmBooking();
   };
 
   const handleConfirmBooking = async () => {
@@ -850,7 +840,7 @@ const Booking = () => {
 
     setLoading(false);
     toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
-    setStep(5);
+    setStep(4);
     // Special success animation
     setTimeout(() => {
       if (stepContentRef.current) {
@@ -991,8 +981,8 @@ const Booking = () => {
       {/* Main Content */}
       <main className="booking-container relative z-10 px-3 sm:px-4 pb-8 sm:pb-12 max-w-5xl mx-auto">
         {/* Step Progress Indicator - Only show for steps 2-4 */}
-        {step > 1 && step < 5 && (
-          <StepIndicator currentStep={step} totalSteps={5} />
+        {step > 1 && step < 4 && (
+          <StepIndicator currentStep={step} totalSteps={4} />
         )}
         
         <div ref={stepContentRef}>
@@ -1644,229 +1634,14 @@ const Booking = () => {
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
+        {/* Step 4: Success (agendamento já foi criado automaticamente) */}
         {step === 4 && (
-          <div className="step-content space-y-6">
-            <div className="flex items-center gap-4 mb-4 sm:mb-6 animate-in">
-              <Button variant="ghost" size="icon" onClick={goBack} className="hover:bg-primary/10">
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">Confirmar Agendamento</h2>
-            </div>
-
-            <Card className="bg-card/60 backdrop-blur-xl border-primary/20 animate-in">
-              <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="text-foreground text-sm sm:text-base">Resumo do Agendamento</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
-                  <span className="text-muted-foreground text-sm">Cliente</span>
-                  <span className="font-semibold text-foreground text-sm sm:text-base truncate ml-2">{customerName}</span>
-                </div>
-                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
-                  <span className="text-muted-foreground text-sm">WhatsApp</span>
-                  <span className="font-semibold text-foreground text-sm sm:text-base">{customerWhatsApp}</span>
-                </div>
-                <div className="py-1.5 sm:py-2 border-b border-border">
-                  <span className="text-muted-foreground block mb-1.5 sm:mb-2 text-sm">Serviços</span>
-                  {selectedServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between py-0.5 sm:py-1">
-                      <span className="text-foreground text-sm truncate">{service.name}</span>
-                      <span className="text-muted-foreground text-sm flex-shrink-0">R$ {service.price.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
-                  <span className="text-muted-foreground text-sm">Data</span>
-                  <span className="font-semibold text-foreground text-sm sm:text-base">
-                    {selectedDate && format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-1.5 sm:py-2 border-b border-border">
-                  <span className="text-muted-foreground text-sm">Horário</span>
-                  <span className="font-semibold text-foreground text-sm sm:text-base">{selectedTime?.slice(0, 5)}</span>
-                </div>
-                <div className="flex items-center justify-between py-3 sm:py-4">
-                  <span className="text-base sm:text-lg font-semibold text-foreground">Total</span>
-                  <span className="text-xl sm:text-2xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
-                  <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  Formas de Pagamento
-                </CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {usingSubscription ? "Pagamento incluso no seu pacote" : "Escolha como deseja pagar seu serviço"}
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4">
-                {usingSubscription ? (
-                  <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-primary bg-primary/10 ring-2 ring-primary/30">
-                    <div className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Crown className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm sm:text-base font-semibold text-foreground">Pacote</h4>
-                      <p className="text-xs text-primary">✓ Incluso na sua assinatura</p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* PIX Option */}
-                    <Collapsible open={selectedPaymentMethod === "pix"} onOpenChange={(open) => open && setSelectedPaymentMethod("pix")}>
-                      <CollapsibleTrigger asChild>
-                        <div 
-                          onClick={() => setSelectedPaymentMethod("pix")}
-                          className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                            selectedPaymentMethod === "pix" 
-                              ? "border-[#00D4AA] bg-[#00D4AA]/10 ring-2 ring-[#00D4AA]/30" 
-                              : "border-[#00D4AA]/30 bg-[#00D4AA]/5 hover:bg-[#00D4AA]/10"
-                          }`}
-                        >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                            selectedPaymentMethod === "pix" ? "border-[#00D4AA] bg-[#00D4AA]" : "border-muted-foreground"
-                          }`}>
-                            {selectedPaymentMethod === "pix" && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                            <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm sm:text-base font-semibold text-foreground">PIX</h4>
-                            <p className="text-xs text-[#00D4AA]">Clique para ver QR Code</p>
-                          </div>
-                          <ChevronDown className={`w-5 h-5 text-[#00D4AA] transition-transform ${selectedPaymentMethod === "pix" ? "rotate-180" : ""}`} />
-                        </div>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="mt-3 p-3 sm:p-4 bg-[#00D4AA]/5 rounded-xl border border-[#00D4AA]/20">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="bg-white p-3 rounded-xl shadow-lg">
-                              <QRCodeSVG
-                                value={generatePixPayload({
-                                  pixKey: PIX_KEY,
-                                  merchantName: "NATAN BARBER",
-                                  merchantCity: "LAURO MULLER",
-                                  amount: selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0),
-                                })}
-                                size={180}
-                                level="M"
-                                includeMargin={true}
-                              />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-muted-foreground">Escaneie o QR Code para pagar via PIX</p>
-                              <p className="text-sm sm:text-lg font-bold text-[#00D4AA] mt-1">
-                                R$ {(selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0)).toFixed(2)}
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-2 border-[#00D4AA]/30 text-[#00D4AA] hover:bg-[#00D4AA]/10"
-                              onClick={() => {
-                                const payload = generatePixPayload({
-                                  pixKey: PIX_KEY,
-                                  merchantName: "NATAN BARBER",
-                                  merchantCity: "LAURO MULLER",
-                                  amount: selectedServices.reduce((sum, s) => sum + s.price, 0) + (selectedPackage?.price || 0),
-                                });
-                                navigator.clipboard.writeText(payload);
-                                toast.success("Código PIX copiado!");
-                              }}
-                            >
-                              <Copy className="w-4 h-4" />
-                              Copiar código PIX
-                            </Button>
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-
-                    {/* Dinheiro Option */}
-                    <div 
-                      onClick={() => setSelectedPaymentMethod("dinheiro")}
-                      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                        selectedPaymentMethod === "dinheiro" 
-                          ? "border-green-500 bg-green-500/10 ring-2 ring-green-500/30" 
-                          : "border-green-500/30 bg-green-500/5 hover:bg-green-500/10"
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedPaymentMethod === "dinheiro" ? "border-green-500 bg-green-500" : "border-muted-foreground"
-                      }`}>
-                        {selectedPaymentMethod === "dinheiro" && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                        <img src={cashIcon} alt="Dinheiro" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm sm:text-base font-semibold text-foreground">Dinheiro</h4>
-                        <p className="text-xs text-green-500">💵 Pague diretamente na barbearia</p>
-                      </div>
-                    </div>
-
-                    {/* Cartão Option */}
-                    <div 
-                      onClick={() => setSelectedPaymentMethod("cartao")}
-                      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
-                        selectedPaymentMethod === "cartao" 
-                          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30" 
-                          : "border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedPaymentMethod === "cartao" ? "border-blue-500 bg-blue-500" : "border-muted-foreground"
-                      }`}>
-                        {selectedPaymentMethod === "cartao" && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 p-1.5 sm:p-2 shadow-sm">
-                        <img src={cardIcon} alt="Cartão" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm sm:text-base font-semibold text-foreground">Cartão</h4>
-                        <p className="text-xs text-blue-500">💳 Pague após o corte na barbearia</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <CancellationPolicy variant="full" />
-
-            <Button
-              onClick={handleConfirmBooking}
-              disabled={loading}
-              className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                  Confirmando...
-                </span>
-              ) : (
-                "Confirmar Agendamento"
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* Step 5: Success */}
-        {step === 5 && (
           <div className="step-content text-center space-y-6 py-8 sm:py-12">
             <div className="success-icon w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
               <Check className="w-10 h-10 sm:w-12 sm:h-12 text-primary" />
             </div>
             <div className="animate-success-child">
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Pedido Enviado!</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Agendamento Criado!</h2>
               <p className="text-muted-foreground max-w-md mx-auto mt-2">
                 Seu agendamento foi enviado e está aguardando aprovação do barbeiro. Você receberá uma confirmação em breve.
               </p>
@@ -1898,29 +1673,65 @@ const Booking = () => {
                   <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-border">
-                  <span className="font-semibold text-foreground">Total (PIX)</span>
+                  <span className="font-semibold text-foreground">Total</span>
                   <span className="text-xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-primary/5 border-primary/30 max-w-md mx-auto">
-              <CardContent className="p-4">
-                <p className="text-sm text-foreground mb-2 font-semibold">PIX Copia e Cola:</p>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground text-sm">Valor: R$ {totalPrice.toFixed(2).replace('.', ',')}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyPixCode(totalPrice, selectedServices.map(s => s.name).join(", "))}
-                    className="border-primary/30 hover:bg-primary/10"
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copiar Código
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Payment section - shown after booking is created */}
+            {!usingSubscription && (
+              <Card className="bg-card/60 backdrop-blur-xl border-primary/20 max-w-md mx-auto text-left">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
+                    <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                    Pague quando quiser
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Você pode pagar agora via PIX ou na hora do atendimento
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* PIX QR Code */}
+                  <div className="p-3 sm:p-4 bg-[#00D4AA]/5 rounded-xl border border-[#00D4AA]/20">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="bg-white p-3 rounded-xl shadow-lg">
+                        <QRCodeSVG
+                          value={generatePixPayload({
+                            pixKey: PIX_KEY,
+                            merchantName: "NATAN BARBER",
+                            merchantCity: "LAURO MULLER",
+                            amount: totalPrice,
+                          })}
+                          size={160}
+                          level="M"
+                          includeMargin={true}
+                        />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Escaneie o QR Code para pagar via PIX</p>
+                        <p className="text-sm sm:text-lg font-bold text-[#00D4AA] mt-1">
+                          R$ {totalPrice.toFixed(2)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-[#00D4AA]/30 text-[#00D4AA] hover:bg-[#00D4AA]/10"
+                        onClick={() => copyPixCode(totalPrice, selectedServices.map(s => s.name).join(", "))}
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copiar código PIX
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-center text-muted-foreground">
+                    💵 Também aceitamos <strong>Dinheiro</strong> e <strong>Cartão</strong> na barbearia
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button onClick={() => navigate("/my-appointments")} className="bg-gold-gradient text-background">
