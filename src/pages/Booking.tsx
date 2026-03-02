@@ -1815,46 +1815,48 @@ const Booking = () => {
 
             {/* Payment Method Selection - confirms booking on click */}
             {!usingSubscription ? (
-              <div className="space-y-3 animate-in">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-primary" />
-                  Selecione a forma de pagamento para confirmar
-                </p>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleCustomerInfoSubmit('pix')}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[#32BCAD]/30 bg-[#32BCAD]/5 hover:bg-[#32BCAD]/15 hover:border-[#32BCAD]/60 transition-all duration-200 active:scale-95"
-                  >
-                    <img src={pixIcon} alt="PIX" className="w-8 h-8 object-contain" />
-                    <span className="text-xs font-semibold text-[#32BCAD]">PIX</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleCustomerInfoSubmit('cartao')}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/15 hover:border-blue-500/60 transition-all duration-200 active:scale-95"
-                  >
-                    <img src={cardIcon} alt="Cartão" className="w-8 h-8 object-contain" />
-                    <span className="text-xs font-semibold text-blue-400">Cartão</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleCustomerInfoSubmit('dinheiro')}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-green-500/30 bg-green-500/5 hover:bg-green-500/15 hover:border-green-500/60 transition-all duration-200 active:scale-95"
-                  >
-                    <img src={cashIcon} alt="Dinheiro" className="w-8 h-8 object-contain" />
-                    <span className="text-xs font-semibold text-green-400">Dinheiro</span>
-                  </button>
-                </div>
-                {loading && (
-                  <p className="text-xs text-center text-muted-foreground animate-pulse">
-                    Criando agendamento...
+              <Card className="bg-card/80 backdrop-blur-xl border-primary/30 shadow-lg shadow-primary/10 animate-in">
+                <CardContent className="p-4 sm:p-5 space-y-4">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                    Selecione a forma de pagamento para confirmar
                   </p>
-                )}
-              </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleCustomerInfoSubmit('pix')}
+                      className="flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 border-[#32BCAD]/30 bg-[#32BCAD]/5 hover:bg-[#32BCAD]/15 hover:border-[#32BCAD]/60 transition-all duration-200 active:scale-95"
+                    >
+                      <img src={pixIcon} alt="PIX" className="w-9 h-9 object-contain" />
+                      <span className="text-xs font-semibold text-[#32BCAD]">PIX</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleCustomerInfoSubmit('cartao')}
+                      className="flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/15 hover:border-blue-500/60 transition-all duration-200 active:scale-95"
+                    >
+                      <img src={cardIcon} alt="Cartão" className="w-9 h-9 object-contain" />
+                      <span className="text-xs font-semibold text-blue-400">Cartão</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleCustomerInfoSubmit('dinheiro')}
+                      className="flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 border-green-500/30 bg-green-500/5 hover:bg-green-500/15 hover:border-green-500/60 transition-all duration-200 active:scale-95"
+                    >
+                      <img src={cashIcon} alt="Dinheiro" className="w-9 h-9 object-contain" />
+                      <span className="text-xs font-semibold text-green-400">Dinheiro</span>
+                    </button>
+                  </div>
+                  {loading && (
+                    <p className="text-xs text-center text-muted-foreground animate-pulse">
+                      Criando agendamento...
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
               <Button
                 onClick={() => handleCustomerInfoSubmit('pix')}
