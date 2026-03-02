@@ -31,7 +31,7 @@ import whatsappIcon from "@/assets/whatsapp-icon.svg";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
-  const steps = ["Serviços", "Data/Hora", "Dados", "Concluído"];
+  const steps = ["Serviços", "Data/Hora", "Dados e Pagamento", "Concluído"];
   
   return (
     <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8">
@@ -653,11 +653,199 @@ const Booking = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCustomerInfoSubmit = async () => {
+  const handleCustomerInfoSubmit = async (paymentMethod: "pix" | "dinheiro" | "cartao") => {
     if (!validateCustomerInfo()) return;
     
-    // Create the appointment directly - no extra confirmation step needed
-    await handleConfirmBooking();
+    // Set payment method and confirm booking in one action
+    setSelectedPaymentMethod(paymentMethod);
+    
+    // We need to pass the payment method directly since setState is async
+    await handleConfirmBookingWithPayment(paymentMethod);
+  };
+
+  const handleConfirmBookingWithPayment = async (paymentMethod: "pix" | "dinheiro" | "cartao") => {
+    if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
+      toast.error("Dados incompletos", { description: "Selecione serviços, data e horário." });
+      return;
+    }
+    
+    if (!user) {
+      toast.error("Login necessário", { description: "Faça login para confirmar seu agendamento." });
+      navigate("/login");
+      return;
+    }
+
+    if (!customerName.trim() || !customerWhatsApp.replace(/\D/g, "")) {
+      toast.error("Dados incompletos", { description: "Preencha seu nome e WhatsApp corretamente." });
+      return;
+    }
+
+    setLoading(true);
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ 
+        full_name: customerName.trim(), 
+        phone: customerWhatsApp.replace(/\D/g, "") 
+      })
+      .eq("user_id", user.id);
+
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+    }
+
+    const appointmentDate = format(selectedDate, "yyyy-MM-dd");
+    
+    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+    const requiredSlots = Math.ceil(totalDuration / 30);
+    
+    const timesToCheck = [selectedTime];
+    for (let i = 1; i < requiredSlots; i++) {
+      timesToCheck.push(addMinutesToTime(selectedTime, i * 30));
+    }
+    
+    const { data: existingAppointments } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("appointment_date", appointmentDate)
+      .in("appointment_time", timesToCheck)
+      .neq("status", "cancelled");
+
+    if (existingAppointments && existingAppointments.length > 0) {
+      setLoading(false);
+      toast.error("Horário indisponível", { 
+        description: requiredSlots > 1
+          ? "Um ou mais horários necessários já foram reservados. Por favor, escolha outro."
+          : "Este horário já foi reservado. Por favor, escolha outro." 
+      });
+      fetchAvailableSlots(selectedDate);
+      return;
+    }
+
+    if (usingSubscription && activeSubscription) {
+      const isWithinSubscriptionPeriod = 
+        (isAfter(selectedDate, activeSubscription.subscription_start_date) || 
+         isEqual(selectedDate, activeSubscription.subscription_start_date)) &&
+        (isBefore(selectedDate, activeSubscription.subscription_end_date) || 
+         isEqual(selectedDate, activeSubscription.subscription_end_date));
+      
+      if (!isWithinSubscriptionPeriod) {
+        setLoading(false);
+        const startFormatted = format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR });
+        const endFormatted = format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR });
+        toast.error("Data fora do período da assinatura", { 
+          description: `Sua assinatura é válida de ${startFormatted} até ${endFormatted}.` 
+        });
+        return;
+      }
+      
+      if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
+        setLoading(false);
+        toast.error("Limite de agendamentos atingido", { 
+          description: `Você já agendou ${activeSubscription.monthly_cuts_limit} vezes este mês.` 
+        });
+        return;
+      }
+      
+      const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
+        isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
+      );
+      
+      if (isWeekAlreadyBooked) {
+        setLoading(false);
+        toast.error("Limite semanal atingido", { 
+          description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
+        });
+        return;
+      }
+      
+      for (const service of selectedServices) {
+        const packageItem = subscriptionPackageItems.find(item => 
+          item.service_id === service.id || 
+          item.service_name.toLowerCase() === service.name.toLowerCase()
+        );
+        
+        if (packageItem) {
+          const used = serviceUsageThisMonth[service.id] || 0;
+          const limit = packageItem.quantity;
+          
+          if (used >= limit) {
+            setLoading(false);
+            toast.error(`Limite de ${service.name} atingido`, { 
+              description: `Você já usou ${used}/${limit} este mês.` 
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    const { data: appointment, error } = await supabase
+      .from("appointments")
+      .insert({
+        user_id: user.id,
+        service_id: selectedServices[0].id,
+        appointment_date: appointmentDate,
+        appointment_time: selectedTime,
+        status: "pending",
+        payment_status: usingSubscription ? "paid" : "pending",
+        payment_method: usingSubscription ? "subscription" : paymentMethod,
+        notes: usingSubscription ? "Agendamento via assinatura" : null,
+      })
+      .select()
+      .single();
+
+    if (error || !appointment) {
+      setLoading(false);
+      if (error?.code === '23505') {
+        toast.error("Horário indisponível", { 
+          description: "Este horário acabou de ser reservado. Por favor, escolha outro." 
+        });
+      } else {
+        toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
+      }
+      return;
+    }
+
+    if (selectedServices.length > 1) {
+      const additionalServices = selectedServices.slice(1).map(service => ({
+        appointment_id: appointment.id,
+        service_id: service.id,
+      }));
+
+      const { error: servicesError } = await supabase
+        .from("appointment_services")
+        .insert(additionalServices);
+
+      if (servicesError) {
+        console.error("Error inserting appointment services:", servicesError);
+      }
+    }
+
+    if (usingSubscription) {
+      fetchSubscriptionBookings();
+    }
+
+    setLoading(false);
+    toast.success("Agendamento realizado!", { description: "Aguardando confirmação do barbeiro." });
+    setStep(4);
+    setTimeout(() => {
+      if (stepContentRef.current) {
+        gsap.fromTo(
+          stepContentRef.current,
+          { opacity: 0, scale: 0.9 },
+          { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }
+        );
+        const successIcon = stepContentRef.current.querySelector(".success-icon");
+        if (successIcon) {
+          gsap.fromTo(
+            successIcon,
+            { scale: 0, rotation: -180 },
+            { scale: 1, rotation: 0, duration: 0.5, delay: 0.2, ease: "back.out(2)" }
+          );
+        }
+      }
+    }, 50);
   };
 
   const handleConfirmBooking = async () => {
@@ -1625,12 +1813,57 @@ const Booking = () => {
               </CardContent>
             </Card>
 
-            <Button
-              onClick={handleCustomerInfoSubmit}
-              className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow animate-in"
-            >
-              Continuar
-            </Button>
+            {/* Payment Method Selection - confirms booking on click */}
+            {!usingSubscription ? (
+              <div className="space-y-3 animate-in">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  Selecione a forma de pagamento para confirmar
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleCustomerInfoSubmit('pix')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[#32BCAD]/30 bg-[#32BCAD]/5 hover:bg-[#32BCAD]/15 hover:border-[#32BCAD]/60 transition-all duration-200 active:scale-95"
+                  >
+                    <img src={pixIcon} alt="PIX" className="w-8 h-8 object-contain" />
+                    <span className="text-xs font-semibold text-[#32BCAD]">PIX</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleCustomerInfoSubmit('cartao')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/15 hover:border-blue-500/60 transition-all duration-200 active:scale-95"
+                  >
+                    <img src={cardIcon} alt="Cartão" className="w-8 h-8 object-contain" />
+                    <span className="text-xs font-semibold text-blue-400">Cartão</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleCustomerInfoSubmit('dinheiro')}
+                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-green-500/30 bg-green-500/5 hover:bg-green-500/15 hover:border-green-500/60 transition-all duration-200 active:scale-95"
+                  >
+                    <img src={cashIcon} alt="Dinheiro" className="w-8 h-8 object-contain" />
+                    <span className="text-xs font-semibold text-green-400">Dinheiro</span>
+                  </button>
+                </div>
+                {loading && (
+                  <p className="text-xs text-center text-muted-foreground animate-pulse">
+                    Criando agendamento...
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={() => handleCustomerInfoSubmit('pix')}
+                disabled={loading}
+                className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow animate-in"
+              >
+                {loading ? 'Criando agendamento...' : 'Confirmar Agendamento'}
+              </Button>
+            )}
           </div>
         )}
 
