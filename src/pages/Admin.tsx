@@ -2786,9 +2786,17 @@ const Admin = () => {
                             {statusLabels[appointment.status]}
                           </Badge>
 
-                          <span className="font-bold text-primary text-sm sm:text-base">
-                            {appointment.payment_method === 'subscription' ? 'R$ 0,00' : `R$ ${getServicesTotal(appointment.services).toFixed(2)}`}
-                          </span>
+                          {(() => {
+                            if (appointment.payment_method === 'subscription') {
+                              return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
+                            }
+                            const sub = getUserSubscription(appointment.user_id);
+                            const credits = hasRemainingCuts(sub);
+                            if (sub && credits) {
+                              return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
+                            }
+                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>;
+                          })()}
 
                           <Select
                             value={appointment.status}
