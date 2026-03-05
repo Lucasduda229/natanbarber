@@ -1243,12 +1243,11 @@ const Booking = () => {
                         );
                       });
                     }
-                    // Normal mode - filter out subscription/premium/pezinho AND subscribers_only
+                    // Normal mode - filter out subscription/premium AND subscribers_only
                     return services.filter(s => 
                       !s.subscribers_only &&
                       !s.name.toLowerCase().includes('assinatura') && 
-                      !s.name.toLowerCase().includes('premium') && 
-                      !s.name.toLowerCase().includes('pezinho')
+                      !s.name.toLowerCase().includes('premium')
                     );
                   };
 
