@@ -839,6 +839,27 @@ const Admin = () => {
   const updateAppointmentStatus = async (id: string, status: string) => {
     // Intercept "completed" to ask for payment method
     if (status === "completed") {
+      // Auto-complete subscribers without payment dialog
+      const appointment = appointments.find(a => a.id === id);
+      if (appointment) {
+        const subscription = getUserSubscription(appointment.user_id);
+        const hasCredits = hasRemainingCuts(subscription);
+        if (appointment.payment_method === 'subscription' || (subscription && hasCredits)) {
+          const { error } = await supabase
+            .from("appointments")
+            .update({ status: "completed", payment_status: "paid_subscription", payment_method: "subscription" })
+            .eq("id", id);
+          if (error) {
+            toast.error("Erro ao concluir agendamento");
+            return;
+          }
+          await executeStatusNotification(id, "completed");
+          toast.success("Agendamento de assinante concluído automaticamente!");
+          fetchData();
+          return;
+        }
+      }
+
       setCompletionAppointmentId(id);
       setCompletionDialogOpen(true);
       return;
