@@ -505,9 +505,8 @@ const Pedido = () => {
                       </div>
                     </div>
                   )}
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
             {/* Step 3: Customer Info */}
             {step === 3 && (
