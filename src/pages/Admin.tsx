@@ -31,6 +31,7 @@ import RewardsManager from "@/components/RewardsManager";
 import { ServicesManager } from "@/components/ServicesManager";
 import VIPPackagesManager from "@/components/VIPPackagesManager";
 import OperatingHoursEditor from "@/components/OperatingHoursEditor";
+import FinancialReport from "@/components/FinancialReport";
 import DataManager from "@/components/DataManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
