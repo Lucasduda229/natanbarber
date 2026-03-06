@@ -616,8 +616,18 @@ const Booking = () => {
     setTimeout(() => setStep(2), 200);
   };
 
+  // Verificar adicional de quinta-feira noturno (19h+)
+  const isThursdayEvening = (() => {
+    if (!selectedDate || !selectedTime) return false;
+    const dayOfWeek = getDay(selectedDate); // 4 = quinta-feira
+    const hour = parseInt(selectedTime.split(':')[0], 10);
+    return dayOfWeek === 4 && hour >= 19;
+  })();
+  const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+
   // Cálculos de totais
-  const totalPrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalPrice = basePrice + thursdaySurcharge;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
