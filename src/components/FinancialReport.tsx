@@ -915,35 +915,6 @@ const FinancialReport = ({
           )}
         </div>
 
-        {/* ========== CLOSING DAY CONFIG ========== */}
-        <div className="border-t border-border/40 pt-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <CalendarIcon className="w-3.5 h-3.5" />
-              Dia de fechamento: <span className="font-semibold text-foreground">dia {cashClosingDay}</span>
-            </p>
-            {editingClosingDay ? (
-              <div className="flex items-center gap-1">
-                <Input type="number" min={1} max={28} value={closingDayInput}
-                  onChange={(e) => setClosingDayInput(e.target.value)}
-                  className="w-14 h-7 text-xs text-center" />
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-500"
-                  onClick={() => { saveCashClosingDay(parseInt(closingDayInput)); setEditingClosingDay(false); }}>
-                  <Save className="w-3.5 h-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                  onClick={() => setEditingClosingDay(false)}>
-                  <XCircle className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <Button variant="ghost" size="sm" className="h-7 text-xs px-2"
-                onClick={() => { setEditingClosingDay(true); setClosingDayInput(cashClosingDay.toString()); }}>
-                <Pencil className="w-3 h-3 mr-1" /> Alterar
-              </Button>
-            )}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
