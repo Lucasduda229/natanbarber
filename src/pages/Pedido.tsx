@@ -493,20 +493,19 @@ const Pedido = () => {
                         ))}
                       </div>
                     )}
-                  </div>
 
-                  {/* Thursday evening surcharge warning */}
-                  {isThursdayEvening && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
-                      <span className="text-base">⚠️</span>
-                      <div>
-                        <p className="text-xs font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
-                        <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem adicional de R$ 5,00.</p>
+                    {/* Thursday evening surcharge warning */}
+                    {isThursdayEvening && (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
+                        <span className="text-base">⚠️</span>
+                        <div>
+                          <p className="text-xs font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
+                          <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem adicional de R$ 5,00.</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
             {/* Step 3: Customer Info */}
             {step === 3 && (
