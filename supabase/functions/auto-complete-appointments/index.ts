@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
         appointment_date,
         appointment_time,
         service_id,
+        payment_method,
+        user_id,
         services (duration_minutes)
       `)
       .eq("status", "confirmed")
@@ -50,12 +52,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const toComplete: string[] = [];
+    const toComplete: { id: string; payment_method: string | null; user_id: string }[] = [];
 
     for (const apt of appointments) {
       // Past dates: always complete
       if (apt.appointment_date < todayStr) {
-        toComplete.push(apt.id);
+        toComplete.push({ id: apt.id, payment_method: apt.payment_method, user_id: apt.user_id });
         continue;
       }
 
@@ -70,7 +72,7 @@ Deno.serve(async (req) => {
       const endTimeStr = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}:00`;
 
       if (currentTimeStr >= endTimeStr) {
-        toComplete.push(apt.id);
+        toComplete.push({ id: apt.id, payment_method: apt.payment_method, user_id: apt.user_id });
       }
     }
 
@@ -81,11 +83,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Mark as completed
-    const { error: updateError } = await supabase
-      .from("appointments")
-      .update({ status: "completed" })
-      .in("id", toComplete);
+    // Map payment_method to payment_status
+    const getPaymentStatus = (method: string | null): string => {
+      switch (method) {
+        case "pix": return "paid_pix";
+        case "dinheiro": return "paid_cash";
+        case "cartao": return "paid_card";
+        case "subscription": return "paid_subscription";
+        default: return "paid";
+      }
+    };
+
+    // Update each appointment with correct payment status
+    for (const apt of toComplete) {
+      const paymentStatus = getPaymentStatus(apt.payment_method);
+      const { error: updateError } = await supabase
+        .from("appointments")
+        .update({ 
+          status: "completed",
+          payment_status: paymentStatus,
+        })
+        .eq("id", apt.id);
+
+      if (updateError) {
+        console.error(`Error completing appointment ${apt.id}:`, updateError);
+      }
+    }
 
     if (updateError) {
       throw updateError;
