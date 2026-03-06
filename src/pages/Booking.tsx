@@ -1815,6 +1815,12 @@ const Booking = () => {
                     <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
                   </div>
                 ))}
+                {isThursdayEvening && (
+                  <div className="flex items-center justify-between text-sm text-amber-500">
+                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span>+ R$ 5,00</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
                   <CalendarIcon className="w-4 h-4" />
                   <span>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</span>
@@ -1912,6 +1918,12 @@ const Booking = () => {
                     </div>
                   ))}
                 </div>
+                {isThursdayEvening && (
+                  <div className="flex items-center justify-between text-amber-500">
+                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span className="font-semibold">+ R$ 5,00</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Data</span>
                   <span className="font-semibold text-foreground">
