@@ -1714,6 +1714,17 @@ const Booking = () => {
               </Card>
             </div>
 
+            {/* Thursday evening surcharge warning */}
+            {isThursdayEvening && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
+                  <p className="text-xs text-muted-foreground">Horários a partir das 19h nas quintas-feiras possuem um adicional de R$ 5,00.</p>
+                </div>
+              </div>
+            )}
+
             {/* Selected Services Summary */}
             {selectedServices.length > 0 && (
               <Card className="bg-primary/5 border-primary/30">
