@@ -604,6 +604,12 @@ const Pedido = () => {
                         </li>
                       ))}
                     </ul>
+                    {isThursdayEvening && (
+                      <div className="flex justify-between text-amber-500 font-medium">
+                        <span>⚠️ Adicional noturno (quinta)</span>
+                        <span>+ R$ 5,00</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>📅 {selectedDate && format(selectedDate, "dd/MM")}</span>
