@@ -616,8 +616,18 @@ const Booking = () => {
     setTimeout(() => setStep(2), 200);
   };
 
+  // Verificar adicional de quinta-feira noturno (19h+)
+  const isThursdayEvening = (() => {
+    if (!selectedDate || !selectedTime) return false;
+    const dayOfWeek = getDay(selectedDate); // 4 = quinta-feira
+    const hour = parseInt(selectedTime.split(':')[0], 10);
+    return dayOfWeek === 4 && hour >= 19;
+  })();
+  const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+
   // Cálculos de totais
-  const totalPrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalPrice = basePrice + thursdaySurcharge;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -790,7 +800,11 @@ const Booking = () => {
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
         payment_method: usingSubscription ? "subscription" : paymentMethod,
-        notes: usingSubscription ? "Agendamento via assinatura" : null,
+        notes: usingSubscription 
+          ? "Agendamento via assinatura" 
+          : isThursdayEvening 
+            ? "⚠️ Adicional noturno quinta-feira: +R$5,00" 
+            : null,
       })
       .select()
       .single();
@@ -1700,6 +1714,17 @@ const Booking = () => {
               </Card>
             </div>
 
+            {/* Thursday evening surcharge warning */}
+            {isThursdayEvening && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
+                  <p className="text-xs text-muted-foreground">Horários a partir das 19h nas quintas-feiras possuem um adicional de R$ 5,00.</p>
+                </div>
+              </div>
+            )}
+
             {/* Selected Services Summary */}
             {selectedServices.length > 0 && (
               <Card className="bg-primary/5 border-primary/30">
@@ -1713,6 +1738,12 @@ const Booking = () => {
                       <span className="text-muted-foreground flex-shrink-0">R$ {service.price.toFixed(2)}</span>
                     </div>
                   ))}
+                  {isThursdayEvening && (
+                    <div className="flex items-center justify-between text-sm text-amber-500">
+                      <span className="flex items-center gap-2">⚠️ Adicional noturno (quinta)</span>
+                      <span>+ R$ 5,00</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                     <span className="font-semibold text-foreground text-sm sm:text-base">Total</span>
                     <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
@@ -1799,6 +1830,12 @@ const Booking = () => {
                     <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
                   </div>
                 ))}
+                {isThursdayEvening && (
+                  <div className="flex items-center justify-between text-sm text-amber-500">
+                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span>+ R$ 5,00</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
                   <CalendarIcon className="w-4 h-4" />
                   <span>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</span>
@@ -1896,6 +1933,12 @@ const Booking = () => {
                     </div>
                   ))}
                 </div>
+                {isThursdayEvening && (
+                  <div className="flex items-center justify-between text-amber-500">
+                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span className="font-semibold">+ R$ 5,00</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Data</span>
                   <span className="font-semibold text-foreground">

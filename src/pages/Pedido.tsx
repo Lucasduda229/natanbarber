@@ -221,9 +221,10 @@ const Pedido = () => {
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Dinheiro";
+    const surchargeNote = isThursdayEvening ? "\n⚠️ Adicional noturno quinta-feira: +R$5,00" : "";
     const notesText = customerNotes.trim() 
-      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}`
-      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}`;
+      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}`
+      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}${surchargeNote}`;
     
     try {
       const response = await supabase.functions.invoke("create-guest-customer", {
@@ -325,8 +326,18 @@ const Pedido = () => {
     );
   }
 
+  // Verificar adicional de quinta-feira noturno (19h+)
+  const isThursdayEvening = (() => {
+    if (!selectedDate || !selectedTime) return false;
+    const dayOfWeek = getDay(selectedDate); // 4 = quinta-feira
+    const hour = parseInt(selectedTime.split(':')[0], 10);
+    return dayOfWeek === 4 && hour >= 19;
+  })();
+  const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+
   // Calculate total price
-  const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const basePrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const totalPrice = basePrice + thursdaySurcharge;
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -483,9 +494,19 @@ const Pedido = () => {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Thursday evening surcharge warning */}
+                  {isThursdayEvening && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
+                      <span className="text-base">⚠️</span>
+                      <div>
+                        <p className="text-xs font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
+                        <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem adicional de R$ 5,00.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* Step 3: Customer Info */}
             {step === 3 && (
@@ -593,6 +614,12 @@ const Pedido = () => {
                         </li>
                       ))}
                     </ul>
+                    {isThursdayEvening && (
+                      <div className="flex justify-between text-amber-500 font-medium">
+                        <span>⚠️ Adicional noturno (quinta)</span>
+                        <span>+ R$ 5,00</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>📅 {selectedDate && format(selectedDate, "dd/MM")}</span>
