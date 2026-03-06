@@ -800,7 +800,11 @@ const Booking = () => {
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
         payment_method: usingSubscription ? "subscription" : paymentMethod,
-        notes: usingSubscription ? "Agendamento via assinatura" : null,
+        notes: usingSubscription 
+          ? "Agendamento via assinatura" 
+          : isThursdayEvening 
+            ? "⚠️ Adicional noturno quinta-feira: +R$5,00" 
+            : null,
       })
       .select()
       .single();
