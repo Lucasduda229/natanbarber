@@ -501,7 +501,7 @@ const Pedido = () => {
                       <span className="text-base">⚠️</span>
                       <div>
                         <p className="text-xs font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
-                        <p className="text-[11px] text-muted-foreground">Horários a partir das 19h possuem adicional de <strong className="text-amber-500">R$ 5,00</strong>.</p>
+                        <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem adicional de R$ 5,00.</p>
                       </div>
                     </div>
                   )}
