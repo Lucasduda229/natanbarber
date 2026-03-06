@@ -713,13 +713,10 @@ const Admin = () => {
   };
 
   const fetchPackagePayments = async () => {
-    const cutoffDate = format(subDays(new Date(), 90), "yyyy-MM-dd");
     const { data, error } = await supabase
       .from("package_payments")
       .select("*")
-      .gte("payment_date", cutoffDate)
-      .order("payment_date", { ascending: false })
-      .limit(100);
+      .order("payment_date", { ascending: false });
 
     if (!error && data) {
       // Fetch profiles separately since there's no direct FK relation
