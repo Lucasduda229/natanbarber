@@ -95,7 +95,7 @@ const Login = () => {
                   Esqueci a senha
                 </Link>
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow">
+              <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-full shadow-gold-glow">
                 {loading ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />Entrando...</span> : "Entrar"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">Não tem conta? <Link to="/register" className="text-primary hover:underline font-semibold">Cadastre-se</Link></p>

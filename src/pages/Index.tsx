@@ -56,7 +56,7 @@ const Index = () => {
           <Link to="/register" className="w-full sm:w-auto">
             <Button 
               size="lg" 
-              className="w-full sm:w-auto bg-gold-gradient hover:opacity-90 text-background font-semibold px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-gold-glow transition-all hover:shadow-gold-glow-strong touch-target"
+              className="w-full sm:w-auto bg-gold-gradient hover:opacity-90 text-background font-semibold px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-full shadow-gold-glow transition-all hover:shadow-gold-glow-strong touch-target"
             >
               Criar Conta
             </Button>
@@ -66,7 +66,7 @@ const Index = () => {
             <Button 
               size="lg" 
               variant="outline" 
-              className="w-full sm:w-auto border-primary bg-card/50 text-primary hover:bg-primary hover:text-background px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl transition-all shadow-md touch-target"
+              className="w-full sm:w-auto border-primary bg-card/50 text-primary hover:bg-primary hover:text-background px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-full transition-all shadow-md touch-target"
             >
               Já tenho conta
             </Button>
