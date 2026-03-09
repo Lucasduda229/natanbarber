@@ -116,7 +116,7 @@ const Register = () => {
                 <GhostInput icon={Phone} name="phone" type="tel" placeholder="(00) 00000-0000" value={formData.phone} onChange={handleChange} />
               </div>
               <div className="form-submit" style={{ opacity: 0 }}>
-                <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-xl shadow-gold-glow">
+                <Button type="submit" disabled={loading} className="w-full bg-gold-gradient hover:opacity-90 text-background font-semibold py-6 rounded-full shadow-gold-glow">
                   {loading ? <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-background border-t-transparent rounded-full animate-spin" />Criando...</span> : "Finalizar Cadastro"}
                 </Button>
               </div>
