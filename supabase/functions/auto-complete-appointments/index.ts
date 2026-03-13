@@ -23,9 +23,6 @@ Deno.serve(async (req) => {
     const todayStr = localTime.toISOString().split("T")[0];
     const currentTimeStr = localTime.toTimeString().slice(0, 8); // HH:MM:SS
 
-    // Find confirmed appointments where the time has passed
-    // We check: appointment_date < today OR (appointment_date = today AND appointment_time + duration <= now)
-    
     // Step 1: Get all confirmed appointments for today or earlier
     const { data: appointments, error: fetchError } = await supabase
       .from("appointments")
@@ -95,6 +92,7 @@ Deno.serve(async (req) => {
     };
 
     // Update each appointment with correct payment status
+    let completedCount = 0;
     for (const apt of toComplete) {
       const paymentStatus = getPaymentStatus(apt.payment_method);
       const { error: updateError } = await supabase
@@ -107,17 +105,15 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error(`Error completing appointment ${apt.id}:`, updateError);
+      } else {
+        completedCount++;
       }
     }
 
-    if (updateError) {
-      throw updateError;
-    }
-
-    console.log(`Auto-completed ${toComplete.length} appointments`);
+    console.log(`Auto-completed ${completedCount} appointments`);
 
     return new Response(
-      JSON.stringify({ message: `${toComplete.length} agendamento(s) concluído(s)`, completed: toComplete.length }),
+      JSON.stringify({ message: `${completedCount} agendamento(s) concluído(s)`, completed: completedCount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
