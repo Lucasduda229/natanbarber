@@ -1,0 +1,2 @@
+ALTER TABLE public.appointments DROP CONSTRAINT appointments_payment_status_check;
+ALTER TABLE public.appointments ADD CONSTRAINT appointments_payment_status_check CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'paid_pix'::text, 'paid_cash'::text, 'paid_card'::text, 'paid_subscription'::text, 'refunded'::text]));
