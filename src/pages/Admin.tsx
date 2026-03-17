@@ -1410,7 +1410,7 @@ const Admin = () => {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
