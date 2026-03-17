@@ -1469,7 +1469,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/40 backdrop-blur-xl border-primary/20 col-span-2 sm:col-span-1">
+          <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
             <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
               <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -1482,6 +1482,20 @@ const Admin = () => {
                     .toFixed(0)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/40 backdrop-blur-xl border-amber-500/20">
+            <CardContent className="p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
+                  {activeSubscriptions.filter(s => s.is_active).length}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Assinantes Ativos</p>
               </div>
             </CardContent>
           </Card>
