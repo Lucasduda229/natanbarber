@@ -506,7 +506,8 @@ const Admin = () => {
     const { data, error } = await supabase
       .from("subscription_progress")
       .select("user_id, package_name, monthly_cuts_limit, cuts_used_this_month, is_active")
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .not("package_id", "is", null);
 
     if (error) {
       console.error("Error fetching subscriptions:", error);
