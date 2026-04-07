@@ -249,7 +249,8 @@ const BuySubscription = () => {
       notes: existingSub ? "Renovação pelo cliente - aguardando pagamento" : "Nova assinatura - aguardando pagamento",
     });
 
-    // Notify admins about new subscription purchase request
+    // Notify admins about new subscription purchase/renewal request
+    const isRenewal = !!existingSub;
     const { data: admins } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -258,8 +259,10 @@ const BuySubscription = () => {
     if (admins) {
       const notifications = admins.map((admin) => ({
         user_id: admin.user_id,
-        title: "Nova Compra de Assinatura",
-        message: `${customerName} solicitou o ${selectedPackage.name} - R$ ${selectedPackage.price.toFixed(2)}`,
+        title: isRenewal ? "🔄 Renovação de Assinatura" : "🆕 Nova Compra de Assinatura",
+        message: isRenewal 
+          ? `${customerName} solicitou RENOVAÇÃO do ${selectedPackage.name} - R$ ${selectedPackage.price.toFixed(2)}. Confira o pagamento na aba Pedidos.`
+          : `${customerName} solicitou o ${selectedPackage.name} - R$ ${selectedPackage.price.toFixed(2)}. Confira o pagamento na aba Pedidos.`,
         type: "subscription_purchase",
       }));
 

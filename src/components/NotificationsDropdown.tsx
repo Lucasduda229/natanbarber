@@ -29,6 +29,9 @@ const typeColors: Record<string, string> = {
   cancelled: "text-red-500",
   info: "text-primary",
   new_booking: "text-amber-500",
+  subscription_purchase: "text-green-500",
+  new_subscription: "text-green-500",
+  subscription_activated: "text-emerald-500",
 };
 
 const typeIcons: Record<string, React.ReactNode> = {
@@ -36,6 +39,9 @@ const typeIcons: Record<string, React.ReactNode> = {
   cancelled: <X className="w-4 h-4 text-red-500" />,
   info: <Bell className="w-4 h-4 text-primary" />,
   new_booking: <CalendarPlus className="w-4 h-4 text-amber-500" />,
+  subscription_purchase: <Bell className="w-4 h-4 text-green-500" />,
+  new_subscription: <Bell className="w-4 h-4 text-green-500" />,
+  subscription_activated: <Check className="w-4 h-4 text-emerald-500" />,
 };
 
 // Create notification sound using Web Audio API - Melodia musical
