@@ -145,16 +145,22 @@ const getServicesNames = (services: AppointmentService[]): string => {
   return services.map(s => s.name).join(", ");
 };
 
-const getServicesTotal = (services: AppointmentService[]): number => {
-  if (!services || services.length === 0) return 0;
-  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+// Helper function to detect Thursday night surcharge from appointment notes
+const getNightSurcharge = (notes: string | null): number => {
+  if (!notes) return 0;
+  return notes.includes("Adicional noturno") ? 5 : 0;
+};
+
+const getServicesTotal = (services: AppointmentService[], notes?: string | null): number => {
+  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
 };
 
 // Helper function to get services total considering subscription (R$ 0 for subscriptions)
-const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null): number => {
+const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null, notes?: string | null): number => {
   if (paymentMethod === 'subscription') return 0;
-  if (!services || services.length === 0) return 0;
-  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
 };
 
 // Helper function to get payment method display info
