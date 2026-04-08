@@ -136,16 +136,16 @@ const FinancialReport = ({
   const totals = useMemo(() => {
     const pixTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'paid_pix' && a.payment_method !== 'subscription')
-      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
     const cashTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'paid_cash' && a.payment_method !== 'subscription')
-      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
     const cardTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
-      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
     const pendingTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription' && a.status !== 'cancelled')
-      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method)), 0);
+      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
     const received = pixTotal + cashTotal + cardTotal;
 
     // Package payments
@@ -284,7 +284,7 @@ const FinancialReport = ({
         yPos += 7;
         if (yPos > 270) { doc.addPage(); yPos = 20; }
         const isSubscription = a.payment_method === 'subscription';
-        const value = isSubscription ? 0 : getAdjustedValue(a.id, getServicesTotal(a.services));
+        const value = isSubscription ? 0 : getAdjustedValue(a.id, getServicesTotal(a.services, a.notes));
         const paymentLabel = a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago';
         doc.text(format(parseISO(a.appointment_date), "dd/MM/yy"), 20, yPos);
         doc.text((a.profiles?.full_name || 'N/A').substring(0, 20), 45, yPos);
@@ -328,7 +328,7 @@ const FinancialReport = ({
         ['Data', 'Horário', 'Cliente', 'Serviço', 'Valor Original', 'Valor Ajustado', 'Pagamento', 'Tipo'],
         ...paidAppointments.map(a => {
           const isSubscription = a.payment_method === 'subscription';
-          const originalValue = isSubscription ? 0 : getServicesTotal(a.services);
+          const originalValue = isSubscription ? 0 : getServicesTotal(a.services, a.notes);
           const adjustedValue = isSubscription ? 0 : getAdjustedValue(a.id, originalValue);
           const paymentLabel = a.payment_status === 'paid_pix' ? 'PIX' : a.payment_status === 'paid_cash' ? 'Dinheiro' : a.payment_status === 'paid_card' ? 'Cartão' : 'Pago';
           return [
@@ -688,7 +688,7 @@ const FinancialReport = ({
             <div className="space-y-1.5">
               {visibleTransactions.map((appointment) => {
                 const isSubscription = appointment.payment_method === 'subscription';
-                const originalValue = isSubscription ? 0 : getServicesTotal(appointment.services);
+                const originalValue = isSubscription ? 0 : getServicesTotal(appointment.services, appointment.notes);
                 const adjustedValue = isSubscription ? 0 : getAdjustedValue(appointment.id, originalValue);
                 const hasAdjustment = revenueAdjustments.some(adj => adj.appointment_id === appointment.id);
                 const isEditing = editingAppointmentId === appointment.id;
