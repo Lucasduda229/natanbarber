@@ -72,8 +72,8 @@ interface FinancialReportProps {
   setReportStartDate: (date: Date | undefined) => void;
   setReportEndDate: (date: Date | undefined) => void;
   getAdjustedValue: (appointmentId: string, originalValue: number) => number;
-  getServicesTotal: (services: AppointmentService[]) => number;
-  getServicesTotalForRevenue: (services: AppointmentService[], paymentMethod: string | null) => number;
+  getServicesTotal: (services: AppointmentService[], notes?: string | null) => number;
+  getServicesTotalForRevenue: (services: AppointmentService[], paymentMethod: string | null, notes?: string | null) => number;
   getServicesNames: (services: AppointmentService[]) => string;
   saveRevenueAdjustment: (appointmentId: string, originalValue: number, adjustedValue: number) => void;
   deletePackagePayment: (paymentId: string, packageName: string) => void;
