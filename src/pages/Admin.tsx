@@ -145,16 +145,22 @@ const getServicesNames = (services: AppointmentService[]): string => {
   return services.map(s => s.name).join(", ");
 };
 
-const getServicesTotal = (services: AppointmentService[]): number => {
-  if (!services || services.length === 0) return 0;
-  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+// Helper function to detect Thursday night surcharge from appointment notes
+const getNightSurcharge = (notes: string | null): number => {
+  if (!notes) return 0;
+  return notes.includes("Adicional noturno") ? 5 : 0;
+};
+
+const getServicesTotal = (services: AppointmentService[], notes?: string | null): number => {
+  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
 };
 
 // Helper function to get services total considering subscription (R$ 0 for subscriptions)
-const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null): number => {
+const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null, notes?: string | null): number => {
   if (paymentMethod === 'subscription') return 0;
-  if (!services || services.length === 0) return 0;
-  return services.reduce((sum, s) => sum + (s.price || 0), 0);
+  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
 };
 
 // Helper function to get payment method display info
@@ -682,7 +688,7 @@ const Admin = () => {
     const confirmedCount = appointments.filter(a => a.status === "confirmed").length;
     const revenue = appointments
       .filter(a => a.status === "completed" || a.status === "confirmed")
-      .reduce((sum, a) => sum + getServicesTotalForRevenue(a.services, a.payment_method), 0);
+      .reduce((sum, a) => sum + getServicesTotalForRevenue(a.services, a.payment_method, a.notes), 0);
     setStats({ today: todayCount, pending: pendingCount, confirmed: confirmedCount, revenue });
   }, [appointments, loading]);
 
@@ -1479,7 +1485,7 @@ const Admin = () => {
                 <p className="text-base sm:text-xl font-bold text-primary">
                   R$ {filteredStatsAppointments
                     .filter(a => (a.status === 'confirmed' || a.status === 'completed') && a.payment_method !== 'subscription')
-                    .reduce((sum, a) => sum + getServicesTotal(a.services), 0)
+                    .reduce((sum, a) => sum + getServicesTotal(a.services, a.notes), 0)
                     .toFixed(0)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
@@ -1679,7 +1685,7 @@ const Admin = () => {
                                 );
                               }
                               return (
-                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
+                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>
                               );
                             })()}
                           </div>
@@ -1971,7 +1977,7 @@ const Admin = () => {
                                   );
                                 }
                                 return (
-                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>
+                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>
                                 );
                               })()}
                             </div>
@@ -1992,7 +1998,7 @@ const Admin = () => {
                             if (sub && credits) {
                               return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
                             }
-                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services).toFixed(2)}</span>;
+                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>;
                           })()}
 
                           <Select
