@@ -156,7 +156,9 @@ const FinancialReport = ({
       const beforeEnd = isBefore(paymentDate, reportEndDate) || isEqual(paymentDate, reportEndDate);
       return afterStart && beforeEnd;
     });
-    const packageTotal = filteredPP.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const packageTotal = filteredPP
+      .filter(p => p.payment_status && p.payment_status !== 'pending')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return { pixTotal, cashTotal, cardTotal, pendingTotal, received, packageTotal, filteredPP };
   }, [filteredReportAppointments, packagePayments, reportStartDate, reportEndDate, getAdjustedValue, getServicesTotalForRevenue]);
