@@ -17,10 +17,10 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get all active subscriptions
+    // Get all active subscriptions with package duration info
     const { data: subscriptions, error: fetchError } = await supabase
       .from('subscription_progress')
-      .select('id, user_id, monthly_cuts_limit, weekly_credits_available, cuts_used_this_month, credits_expired_this_month, current_week_start')
+      .select('id, user_id, monthly_cuts_limit, weekly_credits_available, cuts_used_this_month, credits_expired_this_month, current_week_start, subscription_start_date, package_id')
       .eq('is_active', true)
 
     if (fetchError) {
@@ -33,9 +33,56 @@ Deno.serve(async (req) => {
     currentWeekStart.setHours(0, 0, 0, 0)
 
     let updatedCount = 0
-    const results: { userId: string; expired: number; newWeeklyCredits: number }[] = []
+    let expiredCount = 0
+    const results: { userId: string; expired?: number; newWeeklyCredits?: number; action: string }[] = []
 
     for (const sub of subscriptions || []) {
+      // CHECK IF SUBSCRIPTION PERIOD HAS EXPIRED (30 days from start)
+      const startDate = sub.subscription_start_date ? new Date(sub.subscription_start_date) : null
+
+      if (startDate) {
+        // Get package duration (default 30 days)
+        let durationDays = 30
+        if (sub.package_id) {
+          const { data: pkg } = await supabase
+            .from('packages')
+            .select('duration_days')
+            .eq('id', sub.package_id)
+            .maybeSingle()
+          if (pkg?.duration_days) {
+            durationDays = pkg.duration_days
+          }
+        }
+
+        const expirationDate = new Date(startDate)
+        expirationDate.setDate(expirationDate.getDate() + durationDays)
+
+        if (now > expirationDate) {
+          // Subscription has expired — deactivate it
+          const { error: deactivateError } = await supabase
+            .from('subscription_progress')
+            .update({
+              is_active: false,
+              weekly_credits_available: 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', sub.id)
+
+          if (deactivateError) {
+            console.error(`Error deactivating subscription ${sub.id}:`, deactivateError)
+            continue
+          }
+
+          results.push({
+            userId: sub.user_id,
+            action: 'expired_deactivated'
+          })
+          expiredCount++
+          continue // Skip credit reset for expired subscriptions
+        }
+      }
+
+      // Subscription is still valid — proceed with weekly credit reset
       const subWeekStart = sub.current_week_start ? new Date(sub.current_week_start) : null
       
       // Check if we need to process this subscription (new week)
@@ -68,18 +115,19 @@ Deno.serve(async (req) => {
         results.push({
           userId: sub.user_id,
           expired: expiredCredits,
-          newWeeklyCredits: weeklyCreditsPerWeek
+          newWeeklyCredits: weeklyCreditsPerWeek,
+          action: 'credits_reset'
         })
         updatedCount++
       }
     }
 
-    console.log(`Weekly credits reset completed. Updated ${updatedCount} subscriptions.`, results)
+    console.log(`Weekly credits reset completed. Updated ${updatedCount}, expired ${expiredCount}.`, results)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Processed ${updatedCount} subscriptions`,
+        message: `Processed ${updatedCount} subscriptions, expired ${expiredCount}`,
         results 
       }),
       { 

@@ -261,6 +261,16 @@ const Booking = () => {
       // Subscription is valid for 30 days from start date (can be adjusted per package)
       const endDate = addDays(startDate, 30);
       
+      // CHECK: If subscription period has expired, treat as no active subscription
+      const now = new Date();
+      if (isAfter(now, endDate)) {
+        console.log("Subscription period expired, treating as inactive");
+        setActiveSubscription(null);
+        setSubscriptionPackageItems([]);
+        setHasExpiredSubscription(true);
+        return;
+      }
+      
       // Check if we need to reset monthly cuts (based on subscription period)
       const subMonthStart = subscription.current_month_start ? new Date(subscription.current_month_start) : null;
       let cutsUsed = subscription.cuts_used_this_month;
