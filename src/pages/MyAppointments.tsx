@@ -236,17 +236,22 @@ const MyAppointments = () => {
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
-                                <Scissors className="w-4 h-4 text-primary flex-shrink-0" />
-                                <span className="truncate">{appointment.services?.name || "Serviço"}</span>
+                              <h3 className="font-semibold text-foreground flex items-start gap-2 text-sm sm:text-base">
+                                <Scissors className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                                <span className="break-words">{appointment.combined_name || appointment.services?.name || "Serviço"}</span>
                               </h3>
+                              {appointment.extra_services && appointment.extra_services.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                                  {appointment.extra_services.length} serviço{appointment.extra_services.length > 1 ? 's' : ''} extra{appointment.extra_services.length > 1 ? 's' : ''}
+                                </p>
+                              )}
                               <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
                                   {appointment.appointment_time.slice(0, 5)}
                                 </span>
                                 <span className="text-lg font-bold text-primary">
-                                  R$ {appointment.services?.price?.toFixed(2) || "0.00"}
+                                  R$ {(appointment.total_price ?? appointment.services?.price ?? 0).toFixed(2)}
                                 </span>
                               </div>
                               <div className="flex flex-wrap items-center gap-2 mt-2">
