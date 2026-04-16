@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast, subHours, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy, CreditCard, Receipt, Hash } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -15,6 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,6 +71,7 @@ const MyAppointments = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reviewedAppointments, setReviewedAppointments] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
     gsap.fromTo(".appointments-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
@@ -310,7 +313,11 @@ const MyAppointments = () => {
 
                 <div className="space-y-2 sm:space-y-3">
                   {pastAppointments.map((appointment) => (
-                    <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-border/50 opacity-80">
+                    <Card
+                      key={appointment.id}
+                      onClick={() => setSelectedAppointment(appointment)}
+                      className="bg-card/20 backdrop-blur-xl border-border/50 opacity-80 cursor-pointer hover:opacity-100 hover:border-primary/40 hover:bg-card/40 transition-all active:scale-[0.99]"
+                    >
                       <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -329,7 +336,7 @@ const MyAppointments = () => {
                               <span className="text-xs sm:text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             {appointment.status === "completed" && !reviewedAppointments.has(appointment.id) && (
                               <ReviewForm 
                                 appointmentId={appointment.id} 
@@ -363,6 +370,124 @@ const MyAppointments = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Appointment Details Modal */}
+      <Dialog open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
+        <DialogContent className="max-w-md bg-card/95 backdrop-blur-xl border-primary/20">
+          {selectedAppointment && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-foreground">
+                  <Receipt className="w-5 h-5 text-primary" />
+                  Detalhes do Agendamento
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground">
+                  Informações completas do seu pedido
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {/* Status & Date */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <Badge variant="outline" className={statusColors[selectedAppointment.status]}>
+                    {statusLabels[selectedAppointment.status]}
+                  </Badge>
+                  <Badge variant="outline" className="bg-muted/50 text-xs">
+                    {paymentLabels[selectedAppointment.payment_status]} ({paymentMethodLabels[selectedAppointment.payment_method || 'pix'] || selectedAppointment.payment_method || 'PIX'})
+                  </Badge>
+                </div>
+
+                {/* Date & Time block */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
+                    <span className="text-lg font-bold text-primary">
+                      {format(parseISO(selectedAppointment.appointment_date), "dd")}
+                    </span>
+                    <span className="text-xs text-primary uppercase">
+                      {format(parseISO(selectedAppointment.appointment_date), "MMM", { locale: ptBR })}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">
+                      {format(parseISO(selectedAppointment.appointment_date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </p>
+                    <p className="flex items-center gap-1.5 text-foreground font-semibold mt-1">
+                      <Clock className="w-4 h-4 text-primary" />
+                      {selectedAppointment.appointment_time.slice(0, 5)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Services */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Scissors className="w-4 h-4 text-primary" />
+                    Serviços
+                  </h4>
+                  <div className="space-y-1.5 rounded-xl bg-muted/20 border border-border/50 p-3">
+                    {selectedAppointment.services && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">{selectedAppointment.services.name}</span>
+                        <span className="text-muted-foreground">R$ {selectedAppointment.services.price.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {selectedAppointment.extra_services?.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground">{s.name}</span>
+                        <span className="text-muted-foreground">R$ {s.price.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <Separator className="my-2 bg-border/50" />
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-foreground">Total</span>
+                      <span className="text-primary text-lg">
+                        R$ {(selectedAppointment.total_price ?? selectedAppointment.services?.price ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Info */}
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/20 border border-border/50">
+                  <CreditCard className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div className="flex-1 text-sm">
+                    <p className="text-muted-foreground">Pagamento</p>
+                    <p className="text-foreground font-medium">
+                      {paymentMethodLabels[selectedAppointment.payment_method || 'pix'] || selectedAppointment.payment_method || 'PIX'} • {paymentLabels[selectedAppointment.payment_status]}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Booking ID */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Hash className="w-3 h-3" />
+                  <span className="font-mono truncate">{selectedAppointment.id}</span>
+                </div>
+
+                {/* Review action if completed and not reviewed */}
+                {selectedAppointment.status === "completed" && !reviewedAppointments.has(selectedAppointment.id) && (
+                  <div className="pt-2">
+                    <ReviewForm
+                      appointmentId={selectedAppointment.id}
+                      serviceName={selectedAppointment.combined_name || selectedAppointment.services?.name || "Serviço"}
+                      onReviewSubmitted={() => {
+                        fetchAppointments();
+                        setSelectedAppointment(null);
+                      }}
+                    />
+                  </div>
+                )}
+                {reviewedAppointments.has(selectedAppointment.id) && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-primary pt-1">
+                    <Star className="w-4 h-4 fill-primary" />
+                    Você já avaliou este serviço
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
