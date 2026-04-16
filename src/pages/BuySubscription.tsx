@@ -245,9 +245,9 @@ const BuySubscription = () => {
       package_id: selectedPackage.id,
       package_name: selectedPackage.name,
       amount: selectedPackage.price,
-      payment_method: "pix",
+      payment_method: paymentMethod,
       payment_status: "pending",
-      notes: existingSub ? "Renovação pelo cliente - aguardando pagamento" : "Nova assinatura - aguardando pagamento",
+      notes: `${existingSub ? "Renovação pelo cliente" : "Nova assinatura"} - aguardando pagamento (${paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'})`,
     });
 
     // Notify admins about new subscription purchase/renewal request
