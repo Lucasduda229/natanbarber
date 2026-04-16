@@ -91,6 +91,12 @@ const MyAppointments = () => {
         services (
           name,
           price
+        ),
+        appointment_services (
+          services (
+            name,
+            price
+          )
         )
       `)
       .eq("user_id", user?.id)
@@ -107,7 +113,25 @@ const MyAppointments = () => {
       const reviewedIds = new Set((reviews || []).map(r => r.appointment_id));
       setReviewedAppointments(reviewedIds);
 
-      setAppointments(data as Appointment[]);
+      // Combine main service + extras into single display entry
+      const combined = (data as any[]).map((apt) => {
+        const extras = (apt.appointment_services || [])
+          .map((as: any) => as.services)
+          .filter(Boolean) as { name: string; price: number }[];
+
+        const mainPrice = apt.services?.price || 0;
+        const extrasPrice = extras.reduce((sum, s) => sum + (s.price || 0), 0);
+        const allNames = [apt.services?.name, ...extras.map(e => e.name)].filter(Boolean);
+
+        return {
+          ...apt,
+          extra_services: extras,
+          total_price: mainPrice + extrasPrice,
+          combined_name: allNames.join(" + "),
+        } as Appointment;
+      });
+
+      setAppointments(combined);
     }
     
     setLoading(false);
