@@ -49,6 +49,7 @@ const BuySubscription = () => {
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
 
   useEffect(() => {
     fetchPackages();
