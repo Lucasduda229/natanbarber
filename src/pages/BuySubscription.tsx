@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Crown, Check, ChevronLeft, User, Phone, CreditCard, Copy, ArrowRight } from "lucide-react";
+import { Package, Crown, Check, ChevronLeft, User, Phone, CreditCard, Copy, ArrowRight, Banknote, CreditCard as CardIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
