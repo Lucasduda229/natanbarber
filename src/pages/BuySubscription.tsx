@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Crown, Check, ChevronLeft, User, Phone, CreditCard, Copy, ArrowRight } from "lucide-react";
+import { Package, Crown, Check, ChevronLeft, User, Phone, CreditCard, Copy, ArrowRight, Banknote, CreditCard as CardIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ const BuySubscription = () => {
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
 
   useEffect(() => {
     fetchPackages();
@@ -244,9 +245,9 @@ const BuySubscription = () => {
       package_id: selectedPackage.id,
       package_name: selectedPackage.name,
       amount: selectedPackage.price,
-      payment_method: "pix",
+      payment_method: paymentMethod,
       payment_status: "pending",
-      notes: existingSub ? "Renovação pelo cliente - aguardando pagamento" : "Nova assinatura - aguardando pagamento",
+      notes: `${existingSub ? "Renovação pelo cliente" : "Nova assinatura"} - aguardando pagamento (${paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'})`,
     });
 
     // Notify admins about new subscription purchase/renewal request
@@ -518,8 +519,8 @@ const BuySubscription = () => {
           <div className="space-y-6 animate-in fade-in">
             <div className="text-center mb-6">
               <CreditCard className="w-12 h-12 text-primary mx-auto mb-2" />
-              <h1 className="text-2xl font-bold text-foreground">Pagamento PIX</h1>
-              <p className="text-muted-foreground text-sm">Escaneie o QR Code ou copie a chave</p>
+              <h1 className="text-2xl font-bold text-foreground">Forma de Pagamento</h1>
+              <p className="text-muted-foreground text-sm">Escolha como deseja pagar sua assinatura</p>
             </div>
 
             {/* Package Summary */}
@@ -544,46 +545,133 @@ const BuySubscription = () => {
               </CardContent>
             </Card>
 
-            {/* QR Code */}
-            <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="p-3 bg-white rounded-xl shadow-lg">
-                    <QRCodeSVG
-                      value={generatePixPayload({
-                        pixKey: PIX_KEY,
-                        merchantName: "NATAN BARBER",
-                        merchantCity: "LAURO MULLER",
-                        amount: selectedPackage.price,
-                        description: selectedPackage.name.substring(0, 25),
-                      })}
-                      size={180}
-                      level="M"
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Escaneie o QR Code com seu app de banco
-                  </p>
+            {/* Payment Method Selector */}
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("pix")}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                  paymentMethod === "pix"
+                    ? "border-teal-500 bg-teal-500/10"
+                    : "border-border bg-card/40 hover:border-teal-500/50"
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-1.5">
+                  <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-xs font-semibold text-foreground">PIX</span>
+              </button>
 
-            {/* PIX Copia e Cola */}
-            <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/30 bg-primary/5">
-              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm">
-                <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-primary font-medium">PIX Copia e Cola</p>
-                <p className="text-sm text-muted-foreground">Clique para copiar o código com valor</p>
-              </div>
-              <Button variant="outline" onClick={() => copyPixCode(selectedPackage.price, selectedPackage.name)} className="border-primary/30 hover:bg-primary/10">
-                <Copy className="w-4 h-4 mr-1" />
-                Copiar
-              </Button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("dinheiro")}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                  paymentMethod === "dinheiro"
+                    ? "border-green-500 bg-green-500/10"
+                    : "border-border bg-card/40 hover:border-green-500/50"
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                  <Banknote className="w-6 h-6 text-green-500" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Dinheiro</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cartao")}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                  paymentMethod === "cartao"
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-border bg-card/40 hover:border-blue-500/50"
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <CardIcon className="w-6 h-6 text-blue-500" />
+                </div>
+                <span className="text-xs font-semibold text-foreground">Cartão</span>
+              </button>
             </div>
+
+            {/* PIX content */}
+            {paymentMethod === "pix" && (
+              <>
+                <Card className="bg-card/60 backdrop-blur-xl border-primary/20">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-3 bg-white rounded-xl shadow-lg">
+                        <QRCodeSVG
+                          value={generatePixPayload({
+                            pixKey: PIX_KEY,
+                            merchantName: "NATAN BARBER",
+                            merchantCity: "LAURO MULLER",
+                            amount: selectedPackage.price,
+                            description: selectedPackage.name.substring(0, 25),
+                          })}
+                          size={180}
+                          level="M"
+                          bgColor="#ffffff"
+                          fgColor="#000000"
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Escaneie o QR Code com seu app de banco
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex items-center gap-3 p-4 rounded-xl border border-primary/30 bg-primary/5">
+                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2 shadow-sm">
+                    <img src={pixIcon} alt="PIX" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-primary font-medium">PIX Copia e Cola</p>
+                    <p className="text-sm text-muted-foreground">Clique para copiar o código com valor</p>
+                  </div>
+                  <Button variant="outline" onClick={() => copyPixCode(selectedPackage.price, selectedPackage.name)} className="border-primary/30 hover:bg-primary/10">
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Dinheiro content */}
+            {paymentMethod === "dinheiro" && (
+              <Card className="bg-green-500/5 border-2 border-green-500/30">
+                <CardContent className="p-6 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+                    <Banknote className="w-8 h-8 text-green-500" />
+                  </div>
+                  <h3 className="font-bold text-foreground">Pagamento em Dinheiro</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você pagará <span className="font-bold text-green-500">R$ {selectedPackage.price.toFixed(2)}</span> em dinheiro diretamente na barbearia.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Sua assinatura será ativada após a confirmação do pagamento pelo barbeiro.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Cartão content */}
+            {paymentMethod === "cartao" && (
+              <Card className="bg-blue-500/5 border-2 border-blue-500/30">
+                <CardContent className="p-6 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto">
+                    <CardIcon className="w-8 h-8 text-blue-500" />
+                  </div>
+                  <h3 className="font-bold text-foreground">Pagamento no Cartão</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você pagará <span className="font-bold text-blue-500">R$ {selectedPackage.price.toFixed(2)}</span> no cartão (débito ou crédito) diretamente na barbearia.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Sua assinatura será ativada após a confirmação do pagamento pelo barbeiro.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <CancellationPolicy variant="full" />
 
@@ -598,7 +686,7 @@ const BuySubscription = () => {
                   Processando...
                 </span>
               ) : (
-                "Confirmar Pagamento"
+                "Confirmar Pedido"
               )}
             </Button>
           </div>
