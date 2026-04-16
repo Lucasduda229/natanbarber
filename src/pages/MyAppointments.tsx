@@ -31,6 +31,9 @@ interface Appointment {
     name: string;
     price: number;
   } | null;
+  extra_services?: { name: string; price: number }[];
+  total_price?: number;
+  combined_name?: string;
   hasReview?: boolean;
 }
 
@@ -88,6 +91,12 @@ const MyAppointments = () => {
         services (
           name,
           price
+        ),
+        appointment_services (
+          services (
+            name,
+            price
+          )
         )
       `)
       .eq("user_id", user?.id)
@@ -104,7 +113,25 @@ const MyAppointments = () => {
       const reviewedIds = new Set((reviews || []).map(r => r.appointment_id));
       setReviewedAppointments(reviewedIds);
 
-      setAppointments(data as Appointment[]);
+      // Combine main service + extras into single display entry
+      const combined = (data as any[]).map((apt) => {
+        const extras = (apt.appointment_services || [])
+          .map((as: any) => as.services)
+          .filter(Boolean) as { name: string; price: number }[];
+
+        const mainPrice = apt.services?.price || 0;
+        const extrasPrice = extras.reduce((sum, s) => sum + (s.price || 0), 0);
+        const allNames = [apt.services?.name, ...extras.map(e => e.name)].filter(Boolean);
+
+        return {
+          ...apt,
+          extra_services: extras,
+          total_price: mainPrice + extrasPrice,
+          combined_name: allNames.join(" + "),
+        } as Appointment;
+      });
+
+      setAppointments(combined);
     }
     
     setLoading(false);
@@ -209,17 +236,22 @@ const MyAppointments = () => {
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
-                                <Scissors className="w-4 h-4 text-primary flex-shrink-0" />
-                                <span className="truncate">{appointment.services?.name || "Serviço"}</span>
+                              <h3 className="font-semibold text-foreground flex items-start gap-2 text-sm sm:text-base">
+                                <Scissors className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                                <span className="break-words">{appointment.combined_name || appointment.services?.name || "Serviço"}</span>
                               </h3>
+                              {appointment.extra_services && appointment.extra_services.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                                  {appointment.extra_services.length} serviço{appointment.extra_services.length > 1 ? 's' : ''} extra{appointment.extra_services.length > 1 ? 's' : ''}
+                                </p>
+                              )}
                               <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
                                   {appointment.appointment_time.slice(0, 5)}
                                 </span>
                                 <span className="text-lg font-bold text-primary">
-                                  R$ {appointment.services?.price?.toFixed(2) || "0.00"}
+                                  R$ {(appointment.total_price ?? appointment.services?.price ?? 0).toFixed(2)}
                                 </span>
                               </div>
                               <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -291,7 +323,9 @@ const MyAppointments = () => {
                               </span>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-medium text-muted-foreground text-sm truncate">{appointment.services?.name || "Serviço"}</h3>
+                              <h3 className="font-medium text-muted-foreground text-sm break-words">
+                                {appointment.combined_name || appointment.services?.name || "Serviço"}
+                              </h3>
                               <span className="text-xs sm:text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
