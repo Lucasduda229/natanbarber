@@ -313,7 +313,11 @@ const MyAppointments = () => {
 
                 <div className="space-y-2 sm:space-y-3">
                   {pastAppointments.map((appointment) => (
-                    <Card key={appointment.id} className="bg-card/20 backdrop-blur-xl border-border/50 opacity-80">
+                    <Card
+                      key={appointment.id}
+                      onClick={() => setSelectedAppointment(appointment)}
+                      className="bg-card/20 backdrop-blur-xl border-border/50 opacity-80 cursor-pointer hover:opacity-100 hover:border-primary/40 hover:bg-card/40 transition-all active:scale-[0.99]"
+                    >
                       <CardContent className="p-3 sm:p-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -332,7 +336,7 @@ const MyAppointments = () => {
                               <span className="text-xs sm:text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             {appointment.status === "completed" && !reviewedAppointments.has(appointment.id) && (
                               <ReviewForm 
                                 appointmentId={appointment.id} 
