@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast, subHours, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy, CreditCard, Receipt, Hash } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ProfileMenu } from "@/components/ProfileMenu";
