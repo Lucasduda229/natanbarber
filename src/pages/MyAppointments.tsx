@@ -31,6 +31,9 @@ interface Appointment {
     name: string;
     price: number;
   } | null;
+  extra_services?: { name: string; price: number }[];
+  total_price?: number;
+  combined_name?: string;
   hasReview?: boolean;
 }
 
