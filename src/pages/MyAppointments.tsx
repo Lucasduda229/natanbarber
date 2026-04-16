@@ -323,7 +323,9 @@ const MyAppointments = () => {
                               </span>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-medium text-muted-foreground text-sm truncate">{appointment.services?.name || "Serviço"}</h3>
+                              <h3 className="font-medium text-muted-foreground text-sm break-words">
+                                {appointment.combined_name || appointment.services?.name || "Serviço"}
+                              </h3>
                               <span className="text-xs sm:text-sm text-muted-foreground">{appointment.appointment_time.slice(0, 5)}</span>
                             </div>
                           </div>
