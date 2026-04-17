@@ -1288,9 +1288,10 @@ const VIPPackagesManager = () => {
                           variant="default"
                           className="gap-1 text-xs bg-amber-600 hover:bg-amber-700 text-white"
                           onClick={() => renewSubscription(sub)}
+                          title="Gera um pedido pendente na aba Pedidos"
                         >
                           <ArrowRight className="w-3 h-3" />
-                          Renovar Mês
+                          Gerar Renovação
                         </Button>
                         {sub.is_active ? (
                           <Button 
