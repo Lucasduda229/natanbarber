@@ -438,69 +438,54 @@ const VIPPackagesManager = () => {
   };
 
   const renewSubscription = async (sub: SubscriberWithUsage) => {
-    if (!confirm(`Renovar assinatura de ${sub.profile?.full_name || "Cliente"} para o próximo mês?`)) return;
+    if (!sub.package) {
+      toast.error("Pacote não encontrado para esta assinatura");
+      return;
+    }
 
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const nowTimestamp = today.toISOString();
-    
-    // Calculate weekly credits based on monthly limit
-    const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+    if (!confirm(`Gerar pedido de renovação pendente para ${sub.profile?.full_name || "Cliente"}?\n\nO pedido vai para a aba "Pedidos" aguardando confirmação de pagamento.`)) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
 
     try {
-      // Update subscription progress
-      const { error } = await supabase
-        .from("subscription_progress")
-        .update({
-          // Reset subscription start date to today
-          subscription_start_date: todayStr,
-          // Increment consecutive months
-          consecutive_months: sub.consecutive_months + 1,
-          // Reset monthly usage
-          cuts_used_this_month: 0,
-          current_month_start: todayStr,
-          // Reset weekly credits
-          weekly_credits_available: weeklyCredits,
-          current_week_start: todayStr,
-          credits_expired_this_month: 0,
-          // Reset benefits usage timestamp
-          usage_reset_date: nowTimestamp,
-          // Update last payment date
-          last_payment_date: todayStr,
-          // Ensure active
-          is_active: true,
-          updated_at: nowTimestamp
-        })
-        .eq("id", sub.id);
+      // Check if there is already a pending renewal order for this user
+      const { data: existingPending } = await supabase
+        .from("package_payments")
+        .select("id")
+        .eq("user_id", sub.user_id)
+        .eq("payment_status", "pending")
+        .ilike("notes", "%Renovação%")
+        .limit(1)
+        .maybeSingle();
 
-      if (error) throw error;
-
-      // Register payment in financial records
-      if (sub.package) {
-        const { error: paymentError } = await supabase
-          .from("package_payments")
-          .insert({
-            user_id: sub.user_id,
-            package_id: sub.package_id,
-            package_name: sub.package_name || sub.package.name,
-            amount: sub.package.price,
-            payment_date: todayStr,
-            payment_method: "pix",
-            notes: `Renovação mês ${sub.consecutive_months + 1} - ${sub.profile?.full_name || "Cliente"}`
-          });
-
-        if (paymentError) {
-          console.error("Error registering payment:", paymentError);
-          // Don't fail the renewal if payment record fails
-          toast.warning("Assinatura renovada, mas houve erro ao registrar pagamento");
-        }
+      if (existingPending) {
+        toast.info("Já existe um pedido de renovação pendente para este cliente. Confirme na aba Pedidos.");
+        return;
       }
 
-      toast.success(`Assinatura renovada! ${sub.profile?.full_name || "Cliente"} agora está no mês ${sub.consecutive_months + 1}`);
+      // Create pending payment order — admin will confirm in the Orders tab
+      const { error: paymentError } = await supabase
+        .from("package_payments")
+        .insert({
+          user_id: sub.user_id,
+          package_id: sub.package_id,
+          package_name: sub.package_name || sub.package.name,
+          amount: sub.package.price,
+          payment_date: todayStr,
+          payment_method: "pix",
+          payment_status: "pending",
+          notes: `Renovação mês ${sub.consecutive_months + 1} - ${sub.profile?.full_name || "Cliente"} (gerado pelo admin)`
+        });
+
+      if (paymentError) throw paymentError;
+
+      toast.success("Pedido de renovação criado!", {
+        description: "Confirme o pagamento na aba Pedidos para ativar."
+      });
       fetchData();
     } catch (error) {
-      console.error("Error renewing subscription:", error);
-      toast.error("Erro ao renovar assinatura");
+      console.error("Error creating renewal order:", error);
+      toast.error("Erro ao gerar pedido de renovação");
     }
   };
 
