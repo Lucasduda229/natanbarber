@@ -17,12 +17,22 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect to booking if already logged in
+  // Redirect to booking if already logged in (skip if user just logged out manually)
   useEffect(() => {
-    if (!authLoading && user) {
+    const manualLogout = sessionStorage.getItem("manual_logout") === "true";
+    if (!authLoading && user && !manualLogout) {
       navigate("/booking");
     }
   }, [user, authLoading, navigate]);
+
+  // Clear the manual logout flag when user successfully submits credentials
+  const clearManualLogoutFlag = () => {
+    try {
+      sessionStorage.removeItem("manual_logout");
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     gsap.fromTo(".auth-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" });
