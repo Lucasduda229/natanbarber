@@ -269,8 +269,6 @@ const OperatingHoursEditor = () => {
         
         <p className="text-xs text-muted-foreground mt-4">
           Os horários são divididos em slots de 30 minutos. Ex: 08:00 até 18:00 cria slots das 08:00, 08:30, 09:00, etc.
-          <br />
-          <strong>Atenção:</strong> alterar os horários acima afeta <strong>todas as semanas futuras</strong>. Para fechar mais cedo apenas em um dia específico, use a seção abaixo.
         </p>
 
       </CardContent>
