@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
-import { Clock, Save, X, Pencil, CalendarX, Zap } from "lucide-react";
+import { Clock, Save, X, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { format } from "date-fns";
 
 interface DaySchedule {
   dayOfWeek: number;
@@ -33,11 +31,6 @@ const OperatingHoursEditor = () => {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [originalSchedule, setOriginalSchedule] = useState<DaySchedule[]>([]);
-
-  // Quick close (bloqueio pontual de horários a partir de X numa data específica)
-  const [quickCloseDate, setQuickCloseDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [quickCloseTime, setQuickCloseTime] = useState("");
-  const [quickClosing, setQuickClosing] = useState(false);
 
   useEffect(() => {
     fetchSchedule();
@@ -172,105 +165,6 @@ const OperatingHoursEditor = () => {
     );
   };
 
-  const handleQuickClose = async () => {
-    if (!quickCloseDate || !quickCloseTime) {
-      toast.error("Selecione data e horário");
-      return;
-    }
-
-    setQuickClosing(true);
-    try {
-      const [y, m, d] = quickCloseDate.split("-").map(Number);
-      const dateObj = new Date(y, m - 1, d);
-      const dayOfWeek = dateObj.getDay();
-
-      const { data: slots, error: slotsError } = await supabase
-        .from("time_slots")
-        .select("slot_time")
-        .eq("day_of_week", dayOfWeek)
-        .eq("is_blocked", false)
-        .order("slot_time");
-
-      if (slotsError) throw slotsError;
-
-      const dayLabel = dayNames[dayOfWeek];
-      const dateLabel = quickCloseDate.split("-").reverse().join("/");
-
-      // Day has no operating hours at all (closed in the weekly schedule)
-      if (!slots || slots.length === 0) {
-        toast.error(`${dayLabel} (${dateLabel}) está marcado como fechado na agenda semanal. Não há horários para bloquear.`);
-        return;
-      }
-
-      const cutoff = quickCloseTime.length === 5 ? `${quickCloseTime}:00` : quickCloseTime;
-      const slotsToBlock = slots.filter(s => s.slot_time >= cutoff);
-
-      if (slotsToBlock.length === 0) {
-        const lastSlot = slots[slots.length - 1].slot_time.slice(0, 5);
-        toast.error(`Nenhum horário a partir de ${quickCloseTime}. ${dayLabel} atende até ${lastSlot}.`);
-        return;
-      }
-
-      const { data: existing } = await supabase
-        .from("blocked_dates")
-        .select("blocked_time")
-        .eq("blocked_date", quickCloseDate);
-
-      const existingTimes = new Set((existing || []).map(b => b.blocked_time));
-
-      const newBlocks = slotsToBlock
-        .filter(s => !existingTimes.has(s.slot_time))
-        .map(s => ({
-          blocked_date: quickCloseDate,
-          blocked_time: s.slot_time,
-          reason: "Fechamento antecipado"
-        }));
-
-      if (newBlocks.length === 0) {
-        toast.info("Esses horários já estavam bloqueados");
-        return;
-      }
-
-      const { error: insertError } = await supabase
-        .from("blocked_dates")
-        .insert(newBlocks);
-
-      if (insertError) throw insertError;
-
-      toast.success(`${newBlocks.length} horário(s) bloqueado(s) em ${quickCloseDate.split("-").reverse().join("/")}`);
-      setQuickCloseTime("");
-    } catch (error) {
-      console.error("Error quick closing:", error);
-      toast.error("Erro ao fechar horários");
-    } finally {
-      setQuickClosing(false);
-    }
-  };
-
-  const handleReopenDay = async () => {
-    if (!quickCloseDate) {
-      toast.error("Selecione uma data");
-      return;
-    }
-
-    setQuickClosing(true);
-    try {
-      const { error } = await supabase
-        .from("blocked_dates")
-        .delete()
-        .eq("blocked_date", quickCloseDate)
-        .eq("reason", "Fechamento antecipado");
-
-      if (error) throw error;
-      toast.success("Fechamento antecipado removido");
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao reabrir");
-    } finally {
-      setQuickClosing(false);
-    }
-  };
-
   if (loading) {
     return (
       <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
@@ -375,59 +269,8 @@ const OperatingHoursEditor = () => {
         
         <p className="text-xs text-muted-foreground mt-4">
           Os horários são divididos em slots de 30 minutos. Ex: 08:00 até 18:00 cria slots das 08:00, 08:30, 09:00, etc.
-          <br />
-          <strong>Atenção:</strong> alterar os horários acima afeta <strong>todas as semanas futuras</strong>. Para fechar mais cedo apenas em um dia específico, use a seção abaixo.
         </p>
 
-        <div className="mt-6 p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-orange-500" />
-            <h4 className="text-sm font-semibold text-foreground">Fechar mais cedo (data específica)</h4>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Bloqueia todos os horários a partir do horário escolhido <strong>apenas nessa data</strong>, sem alterar a agenda das outras semanas.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Data</Label>
-              <Input
-                type="date"
-                value={quickCloseDate}
-                onChange={(e) => setQuickCloseDate(e.target.value)}
-                className="bg-card/60 h-9 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Fechar a partir de</Label>
-              <Input
-                type="time"
-                value={quickCloseTime}
-                onChange={(e) => setQuickCloseTime(e.target.value)}
-                className="bg-card/60 h-9 text-sm"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={handleQuickClose}
-                disabled={quickClosing || !quickCloseTime}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white h-9"
-                size="sm"
-              >
-                <CalendarX className="w-4 h-4 mr-1" />
-                Fechar
-              </Button>
-            </div>
-          </div>
-          <Button
-            onClick={handleReopenDay}
-            disabled={quickClosing}
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground w-full"
-          >
-            Reabrir todos os horários dessa data
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
