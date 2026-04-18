@@ -64,6 +64,7 @@ const Login = () => {
       gsap.timeline().to(".auth-card", { x: -10, duration: 0.1 }).to(".auth-card", { x: 10, duration: 0.1 }).to(".auth-card", { x: 0, duration: 0.1 });
       return;
     }
+    clearManualLogoutFlag();
     toast.success("Login realizado!", { description: "Redirecionando..." });
     navigate("/booking");
   };
