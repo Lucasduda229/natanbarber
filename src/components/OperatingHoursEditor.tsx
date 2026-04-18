@@ -193,11 +193,21 @@ const OperatingHoursEditor = () => {
 
       if (slotsError) throw slotsError;
 
+      const dayLabel = dayNames[dayOfWeek];
+      const dateLabel = quickCloseDate.split("-").reverse().join("/");
+
+      // Day has no operating hours at all (closed in the weekly schedule)
+      if (!slots || slots.length === 0) {
+        toast.error(`${dayLabel} (${dateLabel}) está marcado como fechado na agenda semanal. Não há horários para bloquear.`);
+        return;
+      }
+
       const cutoff = quickCloseTime.length === 5 ? `${quickCloseTime}:00` : quickCloseTime;
-      const slotsToBlock = (slots || []).filter(s => s.slot_time >= cutoff);
+      const slotsToBlock = slots.filter(s => s.slot_time >= cutoff);
 
       if (slotsToBlock.length === 0) {
-        toast.error("Nenhum horário encontrado a partir desse momento");
+        const lastSlot = slots[slots.length - 1].slot_time.slice(0, 5);
+        toast.error(`Nenhum horário a partir de ${quickCloseTime}. ${dayLabel} atende até ${lastSlot}.`);
         return;
       }
 
