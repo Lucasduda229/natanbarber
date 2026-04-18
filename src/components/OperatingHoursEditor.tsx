@@ -32,11 +32,6 @@ const OperatingHoursEditor = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [originalSchedule, setOriginalSchedule] = useState<DaySchedule[]>([]);
 
-  // Quick close (bloqueio pontual de horários a partir de X numa data específica)
-  const [quickCloseDate, setQuickCloseDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [quickCloseTime, setQuickCloseTime] = useState("");
-  const [quickClosing, setQuickClosing] = useState(false);
-
   useEffect(() => {
     fetchSchedule();
   }, []);
