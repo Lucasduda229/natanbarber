@@ -165,8 +165,7 @@ const OperatingHoursEditor = () => {
     );
   };
 
-
-
+  if (loading) {
     return (
       <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
         <CardContent className="p-6 flex items-center justify-center">
