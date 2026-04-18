@@ -172,6 +172,95 @@ const OperatingHoursEditor = () => {
     );
   };
 
+  const handleQuickClose = async () => {
+    if (!quickCloseDate || !quickCloseTime) {
+      toast.error("Selecione data e horário");
+      return;
+    }
+
+    setQuickClosing(true);
+    try {
+      const [y, m, d] = quickCloseDate.split("-").map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const dayOfWeek = dateObj.getDay();
+
+      const { data: slots, error: slotsError } = await supabase
+        .from("time_slots")
+        .select("slot_time")
+        .eq("day_of_week", dayOfWeek)
+        .eq("is_blocked", false)
+        .order("slot_time");
+
+      if (slotsError) throw slotsError;
+
+      const cutoff = quickCloseTime.length === 5 ? `${quickCloseTime}:00` : quickCloseTime;
+      const slotsToBlock = (slots || []).filter(s => s.slot_time >= cutoff);
+
+      if (slotsToBlock.length === 0) {
+        toast.error("Nenhum horário encontrado a partir desse momento");
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from("blocked_dates")
+        .select("blocked_time")
+        .eq("blocked_date", quickCloseDate);
+
+      const existingTimes = new Set((existing || []).map(b => b.blocked_time));
+
+      const newBlocks = slotsToBlock
+        .filter(s => !existingTimes.has(s.slot_time))
+        .map(s => ({
+          blocked_date: quickCloseDate,
+          blocked_time: s.slot_time,
+          reason: "Fechamento antecipado"
+        }));
+
+      if (newBlocks.length === 0) {
+        toast.info("Esses horários já estavam bloqueados");
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("blocked_dates")
+        .insert(newBlocks);
+
+      if (insertError) throw insertError;
+
+      toast.success(`${newBlocks.length} horário(s) bloqueado(s) em ${quickCloseDate.split("-").reverse().join("/")}`);
+      setQuickCloseTime("");
+    } catch (error) {
+      console.error("Error quick closing:", error);
+      toast.error("Erro ao fechar horários");
+    } finally {
+      setQuickClosing(false);
+    }
+  };
+
+  const handleReopenDay = async () => {
+    if (!quickCloseDate) {
+      toast.error("Selecione uma data");
+      return;
+    }
+
+    setQuickClosing(true);
+    try {
+      const { error } = await supabase
+        .from("blocked_dates")
+        .delete()
+        .eq("blocked_date", quickCloseDate)
+        .eq("reason", "Fechamento antecipado");
+
+      if (error) throw error;
+      toast.success("Fechamento antecipado removido");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao reabrir");
+    } finally {
+      setQuickClosing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
