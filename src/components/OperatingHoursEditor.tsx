@@ -379,55 +379,6 @@ const OperatingHoursEditor = () => {
           <strong>Atenção:</strong> alterar os horários acima afeta <strong>todas as semanas futuras</strong>. Para fechar mais cedo apenas em um dia específico, use a seção abaixo.
         </p>
 
-        <div className="mt-6 p-4 rounded-xl border border-orange-500/30 bg-orange-500/5 space-y-3">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-orange-500" />
-            <h4 className="text-sm font-semibold text-foreground">Fechar mais cedo (data específica)</h4>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Bloqueia todos os horários a partir do horário escolhido <strong>apenas nessa data</strong>, sem alterar a agenda das outras semanas.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Data</Label>
-              <Input
-                type="date"
-                value={quickCloseDate}
-                onChange={(e) => setQuickCloseDate(e.target.value)}
-                className="bg-card/60 h-9 text-sm"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Fechar a partir de</Label>
-              <Input
-                type="time"
-                value={quickCloseTime}
-                onChange={(e) => setQuickCloseTime(e.target.value)}
-                className="bg-card/60 h-9 text-sm"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={handleQuickClose}
-                disabled={quickClosing || !quickCloseTime}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white h-9"
-                size="sm"
-              >
-                <CalendarX className="w-4 h-4 mr-1" />
-                Fechar
-              </Button>
-            </div>
-          </div>
-          <Button
-            onClick={handleReopenDay}
-            disabled={quickClosing}
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-foreground w-full"
-          >
-            Reabrir todos os horários dessa data
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
