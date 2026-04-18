@@ -95,6 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Mark manual logout so login page won't auto-redirect
+    try {
+      sessionStorage.setItem("manual_logout", "true");
+    } catch {
+      // ignore storage errors
+    }
     await supabase.auth.signOut();
     setIsAdmin(false);
   };
