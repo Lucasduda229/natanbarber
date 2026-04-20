@@ -3,11 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 
 const RESEND_API_KEY = (Deno.env.get("RESEND_API_KEY") ?? "")
   .trim()
-  // In case the value was pasted with quotes
   .replace(/^"(.+)"$/, "$1")
   .replace(/^'(.+)'$/, "$1");
 
-const RESEND_FROM = (Deno.env.get("RESEND_FROM") ?? "Barbearia <onboarding@resend.dev>").trim();
+const DEFAULT_RESEND_FROM = "NatanBarber <onboarding@resend.dev>";
+const RAW_RESEND_FROM = (Deno.env.get("RESEND_FROM") ?? DEFAULT_RESEND_FROM)
+  .trim()
+  .replace(/^"(.+)"$/, "$1")
+  .replace(/^'(.+)'$/, "$1")
+  .replace(/[\r\n\t]+/g, " ")
+  .replace(/\s+/g, " ");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,10 +86,20 @@ function isRateLimited(ip: string): boolean {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateEmail(email: unknown): email is string {
-  return typeof email === 'string' && 
-         email.length > 0 && 
-         email.length <= 255 && 
-         emailRegex.test(email.trim());
+  return typeof email === "string" &&
+    email.length > 0 &&
+    email.length <= 255 &&
+    emailRegex.test(email.trim());
+}
+
+function isValidFromField(value: string) {
+  const trimmed = value.trim();
+  const namedEmailRegex = /^[^<>\r\n]+\s<[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/;
+  return emailRegex.test(trimmed) || namedEmailRegex.test(trimmed);
+}
+
+function getSafeResendFrom() {
+  return isValidFromField(RAW_RESEND_FROM) ? RAW_RESEND_FROM : DEFAULT_RESEND_FROM;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -207,6 +222,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Reset link generated successfully");
 
+    const resendFrom = getSafeResendFrom();
+    if (resendFrom !== RAW_RESEND_FROM) {
+      console.warn("RESEND_FROM invalid, using fallback sender");
+    }
+
     // Send email using Resend API directly
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -215,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: RESEND_FROM,
+        from: resendFrom,
         to: [sanitizedEmail],
         subject: "Redefinir sua senha",
         html: `
