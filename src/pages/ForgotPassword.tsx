@@ -36,29 +36,18 @@ const ForgotPassword = () => {
     setError("");
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('send-reset-email', {
-        body: {
-          email: email,
-        },
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (fnError) {
-        throw new Error(fnError.message || "Erro ao enviar email");
-      }
-
-      const success = Boolean((data as any)?.success);
-      const message = typeof (data as any)?.message === "string" ? (data as any).message : "";
-
-      if (!success) {
-        const description = message.includes("verify a domain")
-          ? "O envio de email está em modo teste. Verifique um domínio no Resend para enviar para outros emails."
-          : message || "Não foi possível enviar o email agora.";
-        toast.error("Erro ao enviar email", { description });
-        return;
+      if (resetError) {
+        throw new Error(resetError.message || "Erro ao enviar email");
       }
 
       setSent(true);
-      toast.success("Email enviado!", { description: message || "Verifique sua caixa de entrada" });
+      toast.success("Email enviado!", {
+        description: "Se o email estiver cadastrado, você receberá um link de recuperação.",
+      });
     } catch (err: any) {
       toast.error("Erro ao enviar email", { description: err.message });
     } finally {
