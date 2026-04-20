@@ -222,6 +222,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Reset link generated successfully");
 
+    const resendFrom = getSafeResendFrom();
+    if (resendFrom !== RAW_RESEND_FROM) {
+      console.warn("RESEND_FROM invalid, using fallback sender");
+    }
+
     // Send email using Resend API directly
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -230,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: RESEND_FROM,
+        from: resendFrom,
         to: [sanitizedEmail],
         subject: "Redefinir sua senha",
         html: `
