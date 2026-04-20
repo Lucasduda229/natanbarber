@@ -3,11 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 
 const RESEND_API_KEY = (Deno.env.get("RESEND_API_KEY") ?? "")
   .trim()
-  // In case the value was pasted with quotes
   .replace(/^"(.+)"$/, "$1")
   .replace(/^'(.+)'$/, "$1");
 
-const RESEND_FROM = (Deno.env.get("RESEND_FROM") ?? "Barbearia <onboarding@resend.dev>").trim();
+const DEFAULT_RESEND_FROM = "NatanBarber <onboarding@resend.dev>";
+const RAW_RESEND_FROM = (Deno.env.get("RESEND_FROM") ?? DEFAULT_RESEND_FROM)
+  .trim()
+  .replace(/^"(.+)"$/, "$1")
+  .replace(/^'(.+)'$/, "$1")
+  .replace(/[\r\n\t]+/g, " ")
+  .replace(/\s+/g, " ");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
