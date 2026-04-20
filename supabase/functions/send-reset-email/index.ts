@@ -86,10 +86,20 @@ function isRateLimited(ip: string): boolean {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateEmail(email: unknown): email is string {
-  return typeof email === 'string' && 
-         email.length > 0 && 
-         email.length <= 255 && 
-         emailRegex.test(email.trim());
+  return typeof email === "string" &&
+    email.length > 0 &&
+    email.length <= 255 &&
+    emailRegex.test(email.trim());
+}
+
+function isValidFromField(value: string) {
+  const trimmed = value.trim();
+  const namedEmailRegex = /^[^<>\r\n]+\s<[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+>$/;
+  return emailRegex.test(trimmed) || namedEmailRegex.test(trimmed);
+}
+
+function getSafeResendFrom() {
+  return isValidFromField(RAW_RESEND_FROM) ? RAW_RESEND_FROM : DEFAULT_RESEND_FROM;
 }
 
 const handler = async (req: Request): Promise<Response> => {
