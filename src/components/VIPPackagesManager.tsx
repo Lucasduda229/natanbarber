@@ -531,16 +531,44 @@ const VIPPackagesManager = () => {
         .limit(1)
         .maybeSingle();
 
+      // Tolerância (em dias) após o vencimento para ainda contar como renovação consecutiva
+      const RENEWAL_TOLERANCE_DAYS = 3;
+      let computedNewMonths = 1;
+
       if (sub) {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
         const nowTimestamp = today.toISOString();
         const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
 
-        // For renewals: increment consecutive_months. For first purchase: set to 1 if it was 0
-        const newConsecutiveMonths = isRenewal 
-          ? sub.consecutive_months + 1 
-          : (sub.consecutive_months === 0 ? 1 : sub.consecutive_months);
+        // Calcular consecutive_months com regra de tolerância
+        if (!isRenewal) {
+          // Primeira compra (ou ativação inicial): se já tinha histórico mantém, senão 1
+          computedNewMonths = sub.consecutive_months > 0 ? sub.consecutive_months : 1;
+        } else {
+          // Renovação: verificar se foi feita dentro do prazo + tolerância
+          const durationDays = order.package_id
+            ? (packages.find(p => p.id === order.package_id)?.duration_days ?? 30)
+            : 30;
+          const startDate = sub.subscription_start_date ? new Date(sub.subscription_start_date) : null;
+
+          if (startDate) {
+            const expirationDate = new Date(startDate);
+            expirationDate.setDate(expirationDate.getDate() + durationDays);
+            const toleranceLimit = new Date(expirationDate);
+            toleranceLimit.setDate(toleranceLimit.getDate() + RENEWAL_TOLERANCE_DAYS);
+
+            if (today <= toleranceLimit) {
+              // Renovou dentro do prazo + tolerância → soma +1
+              computedNewMonths = (sub.consecutive_months || 0) + 1;
+            } else {
+              // Passou da tolerância → reinicia contagem
+              computedNewMonths = 1;
+            }
+          } else {
+            computedNewMonths = (sub.consecutive_months || 0) + 1;
+          }
+        }
 
         await supabase
           .from("subscription_progress")
@@ -554,14 +582,14 @@ const VIPPackagesManager = () => {
             weekly_credits_available: weeklyCredits,
             current_week_start: todayStr,
             last_payment_date: todayStr,
-            consecutive_months: newConsecutiveMonths,
+            consecutive_months: computedNewMonths,
             updated_at: nowTimestamp,
           })
           .eq("id", sub.id);
       }
 
       // 4. Notify client
-      const monthInfo = sub ? ` (Mês ${isRenewal ? (sub.consecutive_months + 1) : 1})` : '';
+      const monthInfo = sub ? ` (Mês ${computedNewMonths})` : '';
       await supabase.from("notifications").insert({
         user_id: order.user_id,
         title: isRenewal ? "Assinatura Renovada! 🔄" : "Assinatura Ativada! 🎉",
