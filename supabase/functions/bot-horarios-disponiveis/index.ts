@@ -101,9 +101,9 @@ Deno.serve(async (req) => {
     for (const ap of appointments || []) {
       const startTime = (ap.appointment_time as string).slice(0, 8);
       const isSubscription = ap.payment_method === "subscription";
-      const apDuration = isSubscription
-        ? 30
-        : (ap.services as { duration_minutes?: number } | null)?.duration_minutes || 30;
+      const rawSvc = ap.services as unknown;
+      const svc = (Array.isArray(rawSvc) ? rawSvc[0] : rawSvc) as { duration_minutes?: number } | null;
+      const apDuration = isSubscription ? 30 : svc?.duration_minutes || 30;
       const slotsCount = Math.ceil(apDuration / 30);
       for (let i = 0; i < slotsCount; i++) {
         occupied.add(addMinutesToTime(startTime, i * 30));
