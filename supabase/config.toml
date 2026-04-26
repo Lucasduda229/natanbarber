@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.ai-appointment-parser]
 verify_jwt = false
+
+[functions.bot-servicos]
+verify_jwt = false
+
+[functions.bot-horarios-disponiveis]
+verify_jwt = false
+
+[functions.bot-agendar]
+verify_jwt = false
+
+[functions.bot-meus-agendamentos]
+verify_jwt = false
