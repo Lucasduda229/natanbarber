@@ -1892,11 +1892,11 @@ const Booking = () => {
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => handleCustomerInfoSubmit('dinheiro')}
-                      className="flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 border-green-500/30 bg-green-500/5 hover:bg-green-500/15 hover:border-green-500/60 transition-all duration-200 active:scale-95"
+                      onClick={() => handleCustomerInfoSubmit('reception')}
+                      className="flex flex-col items-center gap-2.5 p-5 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/15 hover:border-amber-500/60 transition-all duration-200 active:scale-95"
                     >
-                      <img src={cashIcon} alt="Dinheiro" className="w-9 h-9 object-contain" />
-                      <span className="text-xs font-semibold text-green-400">Dinheiro</span>
+                      <Store className="w-9 h-9 text-amber-400" />
+                      <span className="text-xs font-semibold text-amber-400">Recepção</span>
                     </button>
                   </div>
                   {loading && (
