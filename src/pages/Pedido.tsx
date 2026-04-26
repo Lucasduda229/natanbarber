@@ -557,11 +557,12 @@ const Pedido = () => {
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: "pix", label: "PIX", icon: pixIcon, bgSelected: "bg-[#32BCAD]/15", borderSelected: "border-[#32BCAD]" },
-                      { id: "cartao", label: "Cartão", icon: cardIcon, bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500" },
-                      { id: "dinheiro", label: "Dinheiro", icon: cashIcon, bgSelected: "bg-green-500/15", borderSelected: "border-green-500" },
+                      { id: "pix", label: "PIX", icon: pixIcon as string | null, lucide: null as React.ComponentType<{ className?: string }> | null, bgSelected: "bg-[#32BCAD]/15", borderSelected: "border-[#32BCAD]" },
+                      { id: "cartao", label: "Cartão", icon: cardIcon as string | null, lucide: null as React.ComponentType<{ className?: string }> | null, bgSelected: "bg-blue-500/15", borderSelected: "border-blue-500" },
+                      { id: "reception", label: "Recepção", icon: null as string | null, lucide: Store as React.ComponentType<{ className?: string }>, bgSelected: "bg-amber-500/15", borderSelected: "border-amber-500" },
                     ].map((method) => {
                       const isSelected = paymentMethod === method.id;
+                      const LucideIcon = method.lucide;
                       return (
                         <button
                           key={method.id}
@@ -573,11 +574,15 @@ const Pedido = () => {
                               : "border-border/50 bg-card/50 active:border-primary/50"
                           }`}
                         >
-                          <img 
-                            src={method.icon} 
-                            alt={method.label} 
-                            className={`w-7 h-7 ${isSelected ? "opacity-100" : "opacity-50 grayscale"} transition-all`}
-                          />
+                          {method.icon ? (
+                            <img 
+                              src={method.icon} 
+                              alt={method.label} 
+                              className={`w-7 h-7 ${isSelected ? "opacity-100" : "opacity-50 grayscale"} transition-all`}
+                            />
+                          ) : LucideIcon ? (
+                            <LucideIcon className={`w-7 h-7 ${isSelected ? "text-amber-400" : "text-muted-foreground"} transition-all`} />
+                          ) : null}
                           <span className={`text-xs font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>
                             {method.label}
                           </span>
