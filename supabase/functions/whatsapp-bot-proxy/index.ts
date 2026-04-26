@@ -112,9 +112,14 @@ Deno.serve(async (req) => {
     // 5) Chamar o bot externo
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      // ngrok free tier exige este header para pular a página de aviso
+      "ngrok-skip-browser-warning": "true",
     };
-    if (cfg.auth_header_name && cfg.auth_header_value) {
-      headers[cfg.auth_header_name] = cfg.auth_header_value;
+    const headerName = cfg.auth_header_name || "apikey";
+    // Prioriza secret BOT_API_SECRET do servidor; fallback para valor salvo no banco
+    const headerValue = Deno.env.get("BOT_API_SECRET") || cfg.auth_header_value;
+    if (headerName && headerValue) {
+      headers[headerName] = headerValue;
     }
 
     const upstream = await fetch(url, {
