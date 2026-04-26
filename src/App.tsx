@@ -18,6 +18,7 @@ import AppointmentHistory from "./pages/AppointmentHistory";
 import Install from "./pages/Install";
 import Pedido from "./pages/Pedido";
 import Profile from "./pages/Profile";
+import WhatsAppConnection from "./pages/WhatsAppConnection";
 import NotFound from "./pages/NotFound";
 import AuthRecoveryRedirect from "./components/AuthRecoveryRedirect";
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/install" element={<Install />} />
             <Route path="/pedido" element={<Pedido />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/admin/whatsapp-connection" element={<WhatsAppConnection />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
