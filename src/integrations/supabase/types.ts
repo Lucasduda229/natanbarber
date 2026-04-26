@@ -86,6 +86,8 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           payment_status: string
+          reminder_1h_sent: boolean
+          reminder_24h_sent: boolean
           service_id: string
           status: string
           updated_at: string
@@ -99,6 +101,8 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string
+          reminder_1h_sent?: boolean
+          reminder_24h_sent?: boolean
           service_id: string
           status?: string
           updated_at?: string
@@ -112,6 +116,8 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string
+          reminder_1h_sent?: boolean
+          reminder_24h_sent?: boolean
           service_id?: string
           status?: string
           updated_at?: string
