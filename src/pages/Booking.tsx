@@ -155,7 +155,7 @@ const Booking = () => {
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "cartao" | "reception">("pix");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
   const stepContentRef = useRef<HTMLDivElement>(null);
   const prevStepRef = useRef(1);
