@@ -2041,7 +2041,7 @@ const Admin = () => {
                               <SelectTrigger className={cn(
                                 "w-[120px] sm:w-32 h-7 sm:h-8 text-xs sm:text-sm font-medium",
                                 appointment.payment_status === 'pending' && "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-                                (appointment.payment_status === 'paid_pix' || appointment.payment_status === 'paid_cash' || appointment.payment_status === 'paid_card' || appointment.payment_status === 'paid') && "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+                                (appointment.payment_status === 'paid_pix' || appointment.payment_status === 'paid_cash' || appointment.payment_status === 'paid_card' || appointment.payment_status === 'paid_reception' || appointment.payment_status === 'paid') && "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
                                 appointment.payment_status === 'refunded' && "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30"
                               )}>
                                 <SelectValue placeholder="Pagamento" />
@@ -2051,6 +2051,7 @@ const Admin = () => {
                                 <SelectItem value="paid_pix" className="text-green-700 dark:text-green-400">Pago PIX</SelectItem>
                                 <SelectItem value="paid_cash" className="text-green-700 dark:text-green-400">Pago Dinheiro</SelectItem>
                                 <SelectItem value="paid_card" className="text-blue-700 dark:text-blue-400">Pago Cartão</SelectItem>
+                                <SelectItem value="paid_reception" className="text-amber-700 dark:text-amber-400">Pago Recepção</SelectItem>
                                 <SelectItem value="refunded" className="text-red-700 dark:text-red-400">Reembolsado</SelectItem>
                               </SelectContent>
                             </Select>
