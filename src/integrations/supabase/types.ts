@@ -993,6 +993,51 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_bot_config: {
+        Row: {
+          auth_header_name: string | null
+          auth_header_value: string | null
+          bot_base_url: string | null
+          created_at: string
+          disconnect_endpoint: string | null
+          id: string
+          last_connected_at: string | null
+          last_status: string | null
+          pairing_endpoint: string | null
+          qrcode_endpoint: string | null
+          status_endpoint: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_header_name?: string | null
+          auth_header_value?: string | null
+          bot_base_url?: string | null
+          created_at?: string
+          disconnect_endpoint?: string | null
+          id?: string
+          last_connected_at?: string | null
+          last_status?: string | null
+          pairing_endpoint?: string | null
+          qrcode_endpoint?: string | null
+          status_endpoint?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_header_name?: string | null
+          auth_header_value?: string | null
+          bot_base_url?: string | null
+          created_at?: string
+          disconnect_endpoint?: string | null
+          id?: string
+          last_connected_at?: string | null
+          last_status?: string | null
+          pairing_endpoint?: string | null
+          qrcode_endpoint?: string | null
+          status_endpoint?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

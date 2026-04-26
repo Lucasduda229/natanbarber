@@ -1,10 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -13,55 +24,42 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  ExternalLink,
-  Zap,
   Lock,
-  Webhook,
-  Bot,
   KeyRound,
-  Globe,
-  CircleDot,
+  Settings,
+  QrCode,
+  Smartphone,
+  RefreshCw,
+  Power,
+  Wifi,
+  WifiOff,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = "https://ttecccbrigcckurnezhl.supabase.co";
 const FUNCTIONS_BASE = `${SUPABASE_URL}/functions/v1`;
 
-const BOT_ENDPOINTS = [
-  {
-    name: "Listar serviços",
-    method: "POST",
-    path: "/bot-servicos",
-    desc: "Retorna o catálogo de serviços disponíveis.",
-    icon: Bot,
-  },
-  {
-    name: "Horários disponíveis",
-    method: "POST",
-    path: "/bot-horarios-disponiveis",
-    desc: "Lista os horários livres em uma data.",
-    icon: Globe,
-  },
-  {
-    name: "Criar agendamento",
-    method: "POST",
-    path: "/bot-agendar",
-    desc: "Cria um novo agendamento para o cliente.",
-    icon: Zap,
-  },
-  {
-    name: "Meus agendamentos",
-    method: "POST",
-    path: "/bot-meus-agendamentos",
-    desc: "Lista os agendamentos do cliente pelo telefone.",
-    icon: Webhook,
-  },
-];
+interface BotConfig {
+  id: string;
+  bot_base_url: string | null;
+  qrcode_endpoint: string | null;
+  pairing_endpoint: string | null;
+  status_endpoint: string | null;
+  disconnect_endpoint: string | null;
+  auth_header_name: string | null;
+  auth_header_value: string | null;
+  last_status: string | null;
+  last_connected_at: string | null;
+}
+
+type ConnStatus = "connected" | "disconnected" | "connecting" | "unknown";
 
 export default function WhatsAppConnection() {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Credenciais
   const [revealing, setRevealing] = useState(false);
   const [credentials, setCredentials] = useState<{
     BOT_API_SECRET?: string;
@@ -74,12 +72,50 @@ export default function WhatsAppConnection() {
   const [showService, setShowService] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Guarda: só admin
+  // Bot config
+  const [config, setConfig] = useState<BotConfig | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [savingCfg, setSavingCfg] = useState(false);
+  const [editCfg, setEditCfg] = useState<Partial<BotConfig>>({});
+
+  // Conexão WhatsApp
+  const [status, setStatus] = useState<ConnStatus>("unknown");
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [loadingQr, setLoadingQr] = useState(false);
+  const [loadingPair, setLoadingPair] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+
+  // Guarda admin
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       navigate("/login", { replace: true });
     }
   }, [loading, user, isAdmin, navigate]);
+
+  // Load config
+  const loadConfig = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("whatsapp_bot_config")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+    if (data) {
+      setConfig(data as BotConfig);
+      setStatus((data.last_status as ConnStatus) || "unknown");
+      setEditCfg(data);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && isAdmin) loadConfig();
+  }, [user, isAdmin, loadConfig]);
 
   const handleCopy = async (key: string, value: string) => {
     try {
@@ -95,23 +131,12 @@ export default function WhatsAppConnection() {
   const revealCredentials = async () => {
     setRevealing(true);
     try {
-      // 1) busca BOT_API_SECRET via edge function autenticada do usuário admin?
-      // Nosso get-service-key exige x-bot-secret. Vamos primeiro pegar o BOT_API_SECRET
-      // com um truque: usamos a função test/edge com o usuário autenticado.
-      // Como get-service-key exige BOT_API_SECRET, usamos abordagem alternativa:
-      // chamamos diretamente passando o token de admin para uma rota dedicada.
-      // Aqui usamos invoke -> a função get-service-key valida x-bot-secret.
-      // Solução: criamos um endpoint só para admin autenticado.
       const { data, error } = await supabase.functions.invoke(
         "get-connection-credentials",
-        {
-          body: {},
-        }
+        { body: {} }
       );
-
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Falha ao revelar");
-
       setCredentials({
         BOT_API_SECRET: data.BOT_API_SECRET,
         SUPABASE_URL: data.SUPABASE_URL,
@@ -120,10 +145,138 @@ export default function WhatsAppConnection() {
       });
       toast.success("Credenciais carregadas");
     } catch (e: any) {
-      console.error(e);
       toast.error(e.message || "Erro ao carregar credenciais");
     } finally {
       setRevealing(false);
+    }
+  };
+
+  const saveConfig = async () => {
+    if (!config) return;
+    setSavingCfg(true);
+    const { error } = await supabase
+      .from("whatsapp_bot_config")
+      .update({
+        bot_base_url: editCfg.bot_base_url || null,
+        qrcode_endpoint: editCfg.qrcode_endpoint || null,
+        pairing_endpoint: editCfg.pairing_endpoint || null,
+        status_endpoint: editCfg.status_endpoint || null,
+        disconnect_endpoint: editCfg.disconnect_endpoint || null,
+        auth_header_name: editCfg.auth_header_name || "Authorization",
+        auth_header_value: editCfg.auth_header_value || null,
+      })
+      .eq("id", config.id);
+
+    if (error) {
+      toast.error("Erro ao salvar configuração");
+    } else {
+      toast.success("Configuração salva");
+      setConfigOpen(false);
+      loadConfig();
+    }
+    setSavingCfg(false);
+  };
+
+  const callProxy = async (action: string, payload?: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke(
+      "whatsapp-bot-proxy",
+      { body: { action, ...payload } }
+    );
+    if (error) throw error;
+    if (!data?.success) throw new Error(data?.error || "Falha");
+    return data.data;
+  };
+
+  const fetchQr = async () => {
+    if (!config?.qrcode_endpoint) {
+      toast.error("Configure o endpoint de QR Code primeiro");
+      setConfigOpen(true);
+      return;
+    }
+    setLoadingQr(true);
+    setQrData(null);
+    try {
+      const data = await callProxy("qrcode");
+      // Aceita base64, data:image, ou objeto { qrcode | base64 | qr | image }
+      let qr: string | null = null;
+      if (typeof data === "string") qr = data;
+      else if (data && typeof data === "object") {
+        const d = data as any;
+        qr = d.qrcode || d.base64 || d.qr || d.image || d.code || null;
+      }
+      if (!qr) throw new Error("Resposta do bot não contém QR Code");
+      setQrData(qr);
+      toast.success("QR Code gerado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar QR");
+    } finally {
+      setLoadingQr(false);
+    }
+  };
+
+  const fetchPairing = async () => {
+    if (!config?.pairing_endpoint) {
+      toast.error("Configure o endpoint de pareamento primeiro");
+      setConfigOpen(true);
+      return;
+    }
+    if (!phoneInput.trim()) {
+      toast.error("Digite o número de telefone");
+      return;
+    }
+    setLoadingPair(true);
+    setPairingCode(null);
+    try {
+      const data = await callProxy("pairing", { phone: phoneInput.replace(/\D/g, "") });
+      let code: string | null = null;
+      if (typeof data === "string") code = data;
+      else if (data && typeof data === "object") {
+        const d = data as any;
+        code = d.code || d.pairingCode || d.pairing_code || null;
+      }
+      if (!code) throw new Error("Resposta do bot não contém código");
+      setPairingCode(code);
+      toast.success("Código gerado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar código");
+    } finally {
+      setLoadingPair(false);
+    }
+  };
+
+  const checkStatus = async () => {
+    if (!config?.status_endpoint) {
+      toast.error("Configure o endpoint de status primeiro");
+      setConfigOpen(true);
+      return;
+    }
+    setLoadingStatus(true);
+    try {
+      await callProxy("status");
+      await loadConfig();
+      toast.success("Status atualizado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao verificar status");
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!config?.disconnect_endpoint) {
+      toast.error("Configure o endpoint de desconexão primeiro");
+      setConfigOpen(true);
+      return;
+    }
+    if (!confirm("Desconectar o WhatsApp?")) return;
+    try {
+      await callProxy("disconnect");
+      setQrData(null);
+      setPairingCode(null);
+      await loadConfig();
+      toast.success("Desconectado");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao desconectar");
     }
   };
 
@@ -136,6 +289,22 @@ export default function WhatsAppConnection() {
   }
 
   const mask = (v?: string) => (v ? v.slice(0, 6) + "•".repeat(20) + v.slice(-4) : "");
+
+  const statusMeta: Record<ConnStatus, { label: string; color: string; icon: typeof Wifi }> = {
+    connected: { label: "Conectado", color: "emerald", icon: Wifi },
+    disconnected: { label: "Desconectado", color: "red", icon: WifiOff },
+    connecting: { label: "Conectando", color: "amber", icon: Loader2 },
+    unknown: { label: "Desconhecido", color: "gray", icon: AlertCircle },
+  };
+  const sm = statusMeta[status];
+  const StatusIcon = sm.icon;
+
+  // QR rendering: aceita data URI ou raw base64
+  const qrSrc = qrData
+    ? qrData.startsWith("data:") || qrData.startsWith("http")
+      ? qrData
+      : `data:image/png;base64,${qrData.replace(/^base64,/, "")}`
+    : null;
 
   return (
     <div className="min-h-screen bg-background pb-16">
@@ -162,42 +331,278 @@ export default function WhatsAppConnection() {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Apenas administradores podem ver esta página
+              Apenas administradores
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setConfigOpen(true)}
+            className="rounded-full"
+            title="Configurar URLs do bot"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
       <div className="mx-auto max-w-3xl space-y-6 px-4 pt-6">
-        {/* Hero */}
-        <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-7 w-7 text-white"
+        {/* Status card */}
+        <Card
+          className={`overflow-hidden border-2 ${
+            status === "connected"
+              ? "border-emerald-500/40 bg-emerald-500/5"
+              : status === "connecting"
+              ? "border-amber-500/40 bg-amber-500/5"
+              : "border-border/40 bg-card"
+          }`}
+        >
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                  status === "connected"
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : status === "connecting"
+                    ? "bg-amber-500/15 text-amber-400"
+                    : "bg-muted/40 text-muted-foreground"
+                }`}
               >
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold leading-tight text-foreground">
-                Conectar seu Chatbot WhatsApp
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Use as credenciais e endpoints abaixo para integrar seu bot externo
-                (Evolution API, n8n, Make, Z-API, etc) à sua barbearia.
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <CircleDot className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">
-                  Backend pronto para receber requisições
-                </span>
+                <StatusIcon
+                  className={`h-6 w-6 ${status === "connecting" ? "animate-spin" : ""}`}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Status do WhatsApp
+                </p>
+                <p className="text-lg font-bold">{sm.label}</p>
+                {config?.last_connected_at && status === "connected" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Desde{" "}
+                    {new Date(config.last_connected_at).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
               </div>
             </div>
-          </div>
-        </div>
+            <div className="flex gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={checkStatus}
+                disabled={loadingStatus}
+                title="Atualizar status"
+              >
+                {loadingStatus ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+              {status === "connected" && (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={disconnect}
+                  className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  title="Desconectar"
+                >
+                  <Power className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Conectar — QR / Código */}
+        <Card className="border-border/40">
+          <CardContent className="p-5">
+            <Tabs defaultValue="qr" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="qr" className="gap-2">
+                  <QrCode className="h-4 w-4" />
+                  QR Code
+                </TabsTrigger>
+                <TabsTrigger value="code" className="gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  Código
+                </TabsTrigger>
+              </TabsList>
+
+              {/* QR */}
+              <TabsContent value="qr" className="mt-5">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex h-64 w-64 items-center justify-center rounded-2xl border-2 border-dashed border-border/60 bg-muted/10 p-3">
+                    {loadingQr ? (
+                      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    ) : qrSrc ? (
+                      <img
+                        src={qrSrc}
+                        alt="QR Code WhatsApp"
+                        className="h-full w-full rounded-xl bg-white object-contain p-2"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <QrCode className="h-12 w-12 text-muted-foreground/40" />
+                        <p className="text-xs text-muted-foreground">
+                          Clique em "Gerar QR" para começar
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={fetchQr}
+                    disabled={loadingQr}
+                    className="w-full max-w-xs bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+                  >
+                    {loadingQr ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        {qrData ? "Atualizar QR" : "Gerar QR"}
+                      </>
+                    )}
+                  </Button>
+
+                  <ol className="space-y-1.5 text-[12px] text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        1
+                      </span>
+                      Abra o WhatsApp no celular
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        2
+                      </span>
+                      Toque em <b>Mais opções</b> → <b>Aparelhos conectados</b>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        3
+                      </span>
+                      Toque em <b>Conectar um aparelho</b> e aponte para este QR
+                    </li>
+                  </ol>
+                </div>
+              </TabsContent>
+
+              {/* Código */}
+              <TabsContent value="code" className="mt-5">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-full max-w-xs">
+                    <Label htmlFor="phone" className="text-xs">
+                      Número do WhatsApp (com DDI)
+                    </Label>
+                    <Input
+                      id="phone"
+                      placeholder="5511999999999"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      className="mt-1.5 font-mono"
+                    />
+                  </div>
+
+                  {pairingCode && (
+                    <div className="w-full max-w-xs rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/5 p-5 text-center">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                        Código de pareamento
+                      </p>
+                      <p className="font-mono text-3xl font-bold tracking-[0.3em] text-foreground">
+                        {pairingCode}
+                      </p>
+                      <button
+                        onClick={() => handleCopy("pairing", pairingCode)}
+                        className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                      >
+                        {copiedKey === "pairing" ? (
+                          <>
+                            <Check className="h-3 w-3" /> Copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" /> Copiar
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={fetchPairing}
+                    disabled={loadingPair}
+                    className="w-full max-w-xs bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+                  >
+                    {loadingPair ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando...
+                      </>
+                    ) : (
+                      <>
+                        <Smartphone className="mr-2 h-4 w-4" />
+                        {pairingCode ? "Gerar novo código" : "Gerar código"}
+                      </>
+                    )}
+                  </Button>
+
+                  <ol className="space-y-1.5 text-[12px] text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        1
+                      </span>
+                      Abra o WhatsApp → <b>Aparelhos conectados</b>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        2
+                      </span>
+                      Toque em <b>Conectar com número de telefone</b>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary">
+                        3
+                      </span>
+                      Digite o código mostrado acima
+                    </li>
+                  </ol>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Aviso quando bot não configurado */}
+        {config &&
+          !config.bot_base_url &&
+          !config.qrcode_endpoint &&
+          !config.pairing_endpoint && (
+            <button
+              onClick={() => setConfigOpen(true)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-left transition-colors hover:bg-amber-500/10"
+            >
+              <AlertCircle className="h-5 w-5 shrink-0 text-amber-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  Configure as URLs do seu chatbot
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Toque aqui para informar onde seu bot expõe QR/código
+                </p>
+              </div>
+              <Settings className="h-4 w-4 text-amber-400" />
+            </button>
+          )}
 
         {/* Credenciais */}
         <section>
@@ -216,14 +621,12 @@ export default function WhatsAppConnection() {
                   <p className="text-sm font-medium">Credenciais protegidas</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Clique abaixo para revelar as chaves desta integração.
-                    <br />
-                    Nunca compartilhe estes valores publicamente.
                   </p>
                 </div>
                 <Button
                   onClick={revealCredentials}
                   disabled={revealing}
-                  className="bg-gradient-to-br from-primary to-secondary text-primary-foreground hover:shadow-[0_0_20px_hsl(45_75%_52%_/_0.4)]"
+                  className="bg-gradient-to-br from-primary to-secondary text-primary-foreground"
                 >
                   {revealing ? (
                     <>
@@ -285,132 +688,123 @@ export default function WhatsAppConnection() {
             </div>
           )}
         </section>
+      </div>
 
-        {/* Endpoints disponíveis */}
-        <section>
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <Webhook className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Endpoints do bot</h3>
-          </div>
-          <div className="grid gap-3">
-            {BOT_ENDPOINTS.map((ep) => {
-              const Icon = ep.icon;
-              const fullUrl = `${FUNCTIONS_BASE}${ep.path}`;
-              return (
-                <Card key={ep.path} className="border-border/40">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-semibold">{ep.name}</h4>
-                          <Badge
-                            variant="outline"
-                            className="border-emerald-500/30 bg-emerald-500/10 text-[10px] text-emerald-400"
-                          >
-                            {ep.method}
-                          </Badge>
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {ep.desc}
-                        </p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <code className="flex-1 truncate rounded-md border border-border/40 bg-muted/30 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                            {fullUrl}
-                          </code>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() => handleCopy(ep.path, fullUrl)}
-                          >
-                            {copiedKey === ep.path ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
+      {/* Dialog: configurar URLs do bot */}
+      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-primary" />
+              Configurar Chatbot
+            </DialogTitle>
+            <DialogDescription>
+              Informe as URLs onde seu bot expõe QR Code, código de pareamento e status.
+              Pode usar URL completa ou caminho relativo à URL base.
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Como usar */}
-        <section>
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <Zap className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Como usar</h3>
-          </div>
-          <Card className="border-border/40">
-            <CardContent className="space-y-4 p-5 text-sm">
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">URL base do bot</Label>
+              <Input
+                placeholder="https://meu-chatbot.com"
+                value={editCfg.bot_base_url || ""}
+                onChange={(e) => setEditCfg({ ...editCfg, bot_base_url: e.target.value })}
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Endpoint QR Code (GET)</Label>
+              <Input
+                placeholder="/instance/qrcode  ou  https://..."
+                value={editCfg.qrcode_endpoint || ""}
+                onChange={(e) => setEditCfg({ ...editCfg, qrcode_endpoint: e.target.value })}
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Endpoint Pareamento (POST)</Label>
+              <Input
+                placeholder="/instance/pairing-code"
+                value={editCfg.pairing_endpoint || ""}
+                onChange={(e) => setEditCfg({ ...editCfg, pairing_endpoint: e.target.value })}
+                className="mt-1 font-mono text-xs"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Recebe {`{ "number": "5511999999999" }`}
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-xs">Endpoint Status (GET)</Label>
+              <Input
+                placeholder="/instance/connectionState"
+                value={editCfg.status_endpoint || ""}
+                onChange={(e) => setEditCfg({ ...editCfg, status_endpoint: e.target.value })}
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Endpoint Desconectar (POST)</Label>
+              <Input
+                placeholder="/instance/logout"
+                value={editCfg.disconnect_endpoint || ""}
+                onChange={(e) => setEditCfg({ ...editCfg, disconnect_endpoint: e.target.value })}
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <p className="text-muted-foreground">
-                  Toda requisição precisa do header{" "}
-                  <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-primary">
-                    x-bot-secret
-                  </code>{" "}
-                  com o valor do{" "}
-                  <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-primary">
-                    BOT_API_SECRET
-                  </code>
-                  .
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Exemplo (cURL)
-                </p>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-foreground/90">
-{`curl -X POST ${FUNCTIONS_BASE}/bot-servicos \\
-  -H "Content-Type: application/json" \\
-  -H "x-bot-secret: SEU_BOT_API_SECRET" \\
-  -d '{}'`}
-                </pre>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
-                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                <div className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-amber-400">Atenção:</span> Nunca
-                  exponha estas chaves em código de frontend ou repositórios públicos.
-                  Use apenas no servidor do seu bot.
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Documentação externa */}
-        <section className="pt-2">
-          <a
-            href="https://doc.evolution-api.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between rounded-2xl border border-border/40 bg-card p-4 transition-colors hover:border-primary/40"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <ExternalLink className="h-4 w-4" />
+                <Label className="text-xs">Header de auth</Label>
+                <Input
+                  placeholder="Authorization"
+                  value={editCfg.auth_header_name || ""}
+                  onChange={(e) =>
+                    setEditCfg({ ...editCfg, auth_header_name: e.target.value })
+                  }
+                  className="mt-1 font-mono text-xs"
+                />
               </div>
               <div>
-                <p className="text-sm font-medium">Documentação Evolution API</p>
-                <p className="text-xs text-muted-foreground">
-                  Servidor open-source para WhatsApp
-                </p>
+                <Label className="text-xs">Valor (token/apikey)</Label>
+                <Input
+                  type="password"
+                  placeholder="Bearer xxx ou apikey"
+                  value={editCfg.auth_header_value || ""}
+                  onChange={(e) =>
+                    setEditCfg({ ...editCfg, auth_header_value: e.target.value })
+                  }
+                  className="mt-1 font-mono text-xs"
+                />
               </div>
             </div>
-            <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
-          </a>
-        </section>
-      </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfigOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={saveConfig}
+              disabled={savingCfg}
+              className="bg-gradient-to-br from-primary to-secondary text-primary-foreground"
+            >
+              {savingCfg ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -462,11 +856,7 @@ function CredentialRow({
             className="h-8 w-8 shrink-0"
             onClick={onToggle}
           >
-            {masked ? (
-              <Eye className="h-3.5 w-3.5" />
-            ) : (
-              <EyeOff className="h-3.5 w-3.5" />
-            )}
+            {masked ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </Button>
         )}
         <Button
