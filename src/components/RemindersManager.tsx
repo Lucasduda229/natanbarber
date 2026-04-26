@@ -59,6 +59,7 @@ const VARIABLES = [
 ];
 
 export const RemindersManager = () => {
+  const navigate = useNavigate();
   const [reminders, setReminders] = useState<ReminderSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
