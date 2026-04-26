@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -165,7 +165,7 @@ const getServicesTotalForRevenue = (services: AppointmentService[], paymentMetho
 };
 
 // Helper function to get payment method display info
-const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card"; color: string } => {
+const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card" | "reception"; color: string } => {
   switch (method) {
     case "pix":
       return { label: "PIX", icon: "pix", color: "text-[#00D4AA] bg-[#00D4AA]/10 border-[#00D4AA]/30" };
@@ -173,6 +173,8 @@ const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pi
       return { label: "Dinheiro", icon: "cash", color: "text-green-500 bg-green-500/10 border-green-500/30" };
     case "cartao":
       return { label: "Cartão", icon: "card", color: "text-blue-500 bg-blue-500/10 border-blue-500/30" };
+    case "reception":
+      return { label: "Recepção", icon: "reception", color: "text-amber-500 bg-amber-500/10 border-amber-500/30" };
     case "subscription":
       return { label: "Assinatura", icon: "card", color: "text-amber-500 bg-amber-500/10 border-amber-500/30" };
     default:
@@ -883,6 +885,7 @@ const Admin = () => {
     if (paymentStatus === 'paid_pix') payment_method = 'pix';
     else if (paymentStatus === 'paid_cash') payment_method = 'dinheiro';
     else if (paymentStatus === 'paid_card') payment_method = 'cartao';
+    else if (paymentStatus === 'paid_reception') payment_method = 'reception';
 
     const { error } = await supabase
       .from("appointments")
@@ -962,6 +965,8 @@ const Admin = () => {
       payment_method = 'dinheiro';
     } else if (payment_status === 'paid_card') {
       payment_method = 'cartao';
+    } else if (payment_status === 'paid_reception') {
+      payment_method = 'reception';
     }
 
     const updateData: { payment_status: string; payment_method?: string } = { payment_status };
@@ -1675,6 +1680,7 @@ const Admin = () => {
                                   {paymentInfo.icon === "pix" && <img src={pixIcon} alt="PIX" className="w-3 h-3" />}
                                   {paymentInfo.icon === "cash" && <Banknote className="w-3 h-3" />}
                                   {paymentInfo.icon === "card" && <CreditCard className="w-3 h-3" />}
+                                  {paymentInfo.icon === "reception" && <Store className="w-3 h-3" />}
                                   {paymentInfo.label}
                                 </Badge>
                               );
@@ -1959,6 +1965,7 @@ const Admin = () => {
                                     {paymentInfo.icon === "pix" && <img src={pixIcon} alt="PIX" className="w-3 h-3" />}
                                     {paymentInfo.icon === "cash" && <Banknote className="w-3 h-3" />}
                                     {paymentInfo.icon === "card" && <CreditCard className="w-3 h-3" />}
+                                    {paymentInfo.icon === "reception" && <Store className="w-3 h-3" />}
                                     {paymentInfo.label}
                                   </Badge>
                                 );
@@ -2034,7 +2041,7 @@ const Admin = () => {
                               <SelectTrigger className={cn(
                                 "w-[120px] sm:w-32 h-7 sm:h-8 text-xs sm:text-sm font-medium",
                                 appointment.payment_status === 'pending' && "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-                                (appointment.payment_status === 'paid_pix' || appointment.payment_status === 'paid_cash' || appointment.payment_status === 'paid_card' || appointment.payment_status === 'paid') && "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+                                (appointment.payment_status === 'paid_pix' || appointment.payment_status === 'paid_cash' || appointment.payment_status === 'paid_card' || appointment.payment_status === 'paid_reception' || appointment.payment_status === 'paid') && "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
                                 appointment.payment_status === 'refunded' && "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30"
                               )}>
                                 <SelectValue placeholder="Pagamento" />
@@ -2044,6 +2051,7 @@ const Admin = () => {
                                 <SelectItem value="paid_pix" className="text-green-700 dark:text-green-400">Pago PIX</SelectItem>
                                 <SelectItem value="paid_cash" className="text-green-700 dark:text-green-400">Pago Dinheiro</SelectItem>
                                 <SelectItem value="paid_card" className="text-blue-700 dark:text-blue-400">Pago Cartão</SelectItem>
+                                <SelectItem value="paid_reception" className="text-amber-700 dark:text-amber-400">Pago Recepção</SelectItem>
                                 <SelectItem value="refunded" className="text-red-700 dark:text-red-400">Reembolsado</SelectItem>
                               </SelectContent>
                             </Select>
@@ -2437,6 +2445,14 @@ const Admin = () => {
             >
               <CreditCard className="w-6 h-6 text-blue-500" />
               <span>Cartão</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 justify-start gap-3 text-base border-amber-500/30 hover:bg-amber-500/10 hover:border-amber-500"
+              onClick={() => handleCompleteWithPayment('paid_reception')}
+            >
+              <Store className="w-6 h-6 text-amber-500" />
+              <span>Recepção</span>
             </Button>
           </div>
         </DialogContent>
