@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/history" element={<AppointmentHistory />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/simplificado" element={<Pedido />} />
             <Route path="/pedido" element={<Pedido />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin/whatsapp-connection" element={<WhatsAppConnection />} />
