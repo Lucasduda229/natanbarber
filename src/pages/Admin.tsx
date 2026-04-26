@@ -165,7 +165,7 @@ const getServicesTotalForRevenue = (services: AppointmentService[], paymentMetho
 };
 
 // Helper function to get payment method display info
-const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card"; color: string } => {
+const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pix" | "cash" | "card" | "reception"; color: string } => {
   switch (method) {
     case "pix":
       return { label: "PIX", icon: "pix", color: "text-[#00D4AA] bg-[#00D4AA]/10 border-[#00D4AA]/30" };
@@ -173,6 +173,8 @@ const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pi
       return { label: "Dinheiro", icon: "cash", color: "text-green-500 bg-green-500/10 border-green-500/30" };
     case "cartao":
       return { label: "Cartão", icon: "card", color: "text-blue-500 bg-blue-500/10 border-blue-500/30" };
+    case "reception":
+      return { label: "Recepção", icon: "reception", color: "text-amber-500 bg-amber-500/10 border-amber-500/30" };
     case "subscription":
       return { label: "Assinatura", icon: "card", color: "text-amber-500 bg-amber-500/10 border-amber-500/30" };
     default:
