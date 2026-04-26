@@ -965,6 +965,8 @@ const Admin = () => {
       payment_method = 'dinheiro';
     } else if (payment_status === 'paid_card') {
       payment_method = 'cartao';
+    } else if (payment_status === 'paid_reception') {
+      payment_method = 'reception';
     }
 
     const updateData: { payment_status: string; payment_method?: string } = { payment_status };
