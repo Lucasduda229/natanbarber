@@ -522,81 +522,133 @@ export default function WhatsAppConnection() {
 
               {/* ===== Código: telefone + Conectar ===== */}
               <TabsContent value="code" className="mt-5">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-full max-w-xs">
-                    <Label htmlFor="phone" className="text-xs">
-                      Número do WhatsApp (com DDI + DDD)
-                    </Label>
-                    <Input
-                      id="phone"
-                      placeholder="55 11 99999-9999"
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !loadingPair) fetchPairing();
-                      }}
-                      disabled={status === "connected"}
-                      className="mt-1.5 font-mono"
-                    />
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      Exemplo: 5511999999999
-                    </p>
+                <div className="mx-auto flex w-full max-w-sm flex-col gap-5">
+                  {/* Cabeçalho ilustrativo */}
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 animate-pulse rounded-2xl bg-emerald-500/20 blur-xl" />
+                      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30">
+                        <Smartphone className="h-7 w-7 text-white" strokeWidth={2.2} />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold">Conectar com código</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Informe seu número e use o código no WhatsApp
+                      </p>
+                    </div>
                   </div>
 
-                  {status === "connected" ? (
-                    <div className="flex w-full max-w-xs flex-col items-center gap-2 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/5 p-5 text-center">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15">
-                        <Check className="h-5 w-5 text-emerald-400" />
-                      </div>
-                      <p className="text-sm font-medium">WhatsApp já conectado</p>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={fetchPairing}
-                      disabled={loadingPair || !phoneInput.trim()}
-                      className="w-full max-w-xs bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50"
+                  {/* Card de input */}
+                  <div className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur-sm">
+                    <Label
+                      htmlFor="phone"
+                      className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
                     >
-                      {loadingPair ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Conectando...
-                        </>
-                      ) : (
-                        <>
-                          <Plug className="mr-2 h-4 w-4" />
-                          Conectar
-                        </>
-                      )}
-                    </Button>
-                  )}
+                      <Phone className="h-3.5 w-3.5" />
+                      Número do WhatsApp
+                    </Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                        +
+                      </span>
+                      <Input
+                        id="phone"
+                        inputMode="numeric"
+                        placeholder="55 11 99999 9999"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !loadingPair) fetchPairing();
+                        }}
+                        disabled={status === "connected"}
+                        className="h-12 rounded-xl border-border/60 bg-background/60 pl-7 font-mono text-base tracking-wider focus-visible:border-emerald-500/50 focus-visible:ring-emerald-500/20"
+                      />
+                    </div>
+                    <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Sparkles className="h-3 w-3" />
+                      DDI + DDD + número (ex: 5511999999999)
+                    </p>
 
-                  {pairingCode && status !== "connected" && (
-                    <div className="w-full max-w-xs rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/5 p-5 text-center">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
-                        Código de pareamento
-                      </p>
-                      <p className="font-mono text-3xl font-bold tracking-[0.3em] text-foreground">
-                        {pairingCode}
-                      </p>
-                      <button
-                        onClick={() => handleCopy("pairing", pairingCode)}
-                        className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                    {status === "connected" ? (
+                      <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                        <Check className="h-4 w-4 text-emerald-400" />
+                        <p className="text-sm font-medium text-emerald-400">
+                          WhatsApp já conectado
+                        </p>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={fetchPairing}
+                        disabled={loadingPair || !phoneInput.trim()}
+                        className="mt-4 h-12 w-full rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98]"
                       >
-                        {copiedKey === "pairing" ? (
+                        {loadingPair ? (
                           <>
-                            <Check className="h-3 w-3" /> Copiado
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Gerando código...
                           </>
                         ) : (
                           <>
-                            <Copy className="h-3 w-3" /> Copiar
+                            <Plug className="mr-2 h-4 w-4" />
+                            Gerar código
                           </>
                         )}
-                      </button>
-                      <ol className="mt-4 space-y-1.5 text-left text-[11px] text-muted-foreground">
-                        <li>1. Abra o WhatsApp → <b>Aparelhos conectados</b></li>
-                        <li>2. Toque em <b>Conectar com número de telefone</b></li>
-                        <li>3. Digite o código mostrado acima</li>
-                      </ol>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Código gerado */}
+                  {pairingCode && status !== "connected" && (
+                    <div className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent">
+                      <div className="border-b border-emerald-500/20 px-5 py-2.5 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                          Código de pareamento
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-center gap-3 px-5 py-6">
+                        <div className="flex items-center gap-1.5">
+                          {pairingCode.split("").map((ch, i) => (
+                            <span
+                              key={i}
+                              className="flex h-12 w-9 items-center justify-center rounded-lg border border-emerald-500/30 bg-background/60 font-mono text-2xl font-bold text-foreground shadow-sm"
+                            >
+                              {ch}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => handleCopy("pairing", pairingCode)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
+                        >
+                          {copiedKey === "pairing" ? (
+                            <>
+                              <Check className="h-3 w-3" /> Copiado
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" /> Copiar código
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="border-t border-emerald-500/20 bg-background/30 px-5 py-4">
+                        <ol className="space-y-2 text-[11px] text-muted-foreground">
+                          {[
+                            <>Abra o WhatsApp no celular</>,
+                            <>Toque em <b className="text-foreground">Aparelhos conectados</b></>,
+                            <>Toque em <b className="text-foreground">Conectar com número de telefone</b></>,
+                            <>Digite o código mostrado acima</>,
+                          ].map((step, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[9px] font-bold text-emerald-400">
+                                {i + 1}
+                              </span>
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
                     </div>
                   )}
                 </div>
