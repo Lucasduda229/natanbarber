@@ -26,6 +26,8 @@ import {
   WifiOff,
   AlertCircle,
   Plug,
+  Phone,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
