@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Bell, CheckCircle, XCircle, Clock, Save, Info } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReminderSetting {
@@ -20,33 +19,42 @@ interface ReminderSetting {
 
 const REMINDER_META: Record<
   string,
-  { title: string; description: string; icon: typeof Bell; hasTime: boolean }
+  {
+    title: string;
+    description: string;
+    icon: typeof Bell;
+    hasTime: boolean;
+    accent: string; // tailwind color class for icon tint
+  }
 > = {
   appointment_confirmed: {
-    title: "Agendamento Confirmado",
-    description: "Enviado quando um agendamento é confirmado.",
-    icon: CheckCircle,
+    title: "Confirmação de agendamento",
+    description: "Mensagem enviada assim que um agendamento é confirmado.",
+    icon: CheckCircle2,
     hasTime: false,
+    accent: "text-emerald-400",
   },
   appointment_cancelled: {
-    title: "Agendamento Cancelado",
-    description: "Enviado quando um agendamento é cancelado.",
+    title: "Cancelamento de agendamento",
+    description: "Mensagem enviada quando um agendamento é cancelado.",
     icon: XCircle,
     hasTime: false,
+    accent: "text-red-400",
   },
   reminder_24h: {
-    title: "Lembrete 24h Antes",
-    description: "Enviado um dia antes do horário marcado para confirmar presença.",
+    title: "Lembrete 24h antes",
+    description: "Disparado um dia antes para confirmar a presença do cliente.",
     icon: Clock,
     hasTime: true,
+    accent: "text-primary",
   },
 };
 
 const VARIABLES = [
   { key: "{nome}", desc: "Nome do cliente" },
-  { key: "{data}", desc: "Data do agendamento" },
+  { key: "{data}", desc: "Data" },
   { key: "{hora}", desc: "Horário" },
-  { key: "{servico}", desc: "Nome do serviço" },
+  { key: "{servico}", desc: "Serviço" },
 ];
 
 export const RemindersManager = () => {
@@ -69,7 +77,6 @@ export const RemindersManager = () => {
       toast.error("Erro ao carregar lembretes");
       console.error(error);
     } else {
-      // Order: confirmed → cancelled → 24h
       const order = ["appointment_confirmed", "appointment_cancelled", "reminder_24h"];
       const sorted = (data || []).sort(
         (a, b) => order.indexOf(a.reminder_type) - order.indexOf(b.reminder_type)
@@ -79,10 +86,32 @@ export const RemindersManager = () => {
     setLoading(false);
   };
 
-  const updateField = (id: string, field: keyof ReminderSetting, value: string | boolean | null) => {
+  const updateField = (
+    id: string,
+    field: keyof ReminderSetting,
+    value: string | boolean | null
+  ) => {
     setReminders((prev) =>
       prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
     );
+  };
+
+  const insertVariable = (id: string, variable: string) => {
+    const reminder = reminders.find((r) => r.id === id);
+    if (!reminder) return;
+    const textarea = document.getElementById(`msg-${id}`) as HTMLTextAreaElement | null;
+    const start = textarea?.selectionStart ?? reminder.message_template.length;
+    const end = textarea?.selectionEnd ?? reminder.message_template.length;
+    const newValue =
+      reminder.message_template.slice(0, start) +
+      variable +
+      reminder.message_template.slice(end);
+    updateField(id, "message_template", newValue);
+    setTimeout(() => {
+      textarea?.focus();
+      const pos = start + variable.length;
+      textarea?.setSelectionRange(pos, pos);
+    }, 0);
   };
 
   const saveReminder = async (reminder: ReminderSetting) => {
@@ -100,7 +129,7 @@ export const RemindersManager = () => {
       toast.error("Erro ao salvar");
       console.error(error);
     } else {
-      toast.success("Lembrete atualizado!");
+      toast.success("Lembrete atualizado");
     }
     setSavingId(null);
   };
@@ -122,8 +151,8 @@ export const RemindersManager = () => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center text-muted-foreground">
+      <Card className="border-border/40">
+        <CardContent className="p-10 text-center text-muted-foreground text-sm">
           Carregando lembretes...
         </CardContent>
       </Card>
@@ -131,51 +160,98 @@ export const RemindersManager = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="p-4 flex items-start gap-3">
-          <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-muted-foreground">
-            Configure as mensagens automáticas que serão enviadas aos clientes. Use as
-            variáveis abaixo no texto:
-            <div className="flex flex-wrap gap-2 mt-2">
+    <div className="space-y-5">
+      {/* Header explicativo refinado */}
+      <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 via-card to-card p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground">
+              Mensagens automáticas
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Personalize o que seus clientes recebem. Toque numa variável para inserir.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {VARIABLES.map((v) => (
-                <Badge key={v.key} variant="secondary" className="font-mono text-xs">
-                  {v.key} <span className="ml-1 font-normal opacity-70">— {v.desc}</span>
-                </Badge>
+                <span
+                  key={v.key}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 font-mono text-[11px] text-primary"
+                  title={v.desc}
+                >
+                  {v.key}
+                </span>
               ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Cards de lembretes */}
       {reminders.map((reminder) => {
         const meta = REMINDER_META[reminder.reminder_type];
         if (!meta) return null;
         const Icon = meta.icon;
+        const isOn = reminder.is_enabled;
 
         return (
-          <Card key={reminder.id} className={!reminder.is_enabled ? "opacity-60" : ""}>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{meta.title}</CardTitle>
-                    <CardDescription className="mt-1">{meta.description}</CardDescription>
+          <Card
+            key={reminder.id}
+            className={`overflow-hidden border-border/40 bg-card transition-all duration-300 ${
+              isOn
+                ? "shadow-[0_4px_24px_-12px_hsl(45_75%_52%_/_0.25)]"
+                : "opacity-70"
+            }`}
+          >
+            {/* Top bar com toggle */}
+            <div className="flex items-center justify-between gap-3 border-b border-border/30 bg-muted/20 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 ring-1 ring-border/40 ${meta.accent}`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={2.2} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold leading-tight text-foreground">
+                    {meta.title}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {meta.description}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isOn}
+                onCheckedChange={(v) => toggleEnabled(reminder, v)}
+              />
+            </div>
+
+            {/* Corpo */}
+            <CardContent className="space-y-4 p-5">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <Label
+                    htmlFor={`msg-${reminder.id}`}
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    MENSAGEM
+                  </Label>
+                  <div className="flex flex-wrap gap-1">
+                    {VARIABLES.map((v) => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        onClick={() => insertVariable(reminder.id, v.key)}
+                        disabled={!isOn}
+                        className="rounded-md border border-border/50 bg-background/40 px-2 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:opacity-40 disabled:hover:border-border/50 disabled:hover:bg-background/40 disabled:hover:text-muted-foreground"
+                      >
+                        {v.key}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <Switch
-                  checked={reminder.is_enabled}
-                  onCheckedChange={(v) => toggleEnabled(reminder, v)}
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor={`msg-${reminder.id}`}>Mensagem</Label>
                 <Textarea
                   id={`msg-${reminder.id}`}
                   value={reminder.message_template}
@@ -183,42 +259,53 @@ export const RemindersManager = () => {
                     updateField(reminder.id, "message_template", e.target.value)
                   }
                   rows={4}
-                  className="mt-2 font-mono text-sm"
-                  disabled={!reminder.is_enabled}
+                  className="resize-none rounded-xl border-border/50 bg-background/40 font-mono text-[13px] leading-relaxed focus-visible:ring-primary/40"
+                  disabled={!isOn}
                 />
               </div>
 
               {meta.hasTime && (
-                <div>
-                  <Label htmlFor={`time-${reminder.id}`}>Horário do envio</Label>
-                  <Input
-                    id={`time-${reminder.id}`}
-                    type="time"
-                    value={reminder.send_time?.slice(0, 5) || ""}
-                    onChange={(e) =>
-                      updateField(
-                        reminder.id,
-                        "send_time",
-                        e.target.value ? `${e.target.value}:00` : null
-                      )
-                    }
-                    className="mt-2 w-40"
-                    disabled={!reminder.is_enabled}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Hora em que o lembrete será enviado no dia anterior ao agendamento.
+                <div className="flex items-end gap-3 rounded-xl border border-border/40 bg-muted/20 p-3">
+                  <Clock className="mt-2 h-4 w-4 text-primary" />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor={`time-${reminder.id}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Horário do envio
+                    </Label>
+                    <Input
+                      id={`time-${reminder.id}`}
+                      type="time"
+                      value={reminder.send_time?.slice(0, 5) || ""}
+                      onChange={(e) =>
+                        updateField(
+                          reminder.id,
+                          "send_time",
+                          e.target.value ? `${e.target.value}:00` : null
+                        )
+                      }
+                      className="mt-1 h-9 w-32 rounded-lg border-border/50 bg-background/60"
+                      disabled={!isOn}
+                    />
+                  </div>
+                  <p className="pb-2 text-[11px] text-muted-foreground">
+                    Enviado no dia anterior
                   </p>
                 </div>
               )}
 
-              <Button
-                onClick={() => saveReminder(reminder)}
-                disabled={savingId === reminder.id}
-                className="w-full sm:w-auto"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {savingId === reminder.id ? "Salvando..." : "Salvar alterações"}
-              </Button>
+              <div className="flex justify-end pt-1">
+                <Button
+                  onClick={() => saveReminder(reminder)}
+                  disabled={savingId === reminder.id || !isOn}
+                  size="sm"
+                  className="h-9 rounded-lg bg-gradient-to-br from-primary to-secondary px-4 font-medium text-primary-foreground shadow-sm transition-all hover:shadow-[0_0_20px_hsl(45_75%_52%_/_0.4)]"
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
+                  {savingId === reminder.id ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         );
