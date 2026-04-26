@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
