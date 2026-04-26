@@ -143,10 +143,13 @@ const FinancialReport = ({
     const cardTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'paid_card' && a.payment_method !== 'subscription')
       .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
+    const receptionTotal = filteredReportAppointments
+      .filter(a => a.payment_status === 'paid_reception' && a.payment_method !== 'subscription')
+      .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
     const pendingTotal = filteredReportAppointments
       .filter(a => a.payment_status === 'pending' && a.payment_method !== 'subscription' && a.status !== 'cancelled')
       .reduce((sum, a) => sum + getAdjustedValue(a.id, getServicesTotalForRevenue(a.services, a.payment_method, a.notes)), 0);
-    const received = pixTotal + cashTotal + cardTotal;
+    const received = pixTotal + cashTotal + cardTotal + receptionTotal;
 
     // Package payments
     const filteredPP = packagePayments.filter(p => {
@@ -160,7 +163,7 @@ const FinancialReport = ({
       .filter(p => p.payment_status && p.payment_status !== 'pending')
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-    return { pixTotal, cashTotal, cardTotal, pendingTotal, received, packageTotal, filteredPP };
+    return { pixTotal, cashTotal, cardTotal, receptionTotal, pendingTotal, received, packageTotal, filteredPP };
   }, [filteredReportAppointments, packagePayments, reportStartDate, reportEndDate, getAdjustedValue, getServicesTotalForRevenue]);
 
   const grandTotal = totals.received + totals.packageTotal;
