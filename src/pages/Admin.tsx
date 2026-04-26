@@ -2446,6 +2446,14 @@ const Admin = () => {
               <CreditCard className="w-6 h-6 text-blue-500" />
               <span>Cartão</span>
             </Button>
+            <Button
+              variant="outline"
+              className="h-14 justify-start gap-3 text-base border-amber-500/30 hover:bg-amber-500/10 hover:border-amber-500"
+              onClick={() => handleCompleteWithPayment('paid_reception')}
+            >
+              <Store className="w-6 h-6 text-amber-500" />
+              <span>Recepção</span>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
