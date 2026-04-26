@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Bell, CheckCircle2, XCircle, Clock, Save, Sparkles, Link2, Lock } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock, Save, Sparkles, Link2, Lock, Zap, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReminderSetting {
