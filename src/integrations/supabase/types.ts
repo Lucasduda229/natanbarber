@@ -614,6 +614,36 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          message_template: string
+          reminder_type: string
+          send_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          message_template: string
+          reminder_type: string
+          send_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          message_template?: string
+          reminder_type?: string
+          send_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       revenue_adjustments: {
         Row: {
           adjusted_value: number
