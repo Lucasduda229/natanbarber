@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
         case "pix": return "paid_pix";
         case "dinheiro": return "paid_cash";
         case "cartao": return "paid_card";
+        case "reception": return "paid_reception";
         case "subscription": return "paid_subscription";
         default: return "paid";
       }
