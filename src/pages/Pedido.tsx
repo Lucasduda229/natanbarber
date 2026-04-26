@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check, Wallet } from "lucide-react";
+import { Scissors, Calendar as CalendarIcon, Clock, User, Phone, CheckCircle, MapPin, Check, Wallet, Store } from "lucide-react";
 import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
-import cashIcon from "@/assets/cash-icon.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
