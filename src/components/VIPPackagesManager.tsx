@@ -181,8 +181,8 @@ const VIPPackagesManager = () => {
       const completedAppointments = appointmentsResult.data || [];
       const appointmentServices = appointmentServicesResult.data || [];
 
-      // Map subscribers with profiles and packages, including inactive records without a package
-      const subscribersWithData = (subsResult.data || []).map(sub => {
+      // Map only real subscribers with a linked package, whether active or inactive
+      const subscribersWithData = (subsResult.data || []).filter(sub => sub.package_id != null).map(sub => {
         const profile = profilesResult.data?.find(p => p.user_id === sub.user_id);
         const pkg = packagesResult.data?.find(p => p.id === sub.package_id);
         
