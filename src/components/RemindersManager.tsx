@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Bell, CheckCircle2, XCircle, Clock, Save, Sparkles, Link2, Lock } from "lucide-react";
+import { Bell, CheckCircle2, XCircle, Clock, Save, Sparkles, Link2, Lock, Zap, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReminderSetting {
@@ -163,6 +163,30 @@ export const RemindersManager = () => {
 
   return (
     <div className="space-y-5">
+      {/* Banner: upgrade para plano automático */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-card p-4">
+        <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
+        <div className="relative flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg shadow-amber-500/30">
+            <Crown className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                Função bloqueada
+              </h3>
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-400">
+                <Zap className="h-2.5 w-2.5" />
+                Upgrade
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Migre para o <b className="text-amber-400">Plano Automático</b> para liberar o envio automático de lembretes via WhatsApp pelo seu chatbot.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Botão Conectar WhatsApp — leva à página privada do chatbot */}
       <button
         type="button"
