@@ -1677,6 +1677,7 @@ const Admin = () => {
                                   {paymentInfo.icon === "pix" && <img src={pixIcon} alt="PIX" className="w-3 h-3" />}
                                   {paymentInfo.icon === "cash" && <Banknote className="w-3 h-3" />}
                                   {paymentInfo.icon === "card" && <CreditCard className="w-3 h-3" />}
+                                  {paymentInfo.icon === "reception" && <Store className="w-3 h-3" />}
                                   {paymentInfo.label}
                                 </Badge>
                               );
