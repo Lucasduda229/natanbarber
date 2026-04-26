@@ -676,7 +676,7 @@ const Booking = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCustomerInfoSubmit = async (paymentMethod: "pix" | "dinheiro" | "cartao") => {
+  const handleCustomerInfoSubmit = async (paymentMethod: "pix" | "cartao" | "reception") => {
     if (!validateCustomerInfo()) return;
     
     // Set payment method and confirm booking in one action
@@ -686,7 +686,7 @@ const Booking = () => {
     await handleConfirmBookingWithPayment(paymentMethod);
   };
 
-  const handleConfirmBookingWithPayment = async (paymentMethod: "pix" | "dinheiro" | "cartao") => {
+  const handleConfirmBookingWithPayment = async (paymentMethod: "pix" | "cartao" | "reception") => {
     if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
       toast.error("Dados incompletos", { description: "Selecione serviços, data e horário." });
       return;
