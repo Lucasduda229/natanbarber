@@ -275,11 +275,18 @@ export default function WhatsAppConnection() {
   const sm = statusMeta[status];
   const StatusIcon = sm.icon;
 
-  const qrSrc = qrData
-    ? qrData.startsWith("data:") || qrData.startsWith("http")
-      ? qrData
-      : `data:image/png;base64,${qrData.replace(/^base64,/, "")}`
-    : null;
+  // Detecta o formato do QR retornado pela API:
+  // - data URL / http(s) -> usa direto
+  // - base64 puro        -> prefixa data:image/png;base64,
+  // - string crua do WA  -> gera PNG via serviço público
+  const qrSrc = (() => {
+    if (!qrData) return null;
+    const v = qrData.trim();
+    if (v.startsWith("data:") || v.startsWith("http")) return v;
+    const isBase64 = /^[A-Za-z0-9+/=\s]+$/.test(v) && v.length > 200;
+    if (isBase64) return `data:image/png;base64,${v.replace(/\s/g, "")}`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(v)}`;
+  })();
 
   // O bot está pronto para gerar (online ou conectando)?
   const botReady = status === "connecting" || status === "unknown" || !!config?.qrcode_endpoint;
