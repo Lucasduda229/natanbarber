@@ -61,7 +61,10 @@ Deno.serve(async (req) => {
     }
 
     const formatted = (appointments || []).map((a) => {
-      const svc = a.services as { id: string; name: string; price: number; duration_minutes: number } | null;
+      const rawSvc = a.services as unknown;
+      const svc = (Array.isArray(rawSvc) ? rawSvc[0] : rawSvc) as
+        | { id: string; name: string; price: number; duration_minutes: number }
+        | null;
       const timeStr = (a.appointment_time as string).slice(0, 5);
       return {
         id: a.id,
