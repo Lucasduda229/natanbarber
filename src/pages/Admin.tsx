@@ -33,6 +33,7 @@ import VIPPackagesManager from "@/components/VIPPackagesManager";
 import OperatingHoursEditor from "@/components/OperatingHoursEditor";
 import FinancialReport from "@/components/FinancialReport";
 import DataManager from "@/components/DataManager";
+import RemindersManager from "@/components/RemindersManager";
 import { Input } from "@/components/ui/input";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useWebPush } from "@/hooks/useWebPush";
@@ -1547,6 +1548,10 @@ const Admin = () => {
                 <Settings className="w-4 h-4" />
                 <span>Serviços</span>
               </TabsTrigger>
+              <TabsTrigger value="reminders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Lembretes">
+                <Bell className="w-4 h-4" />
+                <span>Lembretes</span>
+              </TabsTrigger>
               <TabsTrigger value="data" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Dados">
                 <Download className="w-4 h-4" />
                 <span>Dados</span>
@@ -2374,6 +2379,11 @@ const Admin = () => {
           {/* Services Tab */}
           <TabsContent value="services">
             <ServicesManager />
+          </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders">
+            <RemindersManager />
           </TabsContent>
 
           {/* Data Export/Import Tab */}
