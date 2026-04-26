@@ -885,6 +885,7 @@ const Admin = () => {
     if (paymentStatus === 'paid_pix') payment_method = 'pix';
     else if (paymentStatus === 'paid_cash') payment_method = 'dinheiro';
     else if (paymentStatus === 'paid_card') payment_method = 'cartao';
+    else if (paymentStatus === 'paid_reception') payment_method = 'reception';
 
     const { error } = await supabase
       .from("appointments")
