@@ -1,0 +1,1 @@
+UPDATE public.whatsapp_bot_config SET bot_base_url = 'http://178.105.54.230:3002' WHERE id = 'ad86b86f-198a-4899-878d-01be2bb08a51';
