@@ -885,6 +885,7 @@ export type Database = {
           current_month_start: string | null
           current_week_start: string | null
           cuts_used_this_month: number
+          expired_weeks_this_period: number
           id: string
           is_active: boolean
           last_payment_date: string | null
@@ -906,6 +907,7 @@ export type Database = {
           current_month_start?: string | null
           current_week_start?: string | null
           cuts_used_this_month?: number
+          expired_weeks_this_period?: number
           id?: string
           is_active?: boolean
           last_payment_date?: string | null
@@ -927,6 +929,7 @@ export type Database = {
           current_month_start?: string | null
           current_week_start?: string | null
           cuts_used_this_month?: number
+          expired_weeks_this_period?: number
           id?: string
           is_active?: boolean
           last_payment_date?: string | null
