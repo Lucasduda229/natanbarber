@@ -220,15 +220,18 @@ const VIPPackagesManager = () => {
         });
 
         // Combine into unified benefits list with actual usage
+        // Add expired weeks (weeks where the subscriber didn't book) as if used
+        const expiredWeeks = (sub as any).expired_weeks_this_period || 0;
         const benefits: BenefitUsage[] = [];
         
         pkgItems.forEach(item => {
           const serviceId = item.service_id || '';
+          const realUsed = usageByService[serviceId] || 0;
           benefits.push({
             service_id: serviceId,
             service_name: item.service_name,
             quantity: item.quantity,
-            used: usageByService[serviceId] || 0
+            used: Math.min(item.quantity, realUsed + expiredWeeks)
           });
         });
         
@@ -236,11 +239,13 @@ const VIPPackagesManager = () => {
           // Check if already added from package_items
           const existing = benefits.find(b => b.service_id === benefit.service_id);
           if (!existing) {
+            const realUsed = usageByService[benefit.service_id] || 0;
+            const qty = benefit.quantity || 1;
             benefits.push({
               service_id: benefit.service_id,
               service_name: benefit.service_name || "Serviço",
-              quantity: benefit.quantity || 1,
-              used: usageByService[benefit.service_id] || 0
+              quantity: qty,
+              used: Math.min(qty, realUsed + expiredWeeks)
             });
           }
         });
