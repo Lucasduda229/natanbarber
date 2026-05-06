@@ -591,7 +591,7 @@ const VIPPackagesManager = () => {
             last_payment_date: todayStr,
             consecutive_months: computedNewMonths,
             updated_at: nowTimestamp,
-          })
+          } as any)
           .eq("id", sub.id);
       }
 
