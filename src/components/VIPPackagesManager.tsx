@@ -584,6 +584,7 @@ const VIPPackagesManager = () => {
             usage_reset_date: nowTimestamp,
             cuts_used_this_month: 0,
             credits_expired_this_month: 0,
+            expired_weeks_this_period: 0,
             current_month_start: todayStr,
             weekly_credits_available: weeklyCredits,
             current_week_start: todayStr,
