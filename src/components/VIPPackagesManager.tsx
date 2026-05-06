@@ -429,7 +429,8 @@ const VIPPackagesManager = () => {
           usage_reset_date: now,
           subscription_start_date: todayStr,
           cuts_used_this_month: 0,
-        })
+          expired_weeks_this_period: 0,
+        } as any)
         .eq("id", subId);
 
       if (error) throw error;
