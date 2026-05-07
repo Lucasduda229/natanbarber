@@ -1446,7 +1446,7 @@ const Booking = () => {
                   {subscriptionPackageItems.length > 0 && (() => {
                     const msPerWeek = 7 * 24 * 60 * 60 * 1000;
                     const startMs = activeSubscription.subscription_start_date.getTime();
-                    const weeksElapsed = Math.max(1, Math.floor((Date.now() - startMs) / msPerWeek) + 1);
+                    const weeksElapsed = Math.max(0, Math.floor((Date.now() - startMs) / msPerWeek));
                     return (
                     <div className="space-y-2 mb-4">
                       <p className="text-xs text-muted-foreground font-medium">Uso por serviço este mês:</p>
