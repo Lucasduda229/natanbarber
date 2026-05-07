@@ -223,10 +223,9 @@ const VIPPackagesManager = () => {
         // regardless of whether the client actually booked or which services he picked.
         // The actual count is the max between weeks elapsed and real bookings made.
         const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        const weeksElapsed = Math.max(
-          1,
-          Math.floor((Date.now() - cutoffTime) / msPerWeek) + 1
-        );
+        // Count only FULLY elapsed weeks since subscription start/reset.
+        // Week 1 (days 0-6) = 0 auto-uses; after 7 days = 1, after 14 days = 2, etc.
+        const weeksElapsed = Math.max(0, Math.floor((Date.now() - cutoffTime) / msPerWeek));
 
         const benefits: BenefitUsage[] = [];
         
