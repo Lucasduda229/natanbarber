@@ -1443,12 +1443,18 @@ const Booking = () => {
                   </div>
                   
                   {/* Service-by-service usage display */}
-                  {subscriptionPackageItems.length > 0 && (
+                  {subscriptionPackageItems.length > 0 && (() => {
+                    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+                    const startMs = activeSubscription.subscription_start_date.getTime();
+                    const weeksElapsed = Math.max(1, Math.floor((Date.now() - startMs) / msPerWeek) + 1);
+                    return (
                     <div className="space-y-2 mb-4">
                       <p className="text-xs text-muted-foreground font-medium">Uso por serviço este mês:</p>
                       {subscriptionPackageItems.map((item) => {
-                        const used = serviceUsageThisMonth[item.service_id || ''] || 0;
+                        const realUsed = serviceUsageThisMonth[item.service_id || ''] || 0;
                         const total = item.quantity;
+                        // Each elapsed week consumes 1 use of every benefit automatically
+                        const used = Math.min(total, Math.max(realUsed, weeksElapsed));
                         const remaining = Math.max(0, total - used);
                         const percentage = total > 0 ? (used / total) * 100 : 0;
                         const isExhausted = remaining === 0;
@@ -1471,7 +1477,8 @@ const Booking = () => {
                         );
                       })}
                     </div>
-                  )}
+                    );
+                  })()}
                   
                   {/* Show booked weeks */}
                   {subscriptionBookedWeeks.length > 0 && (
