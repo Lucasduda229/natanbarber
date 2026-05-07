@@ -686,6 +686,28 @@ const VIPPackagesManager = () => {
         toast.success(`Uso registrado: ${serviceNames}`);
       }
 
+      // Decrement weekly credits and increment monthly cuts on subscription_progress
+      const successfulCount = benefitsToRegister.length - errors.length;
+      if (successfulCount > 0) {
+        const currentWeekly = (selectedSubscriber as any).weekly_credits_available ?? 0;
+        const currentMonthly = (selectedSubscriber as any).cuts_used_this_month ?? 0;
+        const newWeekly = Math.max(0, currentWeekly - successfulCount);
+        const newMonthly = currentMonthly + successfulCount;
+
+        const { error: subUpdateError } = await supabase
+          .from("subscription_progress")
+          .update({
+            weekly_credits_available: newWeekly,
+            cuts_used_this_month: newMonthly,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", (selectedSubscriber as any).id);
+
+        if (subUpdateError) {
+          console.error("Error updating subscription credits:", subUpdateError);
+        }
+      }
+
       setShowUsageModal(false);
       setSelectedSubscriber(null);
       setSelectedBenefits(new Set());
