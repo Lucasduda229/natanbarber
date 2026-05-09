@@ -34,11 +34,13 @@ interface ParsedAppointment {
 }
 
 export const AIAssistantPanel = () => {
+  const { config: extraFee } = useExtraFee();
   const [message, setMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAppointment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('pending');
+  const [chargeExtraFee, setChargeExtraFee] = useState(false);
 
   const processMessage = async () => {
     if (!message.trim()) {
