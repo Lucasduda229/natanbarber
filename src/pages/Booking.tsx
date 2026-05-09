@@ -640,9 +640,13 @@ const Booking = () => {
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
 
+  // Taxa adicional configurável (não aplica para assinantes usando pacote)
+  const isUsingSubscription = !!selectedPackage && selectedPackage.id === activeSubscription?.package_id;
+  const extraFeeAmount = extraFee.enabled && !isUsingSubscription ? extraFee.amount : 0;
+
   // Cálculos de totais
   const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = basePrice + thursdaySurcharge;
+  const totalPrice = basePrice + thursdaySurcharge + extraFeeAmount;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
