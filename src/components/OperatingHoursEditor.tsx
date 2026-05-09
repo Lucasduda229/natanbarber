@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { ExtraFeeEditor } from "./ExtraFeeEditor";
 
 interface DaySchedule {
   dayOfWeek: number;
@@ -176,6 +177,7 @@ const OperatingHoursEditor = () => {
   }
 
   return (
+    <div className="space-y-4">
     <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
       <CardHeader className="flex flex-row items-center justify-between pb-3 sm:pb-4">
         <CardTitle className="flex items-center gap-2 text-foreground text-base sm:text-lg">
@@ -273,6 +275,9 @@ const OperatingHoursEditor = () => {
 
       </CardContent>
     </Card>
+
+    <ExtraFeeEditor />
+    </div>
   );
 };
 

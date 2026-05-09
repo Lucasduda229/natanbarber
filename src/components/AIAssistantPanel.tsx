@@ -9,6 +9,8 @@ import cashIcon from '@/assets/cash-icon.png';
 import whatsappIcon from '@/assets/whatsapp-icon.svg';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useExtraFee, buildExtraFeeNote } from '@/hooks/useExtraFee';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ServiceItem {
   service_id: string;
@@ -32,11 +34,13 @@ interface ParsedAppointment {
 }
 
 export const AIAssistantPanel = () => {
+  const { config: extraFee } = useExtraFee();
   const [message, setMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAppointment | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('pending');
+  const [chargeExtraFee, setChargeExtraFee] = useState(false);
 
   const processMessage = async () => {
     if (!message.trim()) {
@@ -115,7 +119,8 @@ export const AIAssistantPanel = () => {
     try {
       const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
       const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
-      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}`;
+      const feeNote = chargeExtraFee && extraFee.enabled && extraFee.amount > 0 ? `\n${buildExtraFeeNote(extraFee)}` : '';
+      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}${feeNote}`;
       
       const additionalServiceIds = parsedData.services && parsedData.services.length > 1 
         ? parsedData.services.slice(1).map(s => s.service_id) 
@@ -146,6 +151,7 @@ export const AIAssistantPanel = () => {
       setMessage('');
       setParsedData(null);
       setSelectedPaymentMethod('pending');
+      setChargeExtraFee(false);
     } catch (err: any) {
       console.error('Error creating appointment:', err);
       toast.error(err.message || 'Erro ao criar agendamento');
@@ -432,6 +438,30 @@ export const AIAssistantPanel = () => {
                 </button>
               </div>
             </div>
+
+            {/* Extra fee toggle */}
+            {extraFee.enabled && extraFee.amount > 0 && (
+              <label
+                htmlFor="ai-extra-fee"
+                className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
+                  chargeExtraFee
+                    ? 'border-amber-500/60 bg-amber-500/15 ring-2 ring-amber-500/40'
+                    : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                }`}
+              >
+                <Checkbox
+                  id="ai-extra-fee"
+                  checked={chargeExtraFee}
+                  onCheckedChange={(v) => setChargeExtraFee(v === true)}
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">💰 Cobrar {extraFee.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Adiciona R$ {extraFee.amount.toFixed(2).replace('.', ',')} ao agendamento (registrado nas observações).
+                  </p>
+                </div>
+              </label>
+            )}
 
             {/* Confirm button */}
             <Button 

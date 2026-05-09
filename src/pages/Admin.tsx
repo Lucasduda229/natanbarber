@@ -152,16 +152,27 @@ const getNightSurcharge = (notes: string | null): number => {
   return notes.includes("Adicional noturno") ? 5 : 0;
 };
 
+// Helper to detect configurable extra fee saved in notes (e.g. "Taxa adicional (Nome): +R$5,00")
+const getExtraFeeFromNotes = (notes: string | null): number => {
+  if (!notes) return 0;
+  const m = notes.match(/Taxa adicional \([^)]+\): \+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+  if (!m) return 0;
+  return parseFloat(m[1].replace(",", ".")) || 0;
+};
+
+const getExtrasTotal = (notes: string | null): number =>
+  getNightSurcharge(notes) + getExtraFeeFromNotes(notes);
+
 const getServicesTotal = (services: AppointmentService[], notes?: string | null): number => {
-  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
-  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
+  if (!services || services.length === 0) return getExtrasTotal(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
 };
 
 // Helper function to get services total considering subscription (R$ 0 for subscriptions)
 const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null, notes?: string | null): number => {
   if (paymentMethod === 'subscription') return 0;
-  if (!services || services.length === 0) return getNightSurcharge(notes ?? null);
-  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getNightSurcharge(notes ?? null);
+  if (!services || services.length === 0) return getExtrasTotal(notes ?? null);
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
 };
 
 // Helper function to get payment method display info

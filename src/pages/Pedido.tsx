@@ -16,6 +16,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
+import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
 
 interface Service {
   id: string;
@@ -37,6 +38,7 @@ const LOCATION = {
 };
 
 const Pedido = () => {
+  const { config: extraFee } = useExtraFee();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -221,9 +223,10 @@ const Pedido = () => {
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
     const surchargeNote = isThursdayEvening ? "\n⚠️ Adicional noturno quinta-feira: +R$5,00" : "";
-    const notesText = customerNotes.trim() 
-      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}`
-      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}${surchargeNote}`;
+    const extraFeeNote = extraFee.enabled && extraFee.amount > 0 ? `\n${buildExtraFeeNote(extraFee)}` : "";
+    const notesText = customerNotes.trim()
+      ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
+      : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}${surchargeNote}${extraFeeNote}`;
     
     try {
       const response = await supabase.functions.invoke("create-guest-customer", {
@@ -333,10 +336,11 @@ const Pedido = () => {
     return dayOfWeek === 4 && hour >= 19;
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+  const extraFeeAmount = extraFee.enabled ? extraFee.amount : 0;
 
   // Calculate total price
   const basePrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = basePrice + thursdaySurcharge;
+  const totalPrice = basePrice + thursdaySurcharge + extraFeeAmount;
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -503,6 +507,17 @@ const Pedido = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* Extra fee warning */}
+                    {extraFee.enabled && extraFee.amount > 0 && (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
+                        <span className="text-base">💰</span>
+                        <div>
+                          <p className="text-xs font-semibold text-amber-500">{extraFee.name}</p>
+                          <p className="text-xs text-muted-foreground">Será cobrado um adicional de R$ {extraFee.amount.toFixed(2).replace(".", ",")} neste agendamento.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -623,6 +638,12 @@ const Pedido = () => {
                       <div className="flex justify-between text-amber-500 font-medium">
                         <span>⚠️ Adicional noturno (quinta)</span>
                         <span>+ R$ 5,00</span>
+                      </div>
+                    )}
+                    {extraFeeAmount > 0 && (
+                      <div className="flex justify-between text-amber-500 font-medium">
+                        <span>💰 {extraFee.name}</span>
+                        <span>+ R$ {extraFeeAmount.toFixed(2).replace(".", ",")}</span>
                       </div>
                     )}
                   </div>

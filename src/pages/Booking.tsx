@@ -28,6 +28,7 @@ import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
 import whatsappIcon from "@/assets/whatsapp-icon.svg";
+import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -123,6 +124,7 @@ const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Vis
 const Booking = () => {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const { config: extraFee } = useExtraFee();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -638,9 +640,12 @@ const Booking = () => {
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
 
+  // Taxa adicional configurável (não aplica para assinantes usando pacote)
+  const extraFeeAmount = extraFee.enabled && !usingSubscription ? extraFee.amount : 0;
+
   // Cálculos de totais
   const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = basePrice + thursdaySurcharge;
+  const totalPrice = basePrice + thursdaySurcharge + extraFeeAmount;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -813,11 +818,14 @@ const Booking = () => {
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
         payment_method: usingSubscription ? "subscription" : paymentMethod,
-        notes: usingSubscription 
-          ? "Agendamento via assinatura" 
-          : isThursdayEvening 
-            ? "⚠️ Adicional noturno quinta-feira: +R$5,00" 
-            : null,
+        notes: (() => {
+          if (usingSubscription) return "Agendamento via assinatura";
+          const parts: string[] = [];
+          if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
+          const feeNote = buildExtraFeeNote(extraFee);
+          if (feeNote) parts.push(feeNote);
+          return parts.length ? parts.join("\n") : null;
+        })(),
       })
       .select()
       .single();
@@ -1014,7 +1022,14 @@ const Booking = () => {
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
         payment_method: usingSubscription ? "subscription" : selectedPaymentMethod,
-        notes: usingSubscription ? "Agendamento via assinatura" : null,
+        notes: (() => {
+          if (usingSubscription) return "Agendamento via assinatura";
+          const parts: string[] = [];
+          if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
+          const feeNote = buildExtraFeeNote(extraFee);
+          if (feeNote) parts.push(feeNote);
+          return parts.length ? parts.join("\n") : null;
+        })(),
       })
       .select()
       .single();
@@ -1764,6 +1779,12 @@ const Booking = () => {
                       <span>+ R$ 5,00</span>
                     </div>
                   )}
+                  {extraFeeAmount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-amber-500">
+                      <span className="flex items-center gap-2">💰 {extraFee.name}</span>
+                      <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                     <span className="font-semibold text-foreground text-sm sm:text-base">Total</span>
                     <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
@@ -1854,6 +1875,12 @@ const Booking = () => {
                   <div className="flex items-center justify-between text-sm text-amber-500">
                     <span>⚠️ Adicional noturno (quinta)</span>
                     <span>+ R$ 5,00</span>
+                  </div>
+                )}
+                {extraFeeAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-amber-500">
+                    <span>💰 {extraFee.name}</span>
+                    <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
@@ -1957,6 +1984,12 @@ const Booking = () => {
                   <div className="flex items-center justify-between text-amber-500">
                     <span>⚠️ Adicional noturno (quinta)</span>
                     <span className="font-semibold">+ R$ 5,00</span>
+                  </div>
+                )}
+                {extraFeeAmount > 0 && (
+                  <div className="flex items-center justify-between text-amber-500">
+                    <span>💰 {extraFee.name}</span>
+                    <span className="font-semibold">+ R$ {extraFeeAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
