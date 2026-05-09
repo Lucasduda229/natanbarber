@@ -225,6 +225,17 @@ const Booking = () => {
     }
   }, [selectedDate, selectedServices]);
 
+  const fetchOpenDays = async () => {
+    const { data } = await supabase
+      .from("time_slots")
+      .select("day_of_week")
+      .eq("is_blocked", false);
+    if (data) {
+      const days = Array.from(new Set(data.map((r: any) => r.day_of_week as number)));
+      if (days.length) setOpenDays(days);
+    }
+  };
+
   const loadUserProfile = async () => {
     if (!user) return;
     
