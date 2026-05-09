@@ -551,7 +551,6 @@ const VIPPackagesManager = () => {
         const todayStr = today.toISOString().split('T')[0];
         const nowTimestamp = today.toISOString();
         // Use the package from the paid order (may differ from previous package on upgrade/downgrade)
-        const orderPackage = order.package_id ? packages.find(p => p.id === order.package_id) : null;
         const orderPkgItems = order.package_id ? packageItems.filter(i => i.package_id === order.package_id) : [];
         const itemsTotalQty = orderPkgItems.reduce((acc, it) => acc + (it.quantity || 0), 0);
         const newMonthlyLimit = itemsTotalQty > 0 ? itemsTotalQty : sub.monthly_cuts_limit;
