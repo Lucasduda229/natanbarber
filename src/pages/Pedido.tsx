@@ -16,7 +16,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
-import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
+import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from "@/hooks/useExtraFee";
 
 interface Service {
   id: string;
