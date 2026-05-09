@@ -154,6 +154,7 @@ const Booking = () => {
   
   // Track usage per service for the current month
   const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
+  const [openDays, setOpenDays] = useState<number[]>([1, 2, 3, 4, 5]); // dias com horários cadastrados
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
