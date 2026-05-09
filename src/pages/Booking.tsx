@@ -154,6 +154,7 @@ const Booking = () => {
   
   // Track usage per service for the current month
   const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
+  const [openDays, setOpenDays] = useState<number[]>([1, 2, 3, 4, 5]); // dias com horários cadastrados
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
@@ -208,6 +209,7 @@ const Booking = () => {
     fetchPackages();
     loadUserProfile();
     checkActiveSubscription();
+    fetchOpenDays();
   }, []);
 
   useEffect(() => {
@@ -222,6 +224,17 @@ const Booking = () => {
       fetchAvailableSlots(selectedDate);
     }
   }, [selectedDate, selectedServices]);
+
+  const fetchOpenDays = async () => {
+    const { data } = await supabase
+      .from("time_slots")
+      .select("day_of_week")
+      .eq("is_blocked", false);
+    if (data) {
+      const days = Array.from(new Set(data.map((r: any) => r.day_of_week as number)));
+      if (days.length) setOpenDays(days);
+    }
+  };
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -1112,23 +1125,21 @@ const Booking = () => {
     }
   };
 
-  // Disable days: past, Sundays, Saturdays for subscribers
-  // Subscribers CAN book in future months (no longer restricted to current month only)
+  // Disable days: past, dias fechados (não cadastrados em time_slots), Sábado para assinantes
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
-    
-    // If using subscription, block Saturdays only
-    if (usingSubscription) {
-      // Block Saturdays for subscribers (dayOfWeek 6 = Saturday)
-      if (dayOfWeek === 6) {
-        return true;
-      }
-    }
-    
-    // Apenas domingo (0) está fechado e dias passados
-    return date < today || dayOfWeek === 0;
+
+    if (date < today) return true;
+
+    // Bloquear dias que não estão configurados como abertos
+    if (!openDays.includes(dayOfWeek)) return true;
+
+    // Assinantes não podem agendar no sábado
+    if (usingSubscription && dayOfWeek === 6) return true;
+
+    return false;
   };
 
   // Check if a date is in a week that already has a subscription booking
