@@ -9,6 +9,8 @@ import cashIcon from '@/assets/cash-icon.png';
 import whatsappIcon from '@/assets/whatsapp-icon.svg';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useExtraFee, buildExtraFeeNote } from '@/hooks/useExtraFee';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ServiceItem {
   service_id: string;
