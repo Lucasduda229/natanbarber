@@ -119,7 +119,8 @@ export const AIAssistantPanel = () => {
     try {
       const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
       const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
-      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}`;
+      const feeNote = chargeExtraFee && extraFee.enabled && extraFee.amount > 0 ? `\n${buildExtraFeeNote(extraFee)}` : '';
+      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}${feeNote}`;
       
       const additionalServiceIds = parsedData.services && parsedData.services.length > 1 
         ? parsedData.services.slice(1).map(s => s.service_id) 
