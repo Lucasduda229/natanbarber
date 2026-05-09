@@ -1877,6 +1877,12 @@ const Booking = () => {
                     <span>+ R$ 5,00</span>
                   </div>
                 )}
+                {extraFeeAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-amber-500">
+                    <span>💰 {extraFee.name}</span>
+                    <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
                   <CalendarIcon className="w-4 h-4" />
                   <span>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</span>
