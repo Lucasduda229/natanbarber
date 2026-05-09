@@ -510,7 +510,7 @@ const Pedido = () => {
                     )}
 
                     {/* Extra fee warning */}
-                    {extraFee.enabled && extraFee.amount > 0 && (
+                    {extraFeeApplies && (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
                         <span className="text-base">💰</span>
                         <div>
