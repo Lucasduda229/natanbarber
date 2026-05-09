@@ -590,6 +590,8 @@ const VIPPackagesManager = () => {
           .from("subscription_progress")
           .update({
             is_active: true,
+            package_id: order.package_id ?? sub.package_id,
+            monthly_cuts_limit: newMonthlyLimit,
             subscription_start_date: todayStr,
             usage_reset_date: nowTimestamp,
             cuts_used_this_month: 0,
