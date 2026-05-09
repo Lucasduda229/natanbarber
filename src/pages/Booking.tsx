@@ -28,6 +28,7 @@ import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
 import whatsappIcon from "@/assets/whatsapp-icon.svg";
+import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
