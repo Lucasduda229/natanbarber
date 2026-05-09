@@ -1027,7 +1027,7 @@ const Booking = () => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
           if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
-          const feeNote = buildExtraFeeNote(extraFee);
+          const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
         })(),
