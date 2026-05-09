@@ -135,7 +135,9 @@ const VIPPackagesManager = () => {
         supabase
           .from("appointments")
           .select("id, user_id, service_id, appointment_date, status, created_at")
-          .in("status", ["completed", "confirmed"]),
+          .in("status", ["completed", "confirmed"])
+          .order("created_at", { ascending: false })
+          .limit(10000),
         supabase.from("appointment_services").select("appointment_id, service_id"),
         supabase.from("package_payments").select("*").order("created_at", { ascending: false })
       ]);
