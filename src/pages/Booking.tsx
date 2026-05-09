@@ -818,11 +818,14 @@ const Booking = () => {
         status: "pending",
         payment_status: usingSubscription ? "paid" : "pending",
         payment_method: usingSubscription ? "subscription" : paymentMethod,
-        notes: usingSubscription 
-          ? "Agendamento via assinatura" 
-          : isThursdayEvening 
-            ? "⚠️ Adicional noturno quinta-feira: +R$5,00" 
-            : null,
+        notes: (() => {
+          if (usingSubscription) return "Agendamento via assinatura";
+          const parts: string[] = [];
+          if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
+          const feeNote = buildExtraFeeNote(extraFee);
+          if (feeNote) parts.push(feeNote);
+          return parts.length ? parts.join("\n") : null;
+        })(),
       })
       .select()
       .single();
