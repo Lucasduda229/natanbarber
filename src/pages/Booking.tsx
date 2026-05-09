@@ -28,7 +28,7 @@ import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
 import whatsappIcon from "@/assets/whatsapp-icon.svg";
-import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
+import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from "@/hooks/useExtraFee";
 
 // Step progress indicator component
 const StepIndicator = ({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) => {
@@ -640,8 +640,9 @@ const Booking = () => {
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
 
-  // Taxa adicional configurável (não aplica para assinantes usando pacote)
-  const extraFeeAmount = extraFee.enabled && !usingSubscription ? extraFee.amount : 0;
+  // Taxa adicional configurável (não aplica para assinantes; respeita dias da semana selecionados)
+  const extraFeeApplies = !usingSubscription && isExtraFeeApplicable(extraFee, selectedDate ?? null);
+  const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Cálculos de totais
   const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
@@ -822,7 +823,7 @@ const Booking = () => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
           if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
-          const feeNote = buildExtraFeeNote(extraFee);
+          const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
         })(),
@@ -1026,7 +1027,7 @@ const Booking = () => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
           if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
-          const feeNote = buildExtraFeeNote(extraFee);
+          const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
         })(),

@@ -8,13 +8,30 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
-const KEYS = ["extra_fee_enabled", "extra_fee_name", "extra_fee_amount"];
+const KEYS = ["extra_fee_enabled", "extra_fee_name", "extra_fee_amount", "extra_fee_days"];
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const parseDays = (raw: string | undefined | null): number[] => {
+  if (!raw) return ALL_DAYS;
+  const parts = raw
+    .split(",")
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  return parts.length ? Array.from(new Set(parts)).sort() : ALL_DAYS;
+};
 
 export const ExtraFeeEditor = () => {
   const [enabled, setEnabled] = useState(false);
   const [name, setName] = useState("Taxa adicional");
   const [amount, setAmount] = useState("0.00");
-  const [original, setOriginal] = useState({ enabled: false, name: "Taxa adicional", amount: "0.00" });
+  const [days, setDays] = useState<number[]>(ALL_DAYS);
+  const [original, setOriginal] = useState({
+    enabled: false,
+    name: "Taxa adicional",
+    amount: "0.00",
+    days: ALL_DAYS,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -29,10 +46,12 @@ export const ExtraFeeEditor = () => {
       enabled: (map.get("extra_fee_enabled") ?? "false") === "true",
       name: map.get("extra_fee_name") || "Taxa adicional",
       amount: map.get("extra_fee_amount") || "0.00",
+      days: parseDays(map.get("extra_fee_days")),
     };
     setEnabled(next.enabled);
     setName(next.name);
     setAmount(next.amount);
+    setDays(next.days);
     setOriginal(next);
     setLoading(false);
   };
@@ -40,6 +59,12 @@ export const ExtraFeeEditor = () => {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  const toggleDay = (d: number) => {
+    setDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort(),
+    );
+  };
 
   const handleSave = async () => {
     const numericAmount = parseFloat(amount.replace(",", "."));
@@ -51,13 +76,19 @@ export const ExtraFeeEditor = () => {
       toast.error("Nome da taxa é obrigatório");
       return;
     }
+    if (enabled && days.length === 0) {
+      toast.error("Selecione ao menos um dia da semana");
+      return;
+    }
 
     setSaving(true);
     try {
+      const daysCsv = (days.length ? days : ALL_DAYS).join(",");
       const rows = [
         { setting_key: "extra_fee_enabled", setting_value: enabled ? "true" : "false" },
         { setting_key: "extra_fee_name", setting_value: name.trim() },
         { setting_key: "extra_fee_amount", setting_value: numericAmount.toFixed(2) },
+        { setting_key: "extra_fee_days", setting_value: daysCsv },
       ];
       const { error } = await supabase
         .from("admin_settings")
@@ -65,7 +96,7 @@ export const ExtraFeeEditor = () => {
       if (error) throw error;
 
       toast.success("Taxa adicional atualizada!");
-      setOriginal({ enabled, name: name.trim(), amount: numericAmount.toFixed(2) });
+      setOriginal({ enabled, name: name.trim(), amount: numericAmount.toFixed(2), days });
       setEditing(false);
     } catch (e: any) {
       console.error(e);
@@ -79,6 +110,7 @@ export const ExtraFeeEditor = () => {
     setEnabled(original.enabled);
     setName(original.name);
     setAmount(original.amount);
+    setDays(original.days);
     setEditing(false);
   };
 
@@ -128,8 +160,8 @@ export const ExtraFeeEditor = () => {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-primary/10">
           <div>
-            <p className="text-sm font-medium text-foreground">Cobrar taxa em todos os agendamentos</p>
-            <p className="text-xs text-muted-foreground">Quando ativada, a taxa será somada automaticamente a cada agendamento feito pelo cliente.</p>
+            <p className="text-sm font-medium text-foreground">Cobrar taxa nos agendamentos</p>
+            <p className="text-xs text-muted-foreground">Quando ativada, a taxa será somada nos dias selecionados abaixo.</p>
           </div>
           <Switch checked={enabled} onCheckedChange={setEnabled} disabled={!editing} />
         </div>
@@ -141,7 +173,7 @@ export const ExtraFeeEditor = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={!editing}
-              placeholder="Ex: Taxa de deslocamento"
+              placeholder="Ex: Taxa de domingo"
               className="bg-card/60"
               maxLength={60}
             />
@@ -160,8 +192,43 @@ export const ExtraFeeEditor = () => {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">Dias em que a taxa é cobrada</Label>
+            {editing && (
+              <button
+                type="button"
+                onClick={() => setDays(days.length === 7 ? [] : ALL_DAYS)}
+                className="text-xs text-primary hover:underline"
+              >
+                {days.length === 7 ? "Limpar" : "Todos os dias"}
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {DAY_LABELS.map((label, idx) => {
+              const active = days.includes(idx);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={!editing}
+                  onClick={() => toggleDay(idx)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card/60 text-muted-foreground border-muted/40 hover:border-primary/40"
+                  } ${!editing ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <p className="text-xs text-muted-foreground">
-          O valor e o motivo aparecem no resumo do agendamento e ficam registrados nas observações.
+          A taxa só será cobrada nos dias selecionados. O valor e o motivo aparecem no resumo do agendamento e ficam registrados nas observações.
         </p>
       </CardContent>
     </Card>

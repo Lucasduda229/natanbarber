@@ -9,7 +9,7 @@ import cashIcon from '@/assets/cash-icon.png';
 import whatsappIcon from '@/assets/whatsapp-icon.svg';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useExtraFee, buildExtraFeeNote } from '@/hooks/useExtraFee';
+import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from '@/hooks/useExtraFee';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface ServiceItem {
@@ -119,7 +119,8 @@ export const AIAssistantPanel = () => {
     try {
       const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
       const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
-      const feeNote = chargeExtraFee && extraFee.enabled && extraFee.amount > 0 ? `\n${buildExtraFeeNote(extraFee)}` : '';
+      const feeApplies = isExtraFeeApplicable(extraFee, parsedData.appointment_date);
+      const feeNote = chargeExtraFee && feeApplies ? `\n${buildExtraFeeNote(extraFee)}` : '';
       const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}${feeNote}`;
       
       const additionalServiceIds = parsedData.services && parsedData.services.length > 1 
@@ -440,7 +441,7 @@ export const AIAssistantPanel = () => {
             </div>
 
             {/* Extra fee toggle */}
-            {extraFee.enabled && extraFee.amount > 0 && (
+            {extraFee.enabled && extraFee.amount > 0 && isExtraFeeApplicable(extraFee, parsedData.appointment_date) && (
               <label
                 htmlFor="ai-extra-fee"
                 className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${

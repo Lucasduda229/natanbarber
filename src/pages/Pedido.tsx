@@ -16,7 +16,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
-import { useExtraFee, buildExtraFeeNote } from "@/hooks/useExtraFee";
+import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from "@/hooks/useExtraFee";
 
 interface Service {
   id: string;
@@ -223,7 +223,7 @@ const Pedido = () => {
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
     const surchargeNote = isThursdayEvening ? "\n⚠️ Adicional noturno quinta-feira: +R$5,00" : "";
-    const extraFeeNote = extraFee.enabled && extraFee.amount > 0 ? `\n${buildExtraFeeNote(extraFee)}` : "";
+    const extraFeeNote = extraFeeApplies ? `\n${buildExtraFeeNote(extraFee)}` : "";
     const notesText = customerNotes.trim()
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
       : `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}${surchargeNote}${extraFeeNote}`;
@@ -336,7 +336,8 @@ const Pedido = () => {
     return dayOfWeek === 4 && hour >= 19;
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
-  const extraFeeAmount = extraFee.enabled ? extraFee.amount : 0;
+  const extraFeeApplies = isExtraFeeApplicable(extraFee, selectedDate ?? null);
+  const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Calculate total price
   const basePrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
@@ -509,7 +510,7 @@ const Pedido = () => {
                     )}
 
                     {/* Extra fee warning */}
-                    {extraFee.enabled && extraFee.amount > 0 && (
+                    {extraFeeApplies && (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
                         <span className="text-base">💰</span>
                         <div>
