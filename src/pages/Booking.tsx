@@ -124,6 +124,7 @@ const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Vis
 const Booking = () => {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const { config: extraFee } = useExtraFee();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
