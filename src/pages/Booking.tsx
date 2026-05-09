@@ -209,6 +209,7 @@ const Booking = () => {
     fetchPackages();
     loadUserProfile();
     checkActiveSubscription();
+    fetchOpenDays();
   }, []);
 
   useEffect(() => {
