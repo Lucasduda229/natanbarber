@@ -1125,23 +1125,21 @@ const Booking = () => {
     }
   };
 
-  // Disable days: past, Sundays, Saturdays for subscribers
-  // Subscribers CAN book in future months (no longer restricted to current month only)
+  // Disable days: past, dias fechados (não cadastrados em time_slots), Sábado para assinantes
   const disabledDays = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = getDay(date);
-    
-    // If using subscription, block Saturdays only
-    if (usingSubscription) {
-      // Block Saturdays for subscribers (dayOfWeek 6 = Saturday)
-      if (dayOfWeek === 6) {
-        return true;
-      }
-    }
-    
-    // Apenas domingo (0) está fechado e dias passados
-    return date < today || dayOfWeek === 0;
+
+    if (date < today) return true;
+
+    // Bloquear dias que não estão configurados como abertos
+    if (!openDays.includes(dayOfWeek)) return true;
+
+    // Assinantes não podem agendar no sábado
+    if (usingSubscription && dayOfWeek === 6) return true;
+
+    return false;
   };
 
   // Check if a date is in a week that already has a subscription booking
