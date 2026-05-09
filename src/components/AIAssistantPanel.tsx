@@ -151,6 +151,7 @@ export const AIAssistantPanel = () => {
       setMessage('');
       setParsedData(null);
       setSelectedPaymentMethod('pending');
+      setChargeExtraFee(false);
     } catch (err: any) {
       console.error('Error creating appointment:', err);
       toast.error(err.message || 'Erro ao criar agendamento');
