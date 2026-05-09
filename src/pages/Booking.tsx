@@ -1779,6 +1779,12 @@ const Booking = () => {
                       <span>+ R$ 5,00</span>
                     </div>
                   )}
+                  {extraFeeAmount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-amber-500">
+                      <span className="flex items-center gap-2">💰 {extraFee.name}</span>
+                      <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                     <span className="font-semibold text-foreground text-sm sm:text-base">Total</span>
                     <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
