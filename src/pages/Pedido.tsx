@@ -629,6 +629,12 @@ const Pedido = () => {
                         <span>+ R$ 5,00</span>
                       </div>
                     )}
+                    {extraFeeAmount > 0 && (
+                      <div className="flex justify-between text-amber-500 font-medium">
+                        <span>💰 {extraFee.name}</span>
+                        <span>+ R$ {extraFeeAmount.toFixed(2).replace(".", ",")}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>📅 {selectedDate && format(selectedDate, "dd/MM")}</span>
