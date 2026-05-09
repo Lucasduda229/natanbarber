@@ -441,7 +441,7 @@ export const AIAssistantPanel = () => {
             </div>
 
             {/* Extra fee toggle */}
-            {extraFee.enabled && extraFee.amount > 0 && (
+            {extraFee.enabled && extraFee.amount > 0 && isExtraFeeApplicable(extraFee, parsedData.appointment_date) && (
               <label
                 htmlFor="ai-extra-fee"
                 className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
