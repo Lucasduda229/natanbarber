@@ -507,6 +507,17 @@ const Pedido = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* Extra fee warning */}
+                    {extraFee.enabled && extraFee.amount > 0 && (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
+                        <span className="text-base">💰</span>
+                        <div>
+                          <p className="text-xs font-semibold text-amber-500">{extraFee.name}</p>
+                          <p className="text-xs text-muted-foreground">Será cobrado um adicional de R$ {extraFee.amount.toFixed(2).replace(".", ",")} neste agendamento.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
