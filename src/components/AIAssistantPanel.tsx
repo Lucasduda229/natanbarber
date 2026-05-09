@@ -439,6 +439,30 @@ export const AIAssistantPanel = () => {
               </div>
             </div>
 
+            {/* Extra fee toggle */}
+            {extraFee.enabled && extraFee.amount > 0 && (
+              <label
+                htmlFor="ai-extra-fee"
+                className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
+                  chargeExtraFee
+                    ? 'border-amber-500/60 bg-amber-500/15 ring-2 ring-amber-500/40'
+                    : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                }`}
+              >
+                <Checkbox
+                  id="ai-extra-fee"
+                  checked={chargeExtraFee}
+                  onCheckedChange={(v) => setChargeExtraFee(v === true)}
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">💰 Cobrar {extraFee.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Adiciona R$ {extraFee.amount.toFixed(2).replace('.', ',')} ao agendamento (registrado nas observações).
+                  </p>
+                </div>
+              </label>
+            )}
+
             {/* Confirm button */}
             <Button 
               onClick={confirmAppointment} 
