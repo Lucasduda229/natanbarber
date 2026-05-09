@@ -274,6 +274,8 @@ const OperatingHoursEditor = () => {
         </p>
 
       </CardContent>
+
+      <ExtraFeeEditor />
     </Card>
   );
 };
