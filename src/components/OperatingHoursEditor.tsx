@@ -226,45 +226,46 @@ const OperatingHoursEditor = () => {
         {schedule.map((day) => (
           <div
             key={day.dayOfWeek}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+            className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border transition-colors ${
               day.isOpen 
                 ? "bg-green-500/5 border-green-500/20" 
                 : "bg-muted/20 border-muted/30"
             }`}
           >
-            <div className="flex items-center gap-3 min-w-[140px]">
-              <Switch
-                checked={day.isOpen}
-                onCheckedChange={(checked) => updateDay(day.dayOfWeek, { isOpen: checked })}
-                disabled={!isEditing}
-              />
-              <span className={`text-sm font-medium ${day.isOpen ? "text-foreground" : "text-muted-foreground"}`}>
-                {day.dayName}
-              </span>
+            <div className="flex items-center justify-between sm:justify-start gap-3 sm:min-w-[150px]">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={day.isOpen}
+                  onCheckedChange={(checked) => updateDay(day.dayOfWeek, { isOpen: checked })}
+                  disabled={!isEditing}
+                />
+                <span className={`text-sm font-medium ${day.isOpen ? "text-foreground" : "text-muted-foreground"}`}>
+                  {day.dayName}
+                </span>
+              </div>
+              {!day.isOpen && (
+                <span className="text-xs text-muted-foreground italic sm:ml-2">Fechado</span>
+              )}
             </div>
 
             {day.isOpen && (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
                 <Input
                   type="time"
                   value={day.startTime}
                   onChange={(e) => updateDay(day.dayOfWeek, { startTime: e.target.value })}
                   disabled={!isEditing}
-                  className="w-28 bg-card/60 text-sm h-9"
+                  className="flex-1 sm:flex-none sm:w-28 min-w-0 bg-card/60 text-sm h-9 px-2"
                 />
-                <span className="text-muted-foreground text-sm">até</span>
+                <span className="text-muted-foreground text-xs sm:text-sm shrink-0">até</span>
                 <Input
                   type="time"
                   value={day.endTime}
                   onChange={(e) => updateDay(day.dayOfWeek, { endTime: e.target.value })}
                   disabled={!isEditing}
-                  className="w-28 bg-card/60 text-sm h-9"
+                  className="flex-1 sm:flex-none sm:w-28 min-w-0 bg-card/60 text-sm h-9 px-2"
                 />
               </div>
-            )}
-
-            {!day.isOpen && (
-              <span className="text-sm text-muted-foreground italic">Fechado</span>
             )}
           </div>
         ))}
