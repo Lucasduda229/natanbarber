@@ -1986,6 +1986,12 @@ const Booking = () => {
                     <span className="font-semibold">+ R$ 5,00</span>
                   </div>
                 )}
+                {extraFeeAmount > 0 && (
+                  <div className="flex items-center justify-between text-amber-500">
+                    <span>💰 {extraFee.name}</span>
+                    <span className="font-semibold">+ R$ {extraFeeAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Data</span>
                   <span className="font-semibold text-foreground">
