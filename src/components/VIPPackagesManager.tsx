@@ -550,7 +550,10 @@ const VIPPackagesManager = () => {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
         const nowTimestamp = today.toISOString();
-        const weeklyCredits = Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+        // Use the package from the paid order (may differ from previous package on upgrade/downgrade)
+        const orderPackage = order.package_id ? packages.find(p => p.id === order.package_id) : null;
+        const newMonthlyLimit = orderPackage?.monthly_cuts_limit ?? sub.monthly_cuts_limit;
+        const weeklyCredits = Math.max(1, Math.ceil(newMonthlyLimit / 4));
 
         // Calcular consecutive_months com regra de tolerância
         if (!isRenewal) {
