@@ -336,10 +336,11 @@ const Pedido = () => {
     return dayOfWeek === 4 && hour >= 19;
   })();
   const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+  const extraFeeAmount = extraFee.enabled ? extraFee.amount : 0;
 
   // Calculate total price
   const basePrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = basePrice + thursdaySurcharge;
+  const totalPrice = basePrice + thursdaySurcharge + extraFeeAmount;
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
