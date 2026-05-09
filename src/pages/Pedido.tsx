@@ -38,6 +38,7 @@ const LOCATION = {
 };
 
 const Pedido = () => {
+  const { config: extraFee } = useExtraFee();
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
