@@ -56,12 +56,14 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewCustomer = false;
 
-    // Check if a profile with this phone already exists
-    const { data: existingProfile } = await supabaseAdmin
+    // Check if a profile with this phone already exists (handle duplicates)
+    const { data: existingProfiles } = await supabaseAdmin
       .from("profiles")
-      .select("user_id")
+      .select("user_id, created_at")
       .eq("phone", cleanPhone)
-      .maybeSingle();
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const existingProfile = existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null;
 
     if (existingProfile) {
       userId = existingProfile.user_id;
