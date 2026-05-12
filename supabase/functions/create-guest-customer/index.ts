@@ -120,26 +120,26 @@ Deno.serve(async (req) => {
       }
       isNewCustomer = true;
 
-      // Create profile for the new user
+      // Create/ensure profile for the user
       const { error: profileError } = await supabaseAdmin
         .from("profiles")
-        .insert({
+        .upsert({
           user_id: userId,
           full_name: name,
           phone: cleanPhone
-        });
+        }, { onConflict: "user_id" });
 
       if (profileError) {
-        console.error("Error creating profile:", profileError);
+        console.error("Error upserting profile:", profileError);
       }
 
-      // Assign user role
+      // Assign user role (ignore conflict)
       await supabaseAdmin
         .from("user_roles")
-        .insert({
+        .upsert({
           user_id: userId,
           role: "user"
-        });
+        }, { onConflict: "user_id,role" });
 
       console.log("Created new guest customer:", userId);
     }
