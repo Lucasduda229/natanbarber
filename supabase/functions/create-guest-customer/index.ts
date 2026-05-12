@@ -56,12 +56,14 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewCustomer = false;
 
-    // Check if a profile with this phone already exists
-    const { data: existingProfile } = await supabaseAdmin
+    // Check if a profile with this phone already exists (handle duplicates)
+    const { data: existingProfiles } = await supabaseAdmin
       .from("profiles")
-      .select("user_id")
+      .select("user_id, created_at")
       .eq("phone", cleanPhone)
-      .maybeSingle();
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const existingProfile = existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null;
 
     if (existingProfile) {
       userId = existingProfile.user_id;
@@ -89,36 +91,55 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao criar conta: " + createError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Fallback: email already exists in auth — find existing user and reuse
+        const msg = (createError.message || "").toLowerCase();
+        if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+          const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+          const found = list?.users?.find((u) => u.email === generatedEmail);
+          if (found) {
+            userId = found.id;
+            await supabaseAdmin
+              .from("profiles")
+              .upsert({ user_id: userId, full_name: name, phone: cleanPhone }, { onConflict: "user_id" });
+          } else {
+            console.error("User exists but not found in listUsers");
+            return new Response(
+              JSON.stringify({ error: "Erro ao localizar cliente existente" }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else {
+          console.error("Error creating user:", createError);
+          return new Response(
+            JSON.stringify({ error: "Erro ao criar conta: " + createError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        userId = newUser.user.id;
       }
-
-      userId = newUser.user.id;
       isNewCustomer = true;
 
-      // Create profile for the new user
+      // Create/ensure profile for the user
       const { error: profileError } = await supabaseAdmin
         .from("profiles")
-        .insert({
+        .upsert({
           user_id: userId,
           full_name: name,
           phone: cleanPhone
-        });
+        }, { onConflict: "user_id" });
 
       if (profileError) {
-        console.error("Error creating profile:", profileError);
+        console.error("Error upserting profile:", profileError);
       }
 
-      // Assign user role
+      // Assign user role (ignore conflict)
       await supabaseAdmin
         .from("user_roles")
-        .insert({
+        .upsert({
           user_id: userId,
           role: "user"
-        });
+        }, { onConflict: "user_id,role" });
 
       console.log("Created new guest customer:", userId);
     }

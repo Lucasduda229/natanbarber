@@ -1,0 +1,1 @@
+DELETE FROM appointments WHERE id='242a230d-7db2-4a54-b470-71d2fbcc45b5';
