@@ -1319,9 +1319,8 @@ const VIPPackagesManager = () => {
                           <Calendar className="w-3 h-3" />
                           {sub.weekly_credits_available}/{Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4))} créditos/semana
                         </div>
-                        <span className="text-[10px] text-muted-foreground">
-                          ({sub.cuts_used_this_month}/{sub.monthly_cuts_limit} no mês)
-                        </span>
+                      </div>
+
                       </div>
                     </div>
                     
