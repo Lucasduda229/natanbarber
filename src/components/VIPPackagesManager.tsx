@@ -1320,9 +1320,8 @@ const VIPPackagesManager = () => {
                           {sub.weekly_credits_available}/{Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4))} créditos/semana
                         </div>
                       </div>
-
-                      </div>
                     </div>
+
                     
                     <div className="flex flex-col items-end gap-2">
                       <span className="text-sm text-muted-foreground">
