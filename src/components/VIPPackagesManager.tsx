@@ -221,10 +221,18 @@ const VIPPackagesManager = () => {
           });
         });
 
-        // Each fully-elapsed week with NO bookings counts as 1 use of EVERY benefit
-        // (tracked via expired_weeks_this_period by the weekly-credits-reset cron).
-        // Total per-benefit use = real bookings of that benefit + expired weeks.
+        // Each elapsed week (booked OR fully expired) counts as 1 use of EVERY benefit
+        // equally. We compute the floor as: distinct booked weeks + expired weeks.
         const expiredWeeks = (sub as any).expired_weeks_this_period || 0;
+        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+        const bookedWeekKeys = new Set<number>();
+        userAppointments.forEach(apt => {
+          const weekIndex = Math.floor(
+            (new Date(apt.created_at).getTime() - cutoffTime) / msPerWeek
+          );
+          bookedWeekKeys.add(weekIndex);
+        });
+        const weeksConsumed = bookedWeekKeys.size + expiredWeeks;
 
         const benefits: BenefitUsage[] = [];
         
@@ -235,12 +243,11 @@ const VIPPackagesManager = () => {
             service_id: serviceId,
             service_name: item.service_name,
             quantity: item.quantity,
-            used: Math.min(item.quantity, realUsed + expiredWeeks)
+            used: Math.min(item.quantity, Math.max(realUsed, weeksConsumed))
           });
         });
         
         pkgBenefits.forEach(benefit => {
-          // Check if already added from package_items
           const existing = benefits.find(b => b.service_id === benefit.service_id);
           if (!existing) {
             const realUsed = usageByService[benefit.service_id] || 0;
@@ -249,7 +256,7 @@ const VIPPackagesManager = () => {
               service_id: benefit.service_id,
               service_name: benefit.service_name || "Serviço",
               quantity: qty,
-              used: Math.min(qty, realUsed + expiredWeeks)
+              used: Math.min(qty, Math.max(realUsed, weeksConsumed))
             });
           }
         });
