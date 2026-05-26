@@ -221,13 +221,10 @@ const VIPPackagesManager = () => {
           });
         });
 
-        // Each elapsed week of the subscription counts as 1 use of EVERY benefit,
-        // regardless of whether the client actually booked or which services he picked.
-        // The actual count is the max between weeks elapsed and real bookings made.
-        const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-        // Count only FULLY elapsed weeks since subscription start/reset.
-        // Week 1 (days 0-6) = 0 auto-uses; after 7 days = 1, after 14 days = 2, etc.
-        const weeksElapsed = Math.max(0, Math.floor((Date.now() - cutoffTime) / msPerWeek));
+        // Each fully-elapsed week with NO bookings counts as 1 use of EVERY benefit
+        // (tracked via expired_weeks_this_period by the weekly-credits-reset cron).
+        // Total per-benefit use = real bookings of that benefit + expired weeks.
+        const expiredWeeks = (sub as any).expired_weeks_this_period || 0;
 
         const benefits: BenefitUsage[] = [];
         
@@ -238,7 +235,7 @@ const VIPPackagesManager = () => {
             service_id: serviceId,
             service_name: item.service_name,
             quantity: item.quantity,
-            used: Math.min(item.quantity, Math.max(realUsed, weeksElapsed))
+            used: Math.min(item.quantity, realUsed + expiredWeeks)
           });
         });
         
@@ -252,7 +249,7 @@ const VIPPackagesManager = () => {
               service_id: benefit.service_id,
               service_name: benefit.service_name || "Serviço",
               quantity: qty,
-              used: Math.min(qty, Math.max(realUsed, weeksElapsed))
+              used: Math.min(qty, realUsed + expiredWeeks)
             });
           }
         });

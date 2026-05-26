@@ -96,9 +96,11 @@ Deno.serve(async (req) => {
         // Calculate new weekly credits (1/4 of monthly, rounded up)
         const weeklyCreditsPerWeek = Math.ceil(sub.monthly_cuts_limit / 4)
         
-        // If the user didn't book this past week, count it as a used week
-        // so the benefits panel reflects the lost week (1 use per benefit)
-        const expiredWeeksIncrement = expiredCredits > 0 ? 1 : 0
+        // Only count as an "expired week" (which consumes 1 of each benefit)
+        // when the client made ZERO bookings during the week (full credits remained).
+        // Partial-use weeks already had their bookings counted via real appointments.
+        const noBookingsThisWeek = expiredCredits >= weeklyCreditsPerWeek
+        const expiredWeeksIncrement = noBookingsThisWeek ? 1 : 0
 
         // Update subscription
         const { error: updateError } = await supabase
