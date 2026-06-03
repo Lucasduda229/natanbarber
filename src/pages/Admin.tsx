@@ -39,6 +39,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useWebPush } from "@/hooks/useWebPush";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SubscribersHistory } from "@/components/SubscribersHistory";
 
 
 interface AppointmentService {
@@ -1544,6 +1545,10 @@ const Admin = () => {
                 <Crown className="w-4 h-4" />
                 <span>Assinat.</span>
               </TabsTrigger>
+              <TabsTrigger value="subscribers-history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Histórico de Assinaturas">
+                <History className="w-4 h-4" />
+                <span>Hist. Assin.</span>
+              </TabsTrigger>
               <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Relatórios">
                 <BarChart3 className="w-4 h-4" />
                 <span>Relatórios</span>
@@ -2393,6 +2398,11 @@ const Admin = () => {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
             <VIPPackagesManager />
+          </TabsContent>
+
+          {/* Subscribers History Tab */}
+          <TabsContent value="subscribers-history">
+            <SubscribersHistory />
           </TabsContent>
 
           {/* Services Tab */}
