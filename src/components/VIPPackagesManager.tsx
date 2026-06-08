@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign, Filter, ShoppingCart, FileText } from "lucide-react";
+import { Plus, Minus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign, Filter, ShoppingCart, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -451,6 +451,55 @@ const VIPPackagesManager = () => {
     } catch (error) {
       console.error("Error resetting benefits:", error);
       toast.error("Erro ao resetar benefícios");
+    }
+  };
+
+  const updateMonths = async (subscriptionId: string, change: number) => {
+    const sub = subscribers.find(s => s.id === subscriptionId);
+    if (!sub) return;
+
+    const newMonths = Math.max(0, sub.consecutive_months + change);
+
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({ 
+          consecutive_months: newMonths,
+          last_payment_date: change > 0 ? new Date().toISOString().split('T')[0] : sub.last_payment_date
+        })
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+
+      // Register action in package_payments to keep the financial history accurate
+      if (sub.package_id && sub.package_name && sub.package?.price !== undefined) {
+        const amount = change > 0 ? sub.package.price : -(sub.package.price);
+        const actionText = change > 0 ? "adicionado" : "removido";
+        const absChange = Math.abs(change);
+        
+        const now = new Date();
+        const dataFormatada = now.toLocaleDateString('pt-BR');
+        const horaFormatada = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        await supabase.from("package_payments").insert({
+          user_id: sub.user_id,
+          package_id: sub.package_id,
+          package_name: sub.package_name,
+          amount: amount,
+          payment_method: "dinheiro", 
+          payment_status: "approved",
+          notes: `${absChange} mês ${actionText} pelo admin - ${sub.package_name} (R$ ${sub.package.price.toFixed(2)}) em ${dataFormatada} às ${horaFormatada}`
+        });
+      }
+
+      setSubscribers(prev => 
+        prev.map(s => s.id === subscriptionId ? { ...s, consecutive_months: newMonths } : s)
+      );
+
+      toast.success(`Meses atualizados: ${newMonths}`);
+    } catch (error) {
+      console.error("Error updating months:", error);
+      toast.error("Erro ao atualizar meses");
     }
   };
 
@@ -1303,9 +1352,24 @@ const VIPPackagesManager = () => {
                         {sub.package?.name || sub.package_name || "Sem pacote"} • R$ {sub.package?.price || 0}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="flex items-center gap-1 bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full text-xs font-bold border border-amber-500/30">
-                          <Crown className="w-3 h-3" />
-                          {sub.consecutive_months} {sub.consecutive_months === 1 ? "mês" : "meses"} consecutivo{sub.consecutive_months !== 1 ? "s" : ""}
+                        <div className="flex items-center gap-1 bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/30 overflow-hidden">
+                          <button 
+                            onClick={() => updateMonths(sub.id, -1)}
+                            disabled={sub.consecutive_months === 0}
+                            className="px-2 py-1 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <div className="flex items-center gap-1 px-1 text-xs font-bold border-x border-amber-500/20">
+                            <Crown className="w-3 h-3" />
+                            {sub.consecutive_months} {sub.consecutive_months === 1 ? "mês" : "meses"}
+                          </div>
+                          <button 
+                            onClick={() => updateMonths(sub.id, 1)}
+                            className="px-2 py-1 hover:bg-amber-500/20 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
                       

@@ -148,6 +148,10 @@ const Booking = () => {
     subscription_end_date: Date;
   } | null>(null);
   const [hasExpiredSubscription, setHasExpiredSubscription] = useState(false);
+  const [expiredSubscriptionDetails, setExpiredSubscriptionDetails] = useState<{ id: string, package_id: string, package_name: string, price: number } | null>(null);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [renewalLoading, setRenewalLoading] = useState(false);
+  const [renewalSuccess, setRenewalSuccess] = useState(false);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
   const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates that have subscription bookings
@@ -365,13 +369,69 @@ const Booking = () => {
       // Check if user has an inactive/expired subscription
       const { data: inactiveSub } = await supabase
         .from("subscription_progress")
-        .select("id")
+        .select(`
+          id,
+          package_id,
+          package_name,
+          packages (price)
+        `)
         .eq("user_id", user.id)
         .eq("is_active", false)
         .limit(1)
         .maybeSingle();
       
       setHasExpiredSubscription(!!inactiveSub);
+      if (inactiveSub && inactiveSub.packages) {
+        setExpiredSubscriptionDetails({
+          id: inactiveSub.id,
+          package_id: inactiveSub.package_id || "",
+          package_name: inactiveSub.package_name || "",
+          price: (inactiveSub.packages as any).price || 0
+        });
+      }
+    }
+  };
+
+  const handleFastRenewal = async () => {
+    if (!user || !expiredSubscriptionDetails) return;
+    
+    setRenewalLoading(true);
+    
+    try {
+      const { error: paymentError } = await supabase.from("package_payments").insert({
+        user_id: user.id,
+        package_id: expiredSubscriptionDetails.package_id,
+        package_name: expiredSubscriptionDetails.package_name,
+        amount: expiredSubscriptionDetails.price,
+        payment_method: "pix",
+        payment_status: "pending",
+        notes: "Renovação rápida pelo aplicativo (PIX)"
+      });
+      
+      if (paymentError) throw paymentError;
+      
+      const { data: admins } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+
+      if (admins) {
+        const notifications = admins.map((admin) => ({
+          user_id: admin.user_id,
+          title: "🔄 Renovação Rápida",
+          message: `${customerName || 'Um cliente'} solicitou RENOVAÇÃO do ${expiredSubscriptionDetails.package_name} - R$ ${expiredSubscriptionDetails.price.toFixed(2)}. Confira na aba Pedidos.`,
+          type: "subscription_purchase",
+        }));
+        await supabase.from("notifications").insert(notifications);
+      }
+      
+      setRenewalSuccess(true);
+      toast.success("Pedido de renovação enviado!", { description: "O barbeiro confirmará seu pagamento." });
+    } catch (error) {
+      console.error("Erro na renovação:", error);
+      toast.error("Ocorreu um erro ao processar sua renovação.");
+    } finally {
+      setRenewalLoading(false);
     }
   };
 
@@ -1328,8 +1388,17 @@ const Booking = () => {
                       : null;
 
                     // Calculate usage for this specific service
-                    const serviceUsed = serviceUsageThisMonth[service.id] || 0;
+                    const realUsed = serviceUsageThisMonth[service.id] || 0;
                     const serviceLimit = packageItem?.quantity || 0;
+                    
+                    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+                    const startMs = activeSubscription ? activeSubscription.subscription_start_date.getTime() : Date.now();
+                    const weeksElapsed = activeSubscription ? Math.max(0, Math.floor((Date.now() - startMs) / msPerWeek)) : 0;
+                    
+                    // Expiração inteligente: pacote com 4 expira 1/sem. Pacote com 1 expira no fim do mês.
+                    const expiredAmount = Math.floor((weeksElapsed * serviceLimit) / 4);
+                    
+                    const serviceUsed = Math.min(serviceLimit, Math.max(realUsed, expiredAmount));
                     const serviceRemaining = Math.max(0, serviceLimit - serviceUsed);
                     const isServiceLimitReached = usingSubscription && packageItem && serviceRemaining === 0;
 
@@ -1480,8 +1549,9 @@ const Booking = () => {
                       {subscriptionPackageItems.map((item) => {
                         const realUsed = serviceUsageThisMonth[item.service_id || ''] || 0;
                         const total = item.quantity;
-                        // Each elapsed week consumes 1 use of every benefit automatically
-                        const used = Math.min(total, Math.max(realUsed, weeksElapsed));
+                        // Expiração inteligente: proporcional à quantidade do pacote
+                        const expiredAmount = Math.floor((weeksElapsed * total) / 4);
+                        const used = Math.min(total, Math.max(realUsed, expiredAmount));
                         const remaining = Math.max(0, total - used);
                         const percentage = total > 0 ? (used / total) * 100 : 0;
                         const isExhausted = remaining === 0;
@@ -1623,24 +1693,79 @@ const Booking = () => {
                   </div>
                 )}
 
-                <div 
-                  className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4 cursor-pointer active:scale-[0.98] transition-transform"
-                  onClick={() => navigate("/buy-subscription")}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
-                      <Crown className="w-7 h-7 text-background" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-foreground mb-1">
-                        {hasExpiredSubscription ? "Renovar Pacote" : "Assine um Pacote"}
-                      </h4>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {hasExpiredSubscription
-                          ? "Renove sua assinatura e volte a agendar com benefícios exclusivos"
-                          : "Pague mensalmente e agende seus cortes sem custo adicional"}
-                      </p>
-                      {!hasExpiredSubscription && (
+                {hasExpiredSubscription ? (
+                  <div className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4">
+                    {renewalSuccess ? (
+                      <div className="text-center space-y-3 py-4 animate-in fade-in">
+                        <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+                          <Check className="w-6 h-6 text-green-500" />
+                        </div>
+                        <p className="font-bold text-foreground text-lg">Pedido Enviado!</p>
+                        <p className="text-xs text-muted-foreground">O barbeiro confirmará o pagamento em breve.</p>
+                      </div>
+                    ) : isRenewing && expiredSubscriptionDetails ? (
+                      <div className="space-y-4 animate-in fade-in zoom-in-95">
+                        <div className="text-center">
+                          <p className="text-sm font-bold text-foreground">Renovar {expiredSubscriptionDetails.package_name}</p>
+                          <p className="text-xs text-muted-foreground">R$ {expiredSubscriptionDetails.price.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded-xl w-fit mx-auto shadow-lg">
+                          <QRCodeSVG
+                            value={generatePixPayload({
+                              pixKey: PIX_KEY,
+                              merchantName: "NATAN BARBER",
+                              merchantCity: "LAURO MULLER",
+                              amount: expiredSubscriptionDetails.price,
+                              description: `Renovacao ${expiredSubscriptionDetails.package_name}`.substring(0, 25),
+                            })}
+                            size={160}
+                            level="M"
+                            bgColor="#ffffff"
+                            fgColor="#000000"
+                          />
+                        </div>
+                        <p className="text-center text-[10px] text-muted-foreground">Escaneie o QR Code com seu banco</p>
+                        <div className="flex flex-col gap-2 mt-2">
+                          <Button 
+                            onClick={handleFastRenewal} 
+                            disabled={renewalLoading}
+                            className="bg-gold-gradient hover:opacity-90 text-background font-bold shadow-gold-glow w-full"
+                          >
+                            {renewalLoading ? "Aguarde..." : "Confirmar Assinatura (PIX Pago)"}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setIsRenewing(false)} className="text-muted-foreground w-full">
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setIsRenewing(true)}>
+                        <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
+                          <Crown className="w-7 h-7 text-background" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-foreground mb-1">Renovar Pacote</h4>
+                          <p className="text-xs text-muted-foreground mb-2">Clique aqui para gerar o PIX de renovação e confirmar o pagamento.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div 
+                    className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4 cursor-pointer active:scale-[0.98] transition-transform"
+                    onClick={() => navigate("/buy-subscription")}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
+                        <Crown className="w-7 h-7 text-background" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-foreground mb-1">
+                          Assine um Pacote
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Pague mensalmente e agende seus cortes sem custo adicional
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           <span className="text-[10px] bg-amber-600/20 text-amber-600 px-2 py-0.5 rounded-full font-medium">
                             Bronze a partir de R$ 65
@@ -1652,19 +1777,19 @@ const Booking = () => {
                             Ouro
                           </span>
                         </div>
-                      )}
+                      </div>
                     </div>
+                    <Button 
+                      className="w-full mt-4 bg-gold-gradient hover:opacity-90 text-background font-semibold h-12 rounded-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/buy-subscription");
+                      }}
+                    >
+                      Ver Pacotes e Assinar
+                    </Button>
                   </div>
-                  <Button 
-                    className="w-full mt-4 bg-gold-gradient hover:opacity-90 text-background font-semibold h-12 rounded-xl"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate("/buy-subscription");
-                    }}
-                  >
-                    {hasExpiredSubscription ? "Renovar Assinatura" : "Ver Pacotes e Assinar"}
-                  </Button>
-                </div>
+                )}
               </div>
             )}
 

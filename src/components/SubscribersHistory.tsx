@@ -32,6 +32,8 @@ interface ClientHistory {
   payments: PackagePayment[];
   total_spent: number;
   total_purchases: number;
+  is_active: boolean;
+  consecutive_months: number;
 }
 
 export const SubscribersHistory = () => {
@@ -47,27 +49,33 @@ export const SubscribersHistory = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [paymentsRes, profilesRes] = await Promise.all([
+      const [paymentsRes, profilesRes, subsRes] = await Promise.all([
         supabase.from("package_payments").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("user_id, full_name, phone"),
+        supabase.from("subscription_progress").select("user_id, is_active, consecutive_months"),
       ]);
 
       if (paymentsRes.error) throw paymentsRes.error;
       if (profilesRes.error) throw profilesRes.error;
+      if (subsRes.error) throw subsRes.error;
 
       const payments = paymentsRes.data as PackagePayment[];
       const profiles = profilesRes.data as Profile[];
+      const subs = subsRes.data || [];
 
       const historyMap = new Map<string, ClientHistory>();
 
       payments.forEach((payment) => {
         if (!historyMap.has(payment.user_id)) {
+          const sub = subs.find(s => s.user_id === payment.user_id);
           historyMap.set(payment.user_id, {
             user_id: payment.user_id,
             profile: profiles.find((p) => p.user_id === payment.user_id) || null,
             payments: [],
             total_spent: 0,
             total_purchases: 0,
+            is_active: sub?.is_active || false,
+            consecutive_months: sub?.consecutive_months || 0,
           });
         }
         const client = historyMap.get(payment.user_id)!;
@@ -169,12 +177,26 @@ export const SubscribersHistory = () => {
                           <Crown className="w-5 h-5 text-primary" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-foreground">
-                            {client.profile?.full_name || "Cliente sem nome"}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground">
+                              {client.profile?.full_name || "Cliente sem nome"}
+                            </h3>
+                            <Badge 
+                              variant={client.is_active ? "default" : "secondary"}
+                              className={client.is_active ? "bg-green-600 hover:bg-green-600 text-white text-[10px] h-5 py-0" : "text-[10px] h-5 py-0"}
+                            >
+                              {client.is_active ? "Ativo" : "Inativo"}
+                            </Badge>
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             {client.profile?.phone || "Sem telefone"}
                           </p>
+                          {client.consecutive_months > 0 && (
+                            <p className="text-xs text-amber-500 font-medium flex items-center gap-1 mt-0.5">
+                              <Crown className="w-3 h-3" />
+                              {client.consecutive_months} {client.consecutive_months === 1 ? 'mês consecutivo' : 'meses consecutivos'}
+                            </p>
+                          )}
                         </div>
                       </div>
 
