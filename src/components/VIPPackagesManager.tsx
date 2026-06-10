@@ -313,7 +313,9 @@ const VIPPackagesManager = () => {
           package_name: pkg.name,
           monthly_cuts_limit: monthlyCutsLimit,
           weekly_credits_available: weeklyCredits,
-          current_week_start: startDate.toISOString().split('T')[0],
+          current_week_start: null,
+          current_month_start: null,
+          usage_reset_date: null,
           consecutive_months: 1,
           is_active: true
         });
@@ -348,12 +350,12 @@ const VIPPackagesManager = () => {
         // Reactivating: update subscription_start_date to today (new 30-day window)
         const weeklyCredits = sub ? Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4)) : 1;
         updateData.subscription_start_date = todayStr;
-        updateData.usage_reset_date = nowTimestamp;
+        updateData.usage_reset_date = null;
         updateData.cuts_used_this_month = 0;
         updateData.credits_expired_this_month = 0;
-        updateData.current_month_start = todayStr;
+        updateData.current_month_start = null;
         updateData.weekly_credits_available = weeklyCredits;
-        updateData.current_week_start = todayStr;
+        updateData.current_week_start = null;
         updateData.last_payment_date = todayStr;
         updateData.updated_at = nowTimestamp;
       }
@@ -647,13 +649,13 @@ const VIPPackagesManager = () => {
             package_id: order.package_id ?? sub.package_id,
             monthly_cuts_limit: newMonthlyLimit,
             subscription_start_date: todayStr,
-            usage_reset_date: nowTimestamp,
+            usage_reset_date: null,
             cuts_used_this_month: 0,
             credits_expired_this_month: 0,
             expired_weeks_this_period: 0,
-            current_month_start: todayStr,
+            current_month_start: null,
             weekly_credits_available: weeklyCredits,
-            current_week_start: todayStr,
+            current_week_start: null,
             last_payment_date: todayStr,
             consecutive_months: computedNewMonths,
             updated_at: nowTimestamp,

@@ -146,6 +146,7 @@ const Booking = () => {
     weekly_credits_available: number;
     subscription_start_date: Date;
     subscription_end_date: Date;
+    has_started: boolean;
   } | null>(null);
   const [hasExpiredSubscription, setHasExpiredSubscription] = useState(false);
   const [expiredSubscriptionDetails, setExpiredSubscriptionDetails] = useState<{ id: string, package_id: string, package_name: string, price: number } | null>(null);
@@ -266,23 +267,25 @@ const Booking = () => {
 
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available, subscription_start_date")
+      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available, subscription_start_date, usage_reset_date")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
 
     if (subscription) {
+      const hasStarted = subscription.usage_reset_date !== null;
+      
       // Calculate subscription period based on start date
-      const startDate = subscription.subscription_start_date 
+      const startDate = (hasStarted && subscription.subscription_start_date) 
         ? parseISO(subscription.subscription_start_date) 
         : new Date();
       
       // Subscription is valid for 30 days from start date (can be adjusted per package)
       const endDate = addDays(startDate, 30);
       
-      // CHECK: If subscription period has expired, treat as no active subscription
+      // CHECK: If subscription period has expired AND it has started, treat as no active subscription
       const now = new Date();
-      if (isAfter(now, endDate)) {
+      if (hasStarted && isAfter(now, endDate)) {
         console.log("Subscription period expired, treating as inactive");
         setActiveSubscription(null);
         setSubscriptionPackageItems([]);
@@ -310,6 +313,7 @@ const Booking = () => {
         weekly_credits_available: subscription.weekly_credits_available ?? Math.ceil(subscription.monthly_cuts_limit / 4),
         subscription_start_date: startDate,
         subscription_end_date: endDate,
+        has_started: hasStarted,
       });
 
       // Fetch package items AND benefits for this subscription's package
@@ -931,7 +935,31 @@ const Booking = () => {
       }
     }
 
-    if (usingSubscription) {
+    if (usingSubscription && activeSubscription) {
+      if (!activeSubscription.has_started) {
+        // First time using the subscription, let's start the cycle!
+        const nowTimestamp = new Date().toISOString();
+        const startError = await supabase
+          .from("subscription_progress")
+          .update({
+             subscription_start_date: appointmentDate,
+             current_month_start: appointmentDate,
+             current_week_start: appointmentDate,
+             usage_reset_date: nowTimestamp
+          })
+          .eq("id", activeSubscription.id);
+          
+        if (startError.error) {
+          console.error("Error starting subscription:", startError.error);
+        } else {
+          // Update local state to reflect it has started
+          setActiveSubscription({
+            ...activeSubscription,
+            has_started: true,
+            subscription_start_date: parseISO(appointmentDate)
+          });
+        }
+      }
       fetchSubscriptionBookings();
     }
 
@@ -1522,14 +1550,31 @@ const Booking = () => {
                     <Crown className="w-4 h-4 text-green-500" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-foreground">Sua Assinatura Ativa</h3>
-                    <p className="text-xs text-muted-foreground">Use seus benefícios para agendar</p>
+                    <h3 className="text-base font-bold text-foreground">Sua Assinatura</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {activeSubscription.has_started 
+                        ? "Use seus benefícios para agendar"
+                        : "O ciclo iniciará no seu primeiro agendamento"}
+                    </p>
                   </div>
                 </div>
 
                 <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-card/80 border-2 border-green-500/50 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-foreground">{activeSubscription.package_name}</p>
+                    <div className="flex flex-col">
+                      <p className="font-bold text-foreground flex items-center gap-2">
+                        {activeSubscription.package_name}
+                      </p>
+                      {!activeSubscription.has_started ? (
+                        <span className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-0.5 bg-amber-500/10 w-fit px-1.5 py-0.5 rounded">
+                          <Clock className="w-3 h-3" /> 1º agendamento pendente
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 mt-0.5 bg-green-500/10 w-fit px-1.5 py-0.5 rounded">
+                          <Check className="w-3 h-3" /> Assinatura ativa
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded-full">
                       <CalendarIcon className="w-3 h-3" />
                       <span>
