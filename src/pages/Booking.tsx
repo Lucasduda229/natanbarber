@@ -1583,7 +1583,9 @@ const Booking = () => {
                     <div className="flex items-center gap-1 text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded-full">
                       <CalendarIcon className="w-3 h-3" />
                       <span>
-                        {format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR })} - {format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR })}
+                        {activeSubscription.has_started 
+                          ? `${format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR })} - ${format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR })}`
+                          : "A iniciar"}
                       </span>
                     </div>
                   </div>
