@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, Crown, ChevronDown, ChevronUp, History, CreditCard } from "lucide-react";
+import { Search, Calendar, Crown, ChevronDown, ChevronUp, History, CreditCard, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface PackagePayment {
   id: string;
@@ -111,6 +112,26 @@ export const SubscribersHistory = () => {
     });
   };
 
+  const handleDeleteClient = async (userId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Tem certeza que deseja excluir todo o histórico e a assinatura deste cliente? Esta ação não pode ser desfeita.")) return;
+    
+    setLoading(true);
+    try {
+      // Deletar da tabela subscription_progress
+      await supabase.from("subscription_progress").delete().eq("user_id", userId);
+      // Deletar da tabela package_payments
+      await supabase.from("package_payments").delete().eq("user_id", userId);
+      
+      toast.success("Cliente e histórico removidos com sucesso!");
+      fetchData();
+    } catch (error) {
+      console.error("Erro ao deletar cliente:", error);
+      toast.error("Erro ao remover cliente");
+      setLoading(false);
+    }
+  };
+
   const filteredHistories = clientHistories.filter((client) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
@@ -209,9 +230,20 @@ export const SubscribersHistory = () => {
                             Total: R$ {client.total_spent.toFixed(2)}
                           </span>
                         </div>
-                        <Button variant="ghost" size="sm" className="p-0 h-8 w-8 text-muted-foreground hover:text-primary">
-                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-0 h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => handleDeleteClient(client.user_id, e)}
+                            title="Excluir histórico deste cliente"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="p-0 h-8 w-8 text-muted-foreground hover:text-primary">
+                            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
@@ -232,15 +264,20 @@ export const SubscribersHistory = () => {
                                 <span className="font-medium text-sm text-foreground">
                                   {payment.package_name}
                                 </span>
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                                   <Calendar className="w-3 h-3" />
                                   {format(new Date(payment.created_at), "dd/MM/yyyy 'às' HH:mm")}
                                 </span>
+                                {payment.notes && (
+                                  <span className="text-xs text-amber-500/80 bg-amber-500/10 px-1.5 py-0.5 rounded w-fit mt-0.5">
+                                    {payment.notes}
+                                  </span>
+                                )}
                               </div>
                               
                               <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                                 <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                  {payment.payment_method === 'pix' ? 'PIX' : payment.payment_method === 'cash' ? 'Dinheiro' : payment.payment_method === 'card' ? 'Cartão' : 'Outro'}
+                                  {payment.payment_method === 'pix' ? 'PIX' : payment.payment_method === 'cash' ? 'Dinheiro' : payment.payment_method === 'card' ? 'Cartão' : payment.payment_method === 'admin' ? 'Admin' : 'Outro'}
                                 </Badge>
                                 <span className="font-semibold text-sm text-primary whitespace-nowrap">
                                   R$ {Number(payment.amount).toFixed(2)}

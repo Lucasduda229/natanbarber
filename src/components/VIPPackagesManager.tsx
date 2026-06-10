@@ -488,7 +488,7 @@ const VIPPackagesManager = () => {
           package_id: sub.package_id,
           package_name: sub.package_name,
           amount: amount,
-          payment_method: "dinheiro", 
+          payment_method: "admin", 
           payment_status: "approved",
           notes: `${absChange} mês ${actionText} pelo admin - ${sub.package_name} (R$ ${sub.package.price.toFixed(2)}) em ${dataFormatada} às ${horaFormatada}`
         });
