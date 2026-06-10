@@ -938,14 +938,19 @@ const Booking = () => {
     if (usingSubscription && activeSubscription) {
       if (!activeSubscription.has_started) {
         // First time using the subscription, let's start the cycle!
-        const nowTimestamp = new Date().toISOString();
+        // The cycle starts TODAY (the day they are booking), not the appointment date
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // We use the exact created_at of this appointment so it's included in usage counting
+        const resetDate = appointment.created_at || new Date().toISOString();
+        
         const startError = await supabase
           .from("subscription_progress")
           .update({
-             subscription_start_date: appointmentDate,
-             current_month_start: appointmentDate,
-             current_week_start: appointmentDate,
-             usage_reset_date: nowTimestamp
+             subscription_start_date: todayStr,
+             current_month_start: todayStr,
+             current_week_start: todayStr,
+             usage_reset_date: resetDate
           })
           .eq("id", activeSubscription.id);
           
@@ -956,7 +961,7 @@ const Booking = () => {
           setActiveSubscription({
             ...activeSubscription,
             has_started: true,
-            subscription_start_date: parseISO(appointmentDate)
+            subscription_start_date: parseISO(todayStr)
           });
         }
       }
@@ -1606,7 +1611,7 @@ const Booking = () => {
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm text-foreground">{item.service_name}</span>
                               <span className={`text-xs font-bold ${isExhausted ? 'text-destructive' : 'text-green-500'}`}>
-                                {remaining}/{total}
+                                {used}/{total}
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
