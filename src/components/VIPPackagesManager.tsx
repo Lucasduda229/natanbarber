@@ -192,6 +192,16 @@ const VIPPackagesManager = () => {
         const pkgItems = (itemsResult.data || []).filter(i => i.package_id === sub.package_id);
         const pkgBenefits = processedBenefits.filter(b => b.package_id === sub.package_id);
         
+        // AUTO FIX for legacy subscriptions with incorrect monthly_cuts_limit (sum vs max)
+        const correctLimit = pkgItems.length > 0 ? Math.max(...pkgItems.map(i => i.quantity || 0)) : 4;
+        if (sub.monthly_cuts_limit !== correctLimit) {
+          sub.monthly_cuts_limit = correctLimit;
+          supabase.from('subscription_progress').update({ 
+            monthly_cuts_limit: correctLimit,
+            weekly_credits_available: Math.max(1, Math.ceil(correctLimit / 4))
+          }).eq('id', sub.id).then();
+        }
+        
         // Get completed/confirmed appointments for this subscriber AFTER last reset
         const usageResetTime = sub.usage_reset_date ? new Date(sub.usage_reset_date).getTime() : 0;
         const subscriptionStart = new Date(sub.subscription_start_date).getTime();
