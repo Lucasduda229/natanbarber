@@ -1630,9 +1630,13 @@ const Booking = () => {
                   })()}
                   
                   {/* Show booked weeks */}
-                  {subscriptionBookedWeeks.length > 0 && (
+                  {subscriptionBookedWeeks.length > 0 && (() => {
+                    const trueLimit = subscriptionPackageItems.length > 0 
+                      ? Math.max(...subscriptionPackageItems.map(i => i.quantity || 0)) 
+                      : (activeSubscription.monthly_cuts_limit || 4);
+                    return (
                     <div className="mb-3 p-2 bg-muted/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas ({subscriptionBookedWeeks.length}/{activeSubscription.monthly_cuts_limit}):</p>
+                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas ({subscriptionBookedWeeks.length}/{trueLimit}):</p>
                       <div className="flex flex-wrap gap-1">
                         {subscriptionBookedWeeks.map((date, i) => (
                           <span key={i} className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
@@ -1641,7 +1645,7 @@ const Booking = () => {
                         ))}
                       </div>
                     </div>
-                  )}
+                  )})()}
 
                   {/* Check if ANY service still has credits available */}
                   {(() => {
