@@ -289,15 +289,9 @@ const VIPPackagesManager = () => {
 
     // Get package items to count total cuts
     const pkgItems = packageItems.filter(i => i.package_id === selectedPackageId);
-    const totalCuts = pkgItems.reduce((sum, item) => {
-      const serviceName = item.service_name.toLowerCase();
-      if (serviceName.includes('cabelo') || serviceName.includes('degradê') || serviceName.includes('degrade') || serviceName.includes('corte')) {
-        return sum + item.quantity;
-      }
-      return sum;
-    }, 0);
+    const totalCuts = pkgItems.length > 0 ? Math.max(...pkgItems.map(i => i.quantity || 0)) : 4;
 
-    const monthlyCutsLimit = totalCuts || 4;
+    const monthlyCutsLimit = totalCuts;
     const weeklyCredits = Math.max(1, Math.ceil(monthlyCutsLimit / 4));
 
     const durationDays = pkg.duration_days || 30;
@@ -609,7 +603,7 @@ const VIPPackagesManager = () => {
         const nowTimestamp = today.toISOString();
         // Use the package from the paid order (may differ from previous package on upgrade/downgrade)
         const orderPkgItems = order.package_id ? packageItems.filter(i => i.package_id === order.package_id) : [];
-        const itemsTotalQty = orderPkgItems.reduce((acc, it) => acc + (it.quantity || 0), 0);
+        const itemsTotalQty = orderPkgItems.length > 0 ? Math.max(...orderPkgItems.map(it => it.quantity || 0)) : 0;
         const newMonthlyLimit = itemsTotalQty > 0 ? itemsTotalQty : sub.monthly_cuts_limit;
         const weeklyCredits = Math.max(1, Math.ceil(newMonthlyLimit / 4));
 
