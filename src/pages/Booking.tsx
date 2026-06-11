@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual } from "date-fns";
+import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -829,11 +829,11 @@ const Booking = () => {
     }
 
     if (usingSubscription && activeSubscription) {
+      const subStart = startOfDay(activeSubscription.subscription_start_date);
+      const subEnd = endOfDay(activeSubscription.subscription_end_date);
       const isWithinSubscriptionPeriod = 
-        (isAfter(selectedDate, activeSubscription.subscription_start_date) || 
-         isEqual(selectedDate, activeSubscription.subscription_start_date)) &&
-        (isBefore(selectedDate, activeSubscription.subscription_end_date) || 
-         isEqual(selectedDate, activeSubscription.subscription_end_date));
+        (isAfter(selectedDate, subStart) || isEqual(selectedDate, subStart)) &&
+        (isBefore(selectedDate, subEnd) || isEqual(selectedDate, subEnd));
       
       if (!isWithinSubscriptionPeriod) {
         setLoading(false);
@@ -1057,11 +1057,11 @@ const Booking = () => {
       const today = new Date();
       
       // Rule 1: Subscription only valid within the subscription period (30 days from start date)
+      const subStart = startOfDay(activeSubscription.subscription_start_date);
+      const subEnd = endOfDay(activeSubscription.subscription_end_date);
       const isWithinSubscriptionPeriod = 
-        (isAfter(selectedDate, activeSubscription.subscription_start_date) || 
-         isEqual(selectedDate, activeSubscription.subscription_start_date)) &&
-        (isBefore(selectedDate, activeSubscription.subscription_end_date) || 
-         isEqual(selectedDate, activeSubscription.subscription_end_date));
+        (isAfter(selectedDate, subStart) || isEqual(selectedDate, subStart)) &&
+        (isBefore(selectedDate, subEnd) || isEqual(selectedDate, subEnd));
       
       if (!isWithinSubscriptionPeriod) {
         setLoading(false);
