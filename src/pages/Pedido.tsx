@@ -222,7 +222,7 @@ const Pedido = () => {
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
-    const surchargeNote = isThursdayEvening ? "\n⚠️ Adicional noturno quinta-feira: +R$5,00" : "";
+    const surchargeNote = isNightSurcharge ? "\n⚠️ Adicional noturno (19h+): +R$5,00" : "";
     const extraFeeNote = extraFeeApplies ? `\n${buildExtraFeeNote(extraFee)}` : "";
     const notesText = customerNotes.trim()
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
@@ -328,14 +328,13 @@ const Pedido = () => {
     );
   }
 
-  // Verificar adicional de quinta-feira noturno (19h+)
-  const isThursdayEvening = (() => {
-    if (!selectedDate || !selectedTime) return false;
-    const dayOfWeek = getDay(selectedDate); // 4 = quinta-feira
+  // Verificar adicional noturno (19h+) — aplica em qualquer dia da semana
+  const isNightSurcharge = (() => {
+    if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return dayOfWeek === 4 && hour >= 19;
+    return hour >= 19;
   })();
-  const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+  const thursdaySurcharge = isNightSurcharge ? 5 : 0;
   const extraFeeApplies = isExtraFeeApplicable(extraFee, selectedDate ?? null);
   const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
@@ -498,12 +497,12 @@ const Pedido = () => {
                       </div>
                     )}
 
-                    {/* Thursday evening surcharge warning */}
-                    {isThursdayEvening && (
+                    {/* Night surcharge warning (19h+) */}
+                    {isNightSurcharge && (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
                         <span className="text-base">⚠️</span>
                         <div>
-                          <p className="text-xs font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
+                          <p className="text-xs font-semibold text-amber-500">Adicional Noturno</p>
                           <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem adicional de R$ 5,00.</p>
                         </div>
                       </div>
@@ -635,9 +634,9 @@ const Pedido = () => {
                         </li>
                       ))}
                     </ul>
-                    {isThursdayEvening && (
+                    {isNightSurcharge && (
                       <div className="flex justify-between text-amber-500 font-medium">
-                        <span>⚠️ Adicional noturno (quinta)</span>
+                        <span>⚠️ Adicional noturno (19h+)</span>
                         <span>+ R$ 5,00</span>
                       </div>
                     )}

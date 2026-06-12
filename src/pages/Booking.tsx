@@ -708,14 +708,13 @@ const Booking = () => {
     setTimeout(() => setStep(2), 200);
   };
 
-  // Verificar adicional de quinta-feira noturno (19h+)
-  const isThursdayEvening = (() => {
-    if (!selectedDate || !selectedTime) return false;
-    const dayOfWeek = getDay(selectedDate); // 4 = quinta-feira
+  // Verificar adicional noturno (19h+) — aplica em qualquer dia da semana
+  const isNightSurcharge = (() => {
+    if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return dayOfWeek === 4 && hour >= 19;
+    return hour >= 19;
   })();
-  const thursdaySurcharge = isThursdayEvening ? 5 : 0;
+  const thursdaySurcharge = isNightSurcharge ? 5 : 0;
 
   // Taxa adicional configurável (não aplica para assinantes; respeita dias da semana selecionados)
   const extraFeeApplies = !usingSubscription && isExtraFeeApplicable(extraFee, selectedDate ?? null);
@@ -899,7 +898,7 @@ const Booking = () => {
         notes: (() => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
-          if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
+          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -1132,7 +1131,7 @@ const Booking = () => {
         notes: (() => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
-          if (isThursdayEvening) parts.push("⚠️ Adicional noturno quinta-feira: +R$5,00");
+          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -1942,13 +1941,13 @@ const Booking = () => {
               </Card>
             </div>
 
-            {/* Thursday evening surcharge warning */}
-            {isThursdayEvening && (
+            {/* Night surcharge warning (19h+) */}
+            {isNightSurcharge && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2">
                 <span className="text-lg">⚠️</span>
                 <div>
-                  <p className="text-sm font-semibold text-amber-500">Adicional Noturno - Quinta-feira</p>
-                  <p className="text-xs text-muted-foreground">Horários a partir das 19h nas quintas-feiras possuem um adicional de R$ 5,00.</p>
+                  <p className="text-sm font-semibold text-amber-500">Adicional Noturno</p>
+                  <p className="text-xs text-muted-foreground">Horários a partir das 19h possuem um adicional de R$ 5,00.</p>
                 </div>
               </div>
             )}
@@ -1966,9 +1965,9 @@ const Booking = () => {
                       <span className="text-muted-foreground flex-shrink-0">R$ {service.price.toFixed(2)}</span>
                     </div>
                   ))}
-                  {isThursdayEvening && (
+                  {isNightSurcharge && (
                     <div className="flex items-center justify-between text-sm text-amber-500">
-                      <span className="flex items-center gap-2">⚠️ Adicional noturno (quinta)</span>
+                      <span className="flex items-center gap-2">⚠️ Adicional noturno (19h+)</span>
                       <span>+ R$ 5,00</span>
                     </div>
                   )}
@@ -2064,9 +2063,9 @@ const Booking = () => {
                     <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
                   </div>
                 ))}
-                {isThursdayEvening && (
+                {isNightSurcharge && (
                   <div className="flex items-center justify-between text-sm text-amber-500">
-                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span>⚠️ Adicional noturno (19h+)</span>
                     <span>+ R$ 5,00</span>
                   </div>
                 )}
@@ -2173,9 +2172,9 @@ const Booking = () => {
                     </div>
                   ))}
                 </div>
-                {isThursdayEvening && (
+                {isNightSurcharge && (
                   <div className="flex items-center justify-between text-amber-500">
-                    <span>⚠️ Adicional noturno (quinta)</span>
+                    <span>⚠️ Adicional noturno (19h+)</span>
                     <span className="font-semibold">+ R$ 5,00</span>
                   </div>
                 )}
