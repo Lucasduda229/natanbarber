@@ -481,8 +481,7 @@ const Booking = () => {
       `)
       .eq("user_id", user.id)
       .eq("payment_method", "subscription")
-      .neq("status", "cancelled")
-      .gte("appointment_date", format(subscriptionStart, "yyyy-MM-dd"));
+      .neq("status", "cancelled");
 
     if (appointments && appointments.length > 0) {
       // Filter appointments created after the usage reset date
@@ -511,22 +510,15 @@ const Booking = () => {
       const usageMap: Record<string, number> = {};
       
       for (const apt of validAppointments) {
-        const aptDate = parseISO(apt.appointment_date);
-        const isWithinPeriod = 
-          (isAfter(aptDate, subscriptionStart) || isEqual(aptDate, subscriptionStart)) &&
-          (isBefore(aptDate, subscriptionEnd) || isEqual(aptDate, subscriptionEnd));
-        
-        if (isWithinPeriod) {
-          // Count the main service
-          if (apt.service_id) {
-            usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
-          }
-          // Count additional services from appointment_services
-          if (apt.appointment_services && Array.isArray(apt.appointment_services)) {
-            for (const as of apt.appointment_services) {
-              if (as.service_id) {
-                usageMap[as.service_id] = (usageMap[as.service_id] || 0) + 1;
-              }
+        // Count the main service
+        if (apt.service_id) {
+          usageMap[apt.service_id] = (usageMap[apt.service_id] || 0) + 1;
+        }
+        // Count additional services from appointment_services
+        if (apt.appointment_services && Array.isArray(apt.appointment_services)) {
+          for (const as of apt.appointment_services) {
+            if (as.service_id) {
+              usageMap[as.service_id] = (usageMap[as.service_id] || 0) + 1;
             }
           }
         }
