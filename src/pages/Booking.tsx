@@ -290,6 +290,24 @@ const Booking = () => {
         setActiveSubscription(null);
         setSubscriptionPackageItems([]);
         setHasExpiredSubscription(true);
+
+        // Busca o preço do pacote para popular os detalhes de renovação
+        // (sem isso, o modal de renovar PIX nunca abre ao clicar)
+        let packagePrice = 0;
+        if (subscription.package_id) {
+          const { data: pkgData } = await supabase
+            .from("packages")
+            .select("price")
+            .eq("id", subscription.package_id)
+            .maybeSingle();
+          if (pkgData) packagePrice = pkgData.price || 0;
+        }
+        setExpiredSubscriptionDetails({
+          id: subscription.id,
+          package_id: subscription.package_id || "",
+          package_name: subscription.package_name || "Assinatura",
+          price: packagePrice,
+        });
         return;
       }
       
@@ -370,7 +388,7 @@ const Booking = () => {
       setActiveSubscription(null);
       setSubscriptionPackageItems([]);
       
-      // Check if user has an inactive/expired subscription
+      // Check if user has an inactive/expired subscription (pega a mais recente)
       const { data: inactiveSub } = await supabase
         .from("subscription_progress")
         .select(`
@@ -381,16 +399,27 @@ const Booking = () => {
         `)
         .eq("user_id", user.id)
         .eq("is_active", false)
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       
       setHasExpiredSubscription(!!inactiveSub);
-      if (inactiveSub && inactiveSub.packages) {
+      if (inactiveSub) {
+        // Tenta pegar o preço do join, mas faz fallback buscando diretamente
+        let packagePrice = (inactiveSub.packages as any)?.price || 0;
+        if (!packagePrice && inactiveSub.package_id) {
+          const { data: pkgData } = await supabase
+            .from("packages")
+            .select("price")
+            .eq("id", inactiveSub.package_id)
+            .maybeSingle();
+          if (pkgData) packagePrice = pkgData.price || 0;
+        }
         setExpiredSubscriptionDetails({
           id: inactiveSub.id,
           package_id: inactiveSub.package_id || "",
           package_name: inactiveSub.package_name || "",
-          price: (inactiveSub.packages as any).price || 0
+          price: packagePrice,
         });
       }
     }
