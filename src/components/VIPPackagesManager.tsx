@@ -1401,16 +1401,16 @@ const VIPPackagesManager = () => {
                       </div>
                     </div>
 
-                    
-                    <div className="flex flex-col items-end gap-1 mb-2">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Comprado em: {format(new Date(sub.created_at || sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
-                      <span className="text-sm text-foreground">
-                        Ciclo: {sub.usage_reset_date ? format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR }) : "A iniciar"} - {sub.usage_reset_date ? calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30) : "?"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 justify-end">
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-col items-end gap-1 mb-2">
+                        <span className="text-xs text-muted-foreground font-medium">
+                          Comprado em: {format(new Date(sub.created_at || sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                        <span className="text-sm text-foreground">
+                          Ciclo: {sub.usage_reset_date ? format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR }) : "A iniciar"} - {sub.usage_reset_date ? calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30) : "?"}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-end">
                         <Button 
                           size="sm" 
                           variant="outline"

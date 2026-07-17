@@ -884,7 +884,7 @@ const Booking = () => {
       const isFirstAppointment = activeSubscription.usage_reset_date === null;
       const msPerWeek = 7 * 24 * 60 * 60 * 1000;
       // If it's the first appointment, the cycle starts on the selected date, so weeksElapsed is 0.
-      const startMs = isFirstAppointment ? selectedDate.getTime() : activeSubscription.subscription_start_date.getTime();
+      const startMs = isFirstAppointment ? selectedDate.getTime() : new Date(activeSubscription.subscription_start_date).getTime();
       const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((selectedDate.getTime() - startMs) / msPerWeek));
 
       for (const service of selectedServices) {
