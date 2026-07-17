@@ -880,6 +880,13 @@ const Booking = () => {
         return;
       }
       
+      // Verify intelligent expiration based on the selected date
+      const isFirstAppointment = activeSubscription.usage_reset_date === null;
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      // If it's the first appointment, the cycle starts on the selected date, so weeksElapsed is 0.
+      const startMs = isFirstAppointment ? selectedDate.getTime() : activeSubscription.subscription_start_date.getTime();
+      const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((selectedDate.getTime() - startMs) / msPerWeek));
+
       for (const service of selectedServices) {
         const packageItem = subscriptionPackageItems.find(item => 
           item.service_id === service.id || 
@@ -887,13 +894,15 @@ const Booking = () => {
         );
         
         if (packageItem) {
-          const used = serviceUsageThisMonth[service.id] || 0;
           const limit = packageItem.quantity;
+          const realUsed = serviceUsageThisMonth[service.id] || 0;
+          const expiredAmount = Math.floor((weeksElapsedAtSelectedDate * limit) / 4);
+          const serviceUsed = Math.min(limit, Math.max(realUsed, expiredAmount));
           
-          if (used >= limit) {
+          if (serviceUsed >= limit) {
             setLoading(false);
-            toast.error(`Limite de ${service.name} atingido`, { 
-              description: `Você já usou ${used}/${limit} este mês.` 
+            toast.error(`Cota expirada para ${service.name}`, { 
+              description: `O limite para esta data foi atingido (faltas passadas expiram créditos).` 
             });
             return;
           }
@@ -1111,7 +1120,12 @@ const Booking = () => {
         return;
       }
       
-      // Rule 4: Verify each selected service has available credits
+      // Rule 4: Verify each selected service has available credits taking intelligent expiration into account
+      const isFirstAppointment = activeSubscription.usage_reset_date === null;
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      const startMs = isFirstAppointment ? selectedDate.getTime() : activeSubscription.subscription_start_date.getTime();
+      const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((selectedDate.getTime() - startMs) / msPerWeek));
+
       for (const service of selectedServices) {
         const packageItem = subscriptionPackageItems.find(item => 
           item.service_id === service.id || 
@@ -1119,13 +1133,15 @@ const Booking = () => {
         );
         
         if (packageItem) {
-          const used = serviceUsageThisMonth[service.id] || 0;
           const limit = packageItem.quantity;
+          const realUsed = serviceUsageThisMonth[service.id] || 0;
+          const expiredAmount = Math.floor((weeksElapsedAtSelectedDate * limit) / 4);
+          const serviceUsed = Math.min(limit, Math.max(realUsed, expiredAmount));
           
-          if (used >= limit) {
+          if (serviceUsed >= limit) {
             setLoading(false);
-            toast.error(`Limite de ${service.name} atingido`, { 
-              description: `Você já usou ${used}/${limit} este mês.` 
+            toast.error(`Cota expirada para ${service.name}`, { 
+              description: `O limite para esta data foi atingido (faltas passadas expiram créditos).` 
             });
             return;
           }

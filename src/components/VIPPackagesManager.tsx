@@ -40,6 +40,7 @@ interface PackageBenefit {
 interface SubscriberWithUsage {
   id: string;
   user_id: string;
+  created_at: string;
   subscription_start_date: string;
   usage_reset_date: string | null;
   is_active: boolean;
@@ -117,6 +118,8 @@ const VIPPackagesManager = () => {
   const [selectedSubscriber, setSelectedSubscriber] = useState<SubscriberWithUsage | null>(null);
   const [selectedBenefits, setSelectedBenefits] = useState<Set<string>>(new Set());
   const [registeringUsage, setRegisteringUsage] = useState(false);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -134,7 +137,7 @@ const VIPPackagesManager = () => {
         supabase.from("package_benefits").select("*, services(name)"),
         supabase
           .from("appointments")
-          .select("id, user_id, service_id, appointment_date, status, created_at")
+          .select("id, user_id, service_id, appointment_date, appointment_time, payment_method, status, created_at, services(name)")
           .in("status", ["completed", "confirmed"])
           .order("created_at", { ascending: false })
           .limit(10000),
@@ -181,6 +184,7 @@ const VIPPackagesManager = () => {
       setPackageBenefits(processedBenefits);
 
       const completedAppointments = appointmentsResult.data || [];
+      setAllAppointments(completedAppointments);
       const appointmentServices = appointmentServicesResult.data || [];
 
       // Map only real subscribers with a linked package, whether active or inactive
@@ -688,6 +692,11 @@ const VIPPackagesManager = () => {
     setSelectedSubscriber(subscriber);
     setSelectedBenefits(new Set());
     setShowUsageModal(true);
+  };
+
+  const openHistoryModal = (subscriber: SubscriberWithUsage) => {
+    setSelectedSubscriber(subscriber);
+    setShowHistoryModal(true);
   };
 
   const toggleBenefitSelection = (serviceId: string) => {
@@ -1393,11 +1402,24 @@ const VIPPackagesManager = () => {
                     </div>
 
                     
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })} - {calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30)}
+                    <div className="flex flex-col items-end gap-1 mb-2">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Comprado em: {format(new Date(sub.created_at || sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
-                      <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-foreground">
+                        Ciclo: {sub.usage_reset_date ? format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR }) : "A iniciar"} - {sub.usage_reset_date ? calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30) : "?"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-end">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => openHistoryModal(sub)}
+                        >
+                          <FileText className="w-3 h-3" />
+                          Histórico
+                        </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
@@ -1616,6 +1638,52 @@ const VIPPackagesManager = () => {
                 )}
               </Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* History Modal */}
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Histórico de Cortes
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground font-medium border-b pb-2">
+              {selectedSubscriber?.profile?.full_name || "Cliente"}
+            </p>
+            {(() => {
+              const history = allAppointments.filter(
+                a => a.user_id === selectedSubscriber?.user_id && a.payment_method === 'subscription'
+              ).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
+              
+              if (history.length === 0) {
+                return (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum agendamento encontrado para este assinante.
+                  </p>
+                );
+              }
+              
+              return history.map(apt => (
+                <div key={apt.id} className="flex justify-between items-center p-3 rounded-lg border border-border">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {apt.services?.name || "Corte de Cabelo"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(apt.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {apt.appointment_time?.slice(0, 5)}
+                    </p>
+                  </div>
+                  <Badge variant={apt.status === "completed" ? "default" : "secondary"} className={apt.status === "completed" ? "bg-green-600 hover:bg-green-600 text-white" : ""}>
+                    {apt.status === "completed" ? "Concluído" : "Confirmado"}
+                  </Badge>
+                </div>
+              ));
+            })()}
           </div>
         </DialogContent>
       </Dialog>
