@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
@@ -56,6 +56,7 @@ interface Appointment {
   payment_status: string;
   payment_method: string | null;
   notes: string | null;
+  updated_at?: string;
   profiles: {
     full_name: string | null;
     phone: string | null;
@@ -289,6 +290,11 @@ const Admin = () => {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
 
+  const appointmentsRef = useRef<Appointment[]>([]);
+  useEffect(() => {
+    appointmentsRef.current = appointments;
+  }, [appointments]);
+
   // Helper function to check if user has active subscription
   const getUserSubscription = (userId: string): ActiveSubscription | null => {
     return activeSubscriptions.find(s => s.user_id === userId && s.is_active) || null;
@@ -401,7 +407,15 @@ const Admin = () => {
               newRecord?.appointment_time?.slice(0, 5) || 'horário pendente'
             );
           } else if (payload.eventType === 'UPDATE') {
-            toast.info("📝 Agendamento atualizado", { duration: 2000 });
+            const newRecord = payload.new as any;
+            const existing = appointmentsRef.current.find(a => a.id === newRecord.id);
+            if (existing && existing.status !== 'cancelled' && newRecord.status === 'cancelled') {
+              const clientInfo = getClientDisplayInfo(existing);
+              toast.error(`❌ O cliente ${clientInfo.name} cancelou o agendamento das ${existing.appointment_time.slice(0, 5)}!`, { duration: 6000 });
+              playNotificationSound();
+            } else {
+              toast.info("📝 Agendamento atualizado", { duration: 2000 });
+            }
           } else if (payload.eventType === 'DELETE') {
             toast.info("🗑️ Agendamento removido", { duration: 2000 });
           }
@@ -554,6 +568,7 @@ const Admin = () => {
         payment_method,
         user_id,
         notes,
+        updated_at,
         service_id,
         services:service_id (
           name,
@@ -2190,9 +2205,16 @@ const Admin = () => {
                           <span className="truncate max-w-[80px] text-muted-foreground hidden sm:inline">
                             {getServicesNames(appointment.services)}
                           </span>
-                          <Badge className={cn("text-[9px] px-1.5 py-0 h-4", statusColors[appointment.status as keyof typeof statusColors])}>
-                            {statusLabels[appointment.status as keyof typeof statusLabels]}
-                          </Badge>
+                          <div className="flex flex-col items-end sm:flex-row sm:items-center sm:gap-2">
+                            <Badge className={cn("text-[9px] px-1.5 py-0 h-4", statusColors[appointment.status as keyof typeof statusColors])}>
+                              {statusLabels[appointment.status as keyof typeof statusLabels]}
+                            </Badge>
+                            {appointment.status === "cancelled" && appointment.updated_at && (
+                              <span className="text-[9px] sm:text-[10px] text-muted-foreground whitespace-nowrap hidden xs:inline-block mt-1 sm:mt-0">
+                                Cancelado em: {format(parseISO(appointment.updated_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                              </span>
+                            )}
+                          </div>
                           {appointment.status === "completed" && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
