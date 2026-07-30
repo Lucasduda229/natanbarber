@@ -2206,11 +2206,9 @@ const Admin = () => {
                         <div
                           key={appointment.id}
                           onClick={() => {
-                            if (appointment.status === "cancelled") {
-                              setSelectedCompletedAppointment(appointment);
-                            }
+                            setSelectedCompletedAppointment(appointment);
                           }}
-                          className={cn("flex items-center gap-2 px-3 py-2 rounded-lg bg-card/15 border border-muted-foreground/10 opacity-70 text-xs", appointment.status === "cancelled" && "cursor-pointer hover:bg-card/25 transition-colors")}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/15 border border-muted-foreground/10 opacity-70 text-xs cursor-pointer hover:bg-card/25 transition-colors"
                         >
                           <span className="text-muted-foreground font-medium w-10 flex-shrink-0">
                             {format(parseISO(appointment.appointment_date), "dd/MM")}
@@ -2240,8 +2238,9 @@ const Admin = () => {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-5 w-5 p-0 text-orange-500 hover:bg-orange-500/10"
+                                  className="h-5 w-5 p-0 text-orange-500 hover:bg-orange-500/10 z-10 relative"
                                   title="Marcar falta"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <XCircle className="w-3 h-3" />
                                 </Button>
