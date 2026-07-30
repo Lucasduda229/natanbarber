@@ -289,6 +289,7 @@ const Admin = () => {
   const [completedShowCount, setCompletedShowCount] = useState(10);
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
+  const [selectedCompletedAppointment, setSelectedCompletedAppointment] = useState<Appointment | null>(null);
 
   const appointmentsRef = useRef<Appointment[]>([]);
   useEffect(() => {
@@ -2191,7 +2192,12 @@ const Admin = () => {
                       {completedAppointments.slice(0, completedShowCount).map((appointment) => (
                         <div
                           key={appointment.id}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/15 border border-muted-foreground/10 opacity-70 text-xs"
+                          onClick={() => {
+                            if (appointment.status === "cancelled") {
+                              setSelectedCompletedAppointment(appointment);
+                            }
+                          }}
+                          className={cn("flex items-center gap-2 px-3 py-2 rounded-lg bg-card/15 border border-muted-foreground/10 opacity-70 text-xs", appointment.status === "cancelled" && "cursor-pointer hover:bg-card/25 transition-colors")}
                         >
                           <span className="text-muted-foreground font-medium w-10 flex-shrink-0">
                             {format(parseISO(appointment.appointment_date), "dd/MM")}
@@ -2498,6 +2504,55 @@ const Admin = () => {
               <span>Recepção</span>
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Completed/Cancelled Details Dialog */}
+      <Dialog open={!!selectedCompletedAppointment} onOpenChange={(open) => !open && setSelectedCompletedAppointment(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes do Agendamento</DialogTitle>
+          </DialogHeader>
+          {selectedCompletedAppointment && (
+            <div className="space-y-4 text-sm mt-4">
+              <div className="grid grid-cols-[100px_1fr] gap-3">
+                <span className="text-muted-foreground font-medium">Cliente:</span>
+                <span className="font-semibold">{getClientDisplayInfo(selectedCompletedAppointment).name}</span>
+                
+                <span className="text-muted-foreground font-medium">Telefone:</span>
+                <span>{getClientDisplayInfo(selectedCompletedAppointment).phone || "Não informado"}</span>
+
+                <span className="text-muted-foreground font-medium">Serviço(s):</span>
+                <span>{getServicesNames(selectedCompletedAppointment.services)}</span>
+
+                <span className="text-muted-foreground font-medium">Valor Total:</span>
+                <span className="font-semibold text-green-500">
+                  R$ {getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes).toFixed(2).replace('.', ',')}
+                </span>
+
+                <span className="text-muted-foreground font-medium">Data/Hora:</span>
+                <span>
+                  {format(parseISO(selectedCompletedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedCompletedAppointment.appointment_time.slice(0,5)}
+                </span>
+
+                <span className="text-muted-foreground font-medium">Status:</span>
+                <span>
+                  <Badge className={cn("text-[10px]", statusColors[selectedCompletedAppointment.status as keyof typeof statusColors])}>
+                    {statusLabels[selectedCompletedAppointment.status as keyof typeof statusLabels]}
+                  </Badge>
+                </span>
+                
+                {selectedCompletedAppointment.status === "cancelled" && selectedCompletedAppointment.updated_at && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Cancelado em:</span>
+                    <span className="font-semibold text-red-500">
+                      {format(parseISO(selectedCompletedAppointment.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
