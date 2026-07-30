@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import logoImage from "@/assets/logo-barbershop.png";
+import { Footer } from "@/components/Footer";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -76,7 +77,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden flex flex-col">
       <AnimatedBackground />
       <header className="auth-header relative z-10 flex items-center justify-between px-3 sm:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
@@ -88,7 +89,7 @@ const Login = () => {
           <Link to="/register"><Button variant="ghost" className="text-foreground hover:text-primary text-sm sm:text-base px-2 sm:px-4">Cadastrar</Button></Link>
         </div>
       </header>
-      <main className="relative z-10 flex items-center justify-center px-3 sm:px-4 py-8 sm:py-12">
+      <main className="relative z-10 flex items-center justify-center px-3 sm:px-4 py-8 sm:py-12 flex-1 w-full">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-4 sm:mb-6">
             <img src={logoImage} alt="Logo" className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" />
@@ -114,6 +115,7 @@ const Login = () => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

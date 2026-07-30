@@ -7,10 +7,11 @@ import { ServiceGallery } from "@/components/ServiceGallery";
 import { ReviewsDisplay } from "@/components/ReviewsDisplay";
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import logoImage from "@/assets/logo-barbershop.png";
+import { Footer } from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen relative overflow-hidden safe-bottom">
+    <div className="min-h-screen relative overflow-hidden safe-bottom flex flex-col">
       <AnimatedBackground />
       
       {/* PWA Install Button - Fixed Top Right */}
@@ -80,9 +81,11 @@ const Index = () => {
       </div>
 
       {/* Reviews Section */}
-      <div className="relative z-10 px-3 sm:px-4 pb-8 sm:pb-12 max-w-6xl mx-auto">
+      <div className="relative z-10 px-3 sm:px-4 pb-8 sm:pb-12 max-w-6xl mx-auto flex-1 w-full">
         <ReviewsDisplay />
       </div>
+
+      <Footer />
     </div>
   );
 };
