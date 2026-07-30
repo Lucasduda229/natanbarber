@@ -11,13 +11,12 @@ const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Vis
 
 export function Footer() {
   return (
-    <footer className="bg-[#0f0f0f] text-[#a1a1aa] py-12 px-4 sm:px-6 relative z-10 w-full mt-auto border-t border-white/5">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-10 md:gap-4 mb-10">
+    <footer className="bg-[#0f0f0f] text-[#a1a1aa] pt-12 pb-4 px-4 sm:px-6 relative z-10 w-full mt-auto border-t border-white/5">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-10 md:gap-4 mb-8">
         
         {/* Left Side: Brand & Description */}
         <div className="flex flex-col gap-4 max-w-sm">
           <div className="flex items-center gap-2">
-            <Scissors className="w-6 h-6 text-red-600 transform -scale-x-100" />
             <span className="text-white text-xl font-serif tracking-widest uppercase">
               Natan Barbershop
             </span>
