@@ -1366,33 +1366,6 @@ const Booking = () => {
               </Button>
             </div>
 
-            {/* Location Card - Mobile Optimized */}
-            <div className="bg-card/60 backdrop-blur-xl rounded-xl border-l-4 border-l-primary border-y border-r border-primary/10 overflow-hidden">
-              <div className="p-4">
-                <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  Nossa Localização
-                </h3>
-                <div className="text-muted-foreground text-sm space-y-0.5 mb-4">
-                  <p>{LOCATION.address}</p>
-                  <p className="text-xs">{LOCATION.neighborhood}</p>
-                  <p className="text-xs opacity-70">{LOCATION.cep}</p>
-                </div>
-                <a 
-                  href={GOOGLE_MAPS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button 
-                    className="w-full bg-primary/90 hover:bg-primary text-background font-medium h-11 rounded-lg active:scale-[0.98] transition-transform"
-                  >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    Ver Rota no Google Maps
-                  </Button>
-                </a>
-              </div>
-            </div>
 
             {/* Services Section - Mobile Optimized */}
             <div id="services-section" className="space-y-3">

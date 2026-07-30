@@ -1,4 +1,13 @@
-import { Scissors, Instagram, MessageCircle } from "lucide-react";
+import { Scissors, Instagram, MessageCircle, MapPin, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const LOCATION = {
+  address: "Rua Visconde de Barbacena, 99999",
+  neighborhood: "Barro Branco, Lauro Müller - SC",
+  cep: "CEP: 88882-000, Brasil",
+};
+
+const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=Rua+Visconde+de+Barbacena+99999+Barro+Branco+Lauro+Muller+SC";
 
 export function Footer() {
   return (
@@ -16,6 +25,36 @@ export function Footer() {
           <p className="text-sm leading-relaxed">
             Tradição e estilo em cada corte. Sua barbearia premium.
           </p>
+        </div>
+
+        {/* Middle: Location Card */}
+        <div className="flex-1 max-w-sm w-full">
+          <div className="bg-card/60 backdrop-blur-xl rounded-xl border-l-4 border-l-primary border-y border-r border-primary/10 overflow-hidden shadow-md">
+            <div className="p-4">
+              <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-primary" />
+                Nossa Localização
+              </h3>
+              <div className="text-muted-foreground text-sm space-y-0.5 mb-4">
+                <p>{LOCATION.address}</p>
+                <p className="text-xs">{LOCATION.neighborhood}</p>
+                <p className="text-xs opacity-70">{LOCATION.cep}</p>
+              </div>
+              <a 
+                href={GOOGLE_MAPS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button 
+                  className="w-full bg-primary/90 hover:bg-primary text-background font-medium h-11 rounded-lg active:scale-[0.98] transition-transform"
+                >
+                  <Navigation className="w-4 h-4 mr-2" />
+                  Ver Rota no Google Maps
+                </Button>
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Right Side: Contact */}
