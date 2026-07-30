@@ -66,22 +66,15 @@ export function Footer() {
             <MessageCircle className="w-5 h-5" />
             <span>(48) 9952-0220</span>
           </div>
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center mt-2">
             <a 
               href="https://www.instagram.com/_natan_barber_/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[#a1a1aa] hover:text-white transition-colors"
+              className="text-[#a1a1aa] hover:text-white transition-colors flex items-center gap-2"
             >
               <Instagram className="w-5 h-5" />
-            </a>
-            <a 
-              href="https://wa.me/554899520220" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-[#a1a1aa] hover:text-white transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
+              <span className="text-sm">@_natan_barber_</span>
             </a>
           </div>
         </div>
