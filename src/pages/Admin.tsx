@@ -287,6 +287,7 @@ const Admin = () => {
   const [completedCustomDate, setCompletedCustomDate] = useState<Date | undefined>(undefined);
   const [completedCustomMonth, setCompletedCustomMonth] = useState<string>("");
   const [completedShowCount, setCompletedShowCount] = useState(10);
+  const [completedSearchTerm, setCompletedSearchTerm] = useState("");
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
   const [selectedCompletedAppointment, setSelectedCompletedAppointment] = useState<Appointment | null>(null);
@@ -1250,9 +1251,14 @@ const Admin = () => {
     
     return true;
   });
-  const completedAppointments = completedFilter === "all" 
+  const completedAppointments = (completedFilter === "all" 
     ? allCompletedAppointments 
-    : allCompletedAppointments.filter(a => a.status === completedFilter);
+    : allCompletedAppointments.filter(a => a.status === completedFilter))
+    .filter(a => {
+      if (!completedSearchTerm) return true;
+      const clientName = getClientDisplayInfo(a).name.toLowerCase();
+      return clientName.includes(completedSearchTerm.toLowerCase());
+    });
 
   if (authLoading) {
     return (
@@ -2185,6 +2191,13 @@ const Admin = () => {
                           <SelectItem value="no_show">Faltas</SelectItem>
                         </SelectContent>
                       </Select>
+                      <input
+                        type="text"
+                        placeholder="Buscar cliente..."
+                        value={completedSearchTerm}
+                        onChange={(e) => setCompletedSearchTerm(e.target.value)}
+                        className="h-6 text-[10px] px-2 rounded-full border border-input bg-card/30 text-foreground w-[100px] sm:w-[120px]"
+                      />
                     </div>
 
                     {/* Compact list rows */}
