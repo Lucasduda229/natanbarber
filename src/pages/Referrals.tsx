@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, Gift, Share2, Check, ArrowLeft, Users, Ticket, History, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Copy, Gift, Share2, Check, ArrowLeft, Users, Ticket, History, Calendar as CalendarIcon, Clock, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -122,6 +122,37 @@ export default function Referrals() {
   return (
     <div className="min-h-screen relative overflow-hidden safe-bottom">
       <AnimatedBackground />
+
+      {/* Full-page lock overlay - Em breve */}
+      <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden">
+        {/* Diagonal chain: top-left to bottom-right */}
+        <div className="absolute" style={{
+          left: '-10%',
+          right: '-10%',
+          top: '50%',
+          height: '0',
+          borderTop: '3px dashed rgba(212,175,55,0.5)',
+          transform: 'rotate(13deg)',
+        }} />
+        {/* Diagonal chain: top-right to bottom-left */}
+        <div className="absolute" style={{
+          left: '-10%',
+          right: '-10%',
+          top: '50%',
+          height: '0',
+          borderTop: '3px dashed rgba(212,175,55,0.5)',
+          transform: 'rotate(-13deg)',
+        }} />
+        {/* Lock icon + Em breve */}
+        <div className="flex flex-col items-center gap-2 drop-shadow-xl">
+          <div className="w-20 h-20 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
+            <Lock className="w-10 h-10 text-primary" />
+          </div>
+          <span className="text-sm font-bold text-primary tracking-widest uppercase bg-background/70 px-4 py-1 rounded-full backdrop-blur-sm border border-primary/30">
+            Em breve
+          </span>
+        </div>
+      </div>
 
       {/* Header */}
       <header className="relative z-10 flex items-center p-4 max-w-5xl mx-auto safe-top">
