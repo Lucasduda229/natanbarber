@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store, Gift } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store, Gift, Lock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -1397,6 +1397,36 @@ const Booking = () => {
                   <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
                   Painel de Indicações
                 </Button>
+              </div>
+
+              {/* Lock overlay - Em breve */}
+              <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                {/* chains SVG diagonal */}
+                <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                  {/* chain top-left to bottom-right */}
+                  {[0,1,2,3,4,5,6,7,8].map((i) => (
+                    <g key={`dr-${i}`} transform={`translate(${-40 + i * 55}, ${-10 + i * 18})`}>
+                      <rect x="0" y="0" width="28" height="13" rx="6" fill="none" stroke="#d4af37" strokeWidth="2" opacity="0.7" />
+                      <rect x="10" y="-7" width="8" height="10" rx="3" fill="none" stroke="#d4af37" strokeWidth="2" opacity="0.7" />
+                    </g>
+                  ))}
+                  {/* chain top-right to bottom-left */}
+                  {[0,1,2,3,4,5,6,7,8].map((i) => (
+                    <g key={`dl-${i}`} transform={`translate(${110 - i * 14}, ${-10 + i * 18}) rotate(-35, 14, 6)`}>
+                      <rect x="0" y="0" width="28" height="13" rx="6" fill="none" stroke="#d4af37" strokeWidth="2" opacity="0.6" />
+                      <rect x="10" y="-7" width="8" height="10" rx="3" fill="none" stroke="#d4af37" strokeWidth="2" opacity="0.6" />
+                    </g>
+                  ))}
+                </svg>
+                {/* Lock circle center */}
+                <div className="flex flex-col items-center gap-1.5 drop-shadow-lg">
+                  <div className="w-12 h-12 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
+                    <Lock className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-bold text-primary tracking-widest uppercase bg-background/70 px-2 py-0.5 rounded-full backdrop-blur-sm border border-primary/30">
+                    Em breve
+                  </span>
+                </div>
               </div>
             </div>
 
