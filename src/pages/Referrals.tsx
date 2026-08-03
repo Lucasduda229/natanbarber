@@ -239,6 +239,7 @@ export default function Referrals() {
                 variant="outline" 
                 className="w-full sm:w-auto border-primary/30 text-primary hover:bg-primary/10 rounded-xl flex items-center gap-2"
                 onClick={() => setView("history")}
+                disabled
               >
                 <History className="w-4 h-4" />
                 Ver Histórico de Indicações
@@ -275,7 +276,7 @@ export default function Referrals() {
                 </div>
               </div>
               {/* Lock overlay */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center overflow-hidden cursor-not-allowed">
                 <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(8deg)' }} />
                 <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(-8deg)' }} />
                 <div className="flex flex-col items-center gap-1.5">
@@ -339,7 +340,7 @@ export default function Referrals() {
                           Resgatar Prêmio
                         </Button>
                         {/* Lock overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center overflow-hidden cursor-not-allowed">
                           <div className="absolute" style={{ left:'-5%', right:'-5%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(6deg)' }} />
                           <div className="absolute" style={{ left:'-5%', right:'-5%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(-6deg)' }} />
                           <div className="flex flex-col items-center gap-1.5">
