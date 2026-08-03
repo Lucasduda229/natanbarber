@@ -123,37 +123,6 @@ export default function Referrals() {
     <div className="min-h-screen relative overflow-hidden safe-bottom">
       <AnimatedBackground />
 
-      {/* Full-page lock overlay - Em breve */}
-      <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none overflow-hidden">
-        {/* Diagonal chain: top-left to bottom-right */}
-        <div className="absolute" style={{
-          left: '-10%',
-          right: '-10%',
-          top: '50%',
-          height: '0',
-          borderTop: '3px dashed rgba(212,175,55,0.5)',
-          transform: 'rotate(13deg)',
-        }} />
-        {/* Diagonal chain: top-right to bottom-left */}
-        <div className="absolute" style={{
-          left: '-10%',
-          right: '-10%',
-          top: '50%',
-          height: '0',
-          borderTop: '3px dashed rgba(212,175,55,0.5)',
-          transform: 'rotate(-13deg)',
-        }} />
-        {/* Lock icon + Em breve */}
-        <div className="flex flex-col items-center gap-2 drop-shadow-xl">
-          <div className="w-20 h-20 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
-            <Lock className="w-10 h-10 text-primary" />
-          </div>
-          <span className="text-sm font-bold text-primary tracking-widest uppercase bg-background/70 px-4 py-1 rounded-full backdrop-blur-sm border border-primary/30">
-            Em breve
-          </span>
-        </div>
-      </div>
-
       {/* Header */}
       <header className="relative z-10 flex items-center p-4 max-w-5xl mx-auto safe-top">
         <Button 
@@ -200,14 +169,27 @@ export default function Referrals() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              <div className="bg-card/60 backdrop-blur-xl border border-primary/20 rounded-2xl p-3 sm:p-5 flex flex-col items-center justify-center text-center">
+              {/* Amigos Indicados */}
+              <div className="bg-card/60 backdrop-blur-xl border border-primary/20 rounded-2xl p-3 sm:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden">
                 <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary mb-1 sm:mb-2 opacity-80" />
                 <p className="text-[10px] sm:text-xs font-medium text-muted-foreground leading-tight">Amigos<br/>Indicados</p>
                 <div className="flex items-end gap-1 mt-1">
                   <span className="text-2xl sm:text-3xl font-bold text-foreground">{profile?.total_referrals || 0}</span>
                 </div>
+                {/* Lock overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(15deg)' }} />
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(-15deg)' }} />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-background/80 border border-primary flex items-center justify-center backdrop-blur-sm">
+                      <Lock className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-[8px] font-bold text-primary tracking-widest uppercase bg-background/70 px-1.5 py-0.5 rounded-full border border-primary/30">Em breve</span>
+                  </div>
+                </div>
               </div>
 
+              {/* Saldo Serviços */}
               <div className="bg-primary/10 backdrop-blur-xl border border-primary/30 rounded-2xl p-3 sm:p-5 flex flex-col items-center justify-center text-center shadow-gold-glow relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10">
                   <Gift className="w-16 h-16 sm:w-20 sm:h-20 text-primary" />
@@ -216,8 +198,20 @@ export default function Referrals() {
                 <div className="flex items-end gap-1 mt-1 relative z-10">
                   <span className="text-2xl sm:text-3xl font-bold text-primary">{profile?.referrals_balance || 0}</span>
                 </div>
+                {/* Lock overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden z-20">
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(15deg)' }} />
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(-15deg)' }} />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-background/80 border border-primary flex items-center justify-center backdrop-blur-sm">
+                      <Lock className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-[8px] font-bold text-primary tracking-widest uppercase bg-background/70 px-1.5 py-0.5 rounded-full border border-primary/30">Em breve</span>
+                  </div>
+                </div>
               </div>
 
+              {/* Tickets Produtos */}
               <div className="bg-[#00D4AA]/10 backdrop-blur-xl border border-[#00D4AA]/30 rounded-2xl p-3 sm:p-5 flex flex-col items-center justify-center text-center shadow-[0_0_15px_rgba(0,212,170,0.15)] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10">
                   <Ticket className="w-16 h-16 sm:w-20 sm:h-20 text-[#00D4AA]" />
@@ -225,6 +219,17 @@ export default function Referrals() {
                 <p className="text-[10px] sm:text-xs font-medium text-[#00D4AA] relative z-10 leading-tight">Tickets p/<br/>Produtos</p>
                 <div className="flex items-end gap-1 mt-1 relative z-10">
                   <span className="text-2xl sm:text-3xl font-bold text-[#00D4AA]">{profile?.tickets_balance || 0}</span>
+                </div>
+                {/* Lock overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden z-20">
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(15deg)' }} />
+                  <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.55)', transform:'rotate(-15deg)' }} />
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-8 h-8 rounded-full bg-background/80 border border-primary flex items-center justify-center backdrop-blur-sm">
+                      <Lock className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-[8px] font-bold text-primary tracking-widest uppercase bg-background/70 px-1.5 py-0.5 rounded-full border border-primary/30">Em breve</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -240,7 +245,7 @@ export default function Referrals() {
               </Button>
             </div>
             {/* Link Section */}
-            <div className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-6 space-y-4">
+            <div className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-6 space-y-4 relative overflow-hidden">
               <h3 className="font-semibold text-foreground">Seu Link Exclusivo</h3>
               <p className="text-sm text-muted-foreground">Copie ou compartilhe o link abaixo com quem você quiser indicar:</p>
               <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -269,6 +274,17 @@ export default function Referrals() {
                   )}
                 </div>
               </div>
+              {/* Lock overlay */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(8deg)' }} />
+                <div className="absolute" style={{ left:'-10%', right:'-10%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(-8deg)' }} />
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-12 h-12 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
+                    <Lock className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-[10px] font-bold text-primary tracking-widest uppercase bg-background/70 px-2 py-0.5 rounded-full backdrop-blur-sm border border-primary/30">Em breve</span>
+                </div>
+              </div>
             </div>
 
             {/* Rewards Section */}
@@ -290,7 +306,7 @@ export default function Referrals() {
                     const isReady = (profile?.referrals_balance || 0) >= reward.cost_in_coupons;
 
                     return (
-                      <div key={reward.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-xl hover:border-primary/30 transition-colors gap-4">
+                      <div key={reward.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-xl hover:border-primary/30 transition-colors gap-4 relative overflow-hidden">
                         <div className="flex-1 w-full space-y-3">
                           <div>
                             <p className="font-bold text-lg text-foreground leading-none mb-1">{reward.name}</p>
@@ -322,6 +338,17 @@ export default function Referrals() {
                         >
                           Resgatar Prêmio
                         </Button>
+                        {/* Lock overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                          <div className="absolute" style={{ left:'-5%', right:'-5%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(6deg)' }} />
+                          <div className="absolute" style={{ left:'-5%', right:'-5%', top:'50%', height:'0', borderTop:'2px dashed rgba(212,175,55,0.5)', transform:'rotate(-6deg)' }} />
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className="w-10 h-10 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
+                              <Lock className="w-5 h-5 text-primary" />
+                            </div>
+                            <span className="text-[9px] font-bold text-primary tracking-widest uppercase bg-background/70 px-2 py-0.5 rounded-full backdrop-blur-sm border border-primary/30">Em breve</span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
