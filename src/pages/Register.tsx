@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, User, Phone } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
@@ -8,11 +8,13 @@ import GhostInput from "@/components/GhostInput";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import logoImage from "@/assets/logo-barbershop.png";
 
 const Register = () => {
   const navigate = useNavigate();
-  const { signUp, user, loading: authLoading } = useAuth();
+  const location = useLocation();
+  const { signUp, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,6 +68,41 @@ const Register = () => {
       }
       return;
     }
+
+    // Process referral if ?ref= exists
+    const searchParams = new URLSearchParams(location.search);
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          
+          let actualReferralCode = refCode;
+          // Try to find the user by exact referral_code match
+          const { data: exactMatch } = await supabase.from('profiles').select('referral_code').eq('referral_code', refCode).maybeSingle();
+          
+          if (!exactMatch) {
+            // It might be a first name, let's search by first name (e.g. "Lucas %")
+            const { data: nameMatch } = await supabase.from('profiles').select('referral_code').ilike('full_name', `${refCode} %`).limit(1).maybeSingle();
+            if (nameMatch) {
+              actualReferralCode = nameMatch.referral_code;
+            } else {
+              // Try exact full name match just in case
+              const { data: exactNameMatch } = await supabase.from('profiles').select('referral_code').ilike('full_name', refCode).limit(1).maybeSingle();
+              if (exactNameMatch) actualReferralCode = exactNameMatch.referral_code;
+            }
+          }
+
+          await supabase.rpc('process_referral', { 
+            p_referrer_code: actualReferralCode, 
+            p_referred_id: session.user.id 
+          });
+        }
+      } catch (err) {
+        console.error("Error processing referral:", err);
+      }
+    }
+
     toast.success("Conta criada com sucesso!", { description: "Faça login para continuar." });
     navigate("/login");
   };

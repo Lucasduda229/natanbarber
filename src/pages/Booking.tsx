@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store } from "lucide-react";
+import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store, Gift } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -28,6 +28,7 @@ import pixIcon from "@/assets/pix-icon-new.png";
 import cardIcon from "@/assets/card-icon.png";
 import cashIcon from "@/assets/cash-icon.png";
 import whatsappIcon from "@/assets/whatsapp-icon.svg";
+import nIconImage from "@/assets/n-icone.png";
 import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from "@/hooks/useExtraFee";
 
 // Step progress indicator component
@@ -1298,6 +1299,15 @@ const Booking = () => {
         </div>
 
         <nav className="flex items-center gap-1 sm:gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/indique')}
+            className="text-primary hover:bg-primary/10 rounded-full shrink-0 animate-pulse-slow"
+            title="Indique e Ganhe"
+          >
+            <Gift className="w-5 h-5" />
+          </Button>
           <NotificationsDropdown />
           {isAdmin && (
             <Button 
@@ -1356,14 +1366,38 @@ const Booking = () => {
         {step === 1 && (
           <div className="step-content space-y-6 sm:space-y-8">
             {/* CTA Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-center w-full px-4 sm:px-0">
               <Button 
                 onClick={() => document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-gold-glow touch-target"
+                className="bg-gold-gradient hover:opacity-90 text-background font-semibold px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-gold-glow touch-target w-full sm:w-auto"
               >
                 <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                 Agendar Horário
               </Button>
+            </div>
+
+            {/* Referral Card */}
+            <div className="bg-card/60 backdrop-blur-xl rounded-xl border-l-4 border-l-primary border-y border-r border-primary/10 overflow-hidden shadow-md mx-4 sm:mx-0 relative">
+              <div className="absolute top-0 right-0 bottom-0 w-1/2 opacity-50 sm:opacity-40 pointer-events-none z-0">
+                <img src={natanHeroImage} alt="Natan" className="w-full h-full object-contain object-right-bottom" />
+              </div>
+              <div className="p-4 relative z-10">
+                <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-primary" />
+                  Indique e Ganhe
+                </h3>
+                <div className="text-muted-foreground text-sm space-y-0.5 mb-4 max-w-[70%] sm:max-w-[80%] drop-shadow-md">
+                  <p className="font-medium text-foreground">Compartilhe seu link com amigos.</p>
+                  <p className="text-xs">A cada amigo cadastrado, você ganha saldo e tickets para trocar por prêmios e produtos!</p>
+                </div>
+                <Button 
+                  onClick={() => navigate('/indique')}
+                  className="w-fit px-4 sm:px-6 text-xs sm:text-sm bg-primary/90 hover:bg-primary text-background font-medium h-9 sm:h-11 rounded-full active:scale-[0.98] transition-transform animate-pulse-slow shadow-gold-glow relative z-20"
+                >
+                  <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  Painel de Indicações
+                </Button>
+              </div>
             </div>
 
 
@@ -1493,13 +1527,13 @@ const Booking = () => {
                               ? "bg-green-500/10 mt-4" 
                               : "bg-primary/10"
                         }`}>
-                          <Scissors className={`w-4 h-4 ${
-                            isServiceLimitReached 
-                              ? "text-muted-foreground" 
-                              : usingSubscription 
-                                ? "text-green-500" 
-                                : "text-primary"
-                          }`} />
+                          <img 
+                            src={nIconImage} 
+                            alt="Icon" 
+                            className={`w-5 h-5 object-contain ${
+                              isServiceLimitReached ? "opacity-50 grayscale" : ""
+                            }`} 
+                          />
                         </div>
                         
                         {/* Service Info */}

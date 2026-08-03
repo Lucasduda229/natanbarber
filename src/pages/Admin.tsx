@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -40,7 +40,7 @@ import { useWebPush } from "@/hooks/useWebPush";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SubscribersHistory } from "@/components/SubscribersHistory";
-
+import ReferralsTab from "@/components/admin/ReferralsTab";
 
 interface AppointmentService {
   name: string;
@@ -1587,6 +1587,10 @@ const Admin = () => {
                 <Trophy className="w-4 h-4" />
                 <span>Premiações</span>
               </TabsTrigger>
+              <TabsTrigger value="referrals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Indicações">
+                <Gift className="w-4 h-4" />
+                <span>Indicações</span>
+              </TabsTrigger>
               <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Serviços">
                 <Settings className="w-4 h-4" />
                 <span>Serviços</span>
@@ -2433,6 +2437,11 @@ const Admin = () => {
           {/* Rewards Tab */}
           <TabsContent value="loyalty">
             <RewardsManager />
+          </TabsContent>
+
+          {/* Referrals Tab */}
+          <TabsContent value="referrals" className="space-y-6">
+            <ReferralsTab />
           </TabsContent>
 
           {/* Subscriptions Tab */}

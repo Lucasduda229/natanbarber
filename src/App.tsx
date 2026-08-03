@@ -21,6 +21,7 @@ import Profile from "./pages/Profile";
 import WhatsAppConnection from "./pages/WhatsAppConnection";
 import NotFound from "./pages/NotFound";
 import AuthRecoveryRedirect from "./components/AuthRecoveryRedirect";
+import Referrals from "./pages/Referrals";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/simplificado" element={<Pedido />} />
             <Route path="/pedido" element={<Pedido />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/indique" element={<Referrals />} />
             <Route path="/admin/whatsapp-connection" element={<WhatsAppConnection />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
