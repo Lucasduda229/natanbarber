@@ -1403,31 +1403,21 @@ const Booking = () => {
               <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none overflow-hidden">
                 {/* Chain: top-left to bottom-right */}
                 <div className="absolute" style={{
-                  left: '-20%',
-                  right: '-20%',
-                  top: 'calc(50% - 15px)',
-                  height: '30px',
-                  backgroundImage: 'url(https://img.icons8.com/quill/100/chain.png)',
-                  backgroundRepeat: 'repeat-x',
-                  backgroundSize: '42px 30px',
-                  backgroundPosition: 'center',
+                  left: '-10%',
+                  right: '-10%',
+                  top: '50%',
+                  height: '0',
+                  borderTop: '3px dashed rgba(212,175,55,0.65)',
                   transform: 'rotate(13deg)',
-                  opacity: 0.8,
-                  filter: 'invert(73%) sepia(61%) saturate(562%) hue-rotate(5deg) brightness(95%)',
                 }} />
                 {/* Chain: top-right to bottom-left */}
                 <div className="absolute" style={{
-                  left: '-20%',
-                  right: '-20%',
-                  top: 'calc(50% - 15px)',
-                  height: '30px',
-                  backgroundImage: 'url(https://img.icons8.com/quill/100/chain.png)',
-                  backgroundRepeat: 'repeat-x',
-                  backgroundSize: '42px 30px',
-                  backgroundPosition: 'center',
+                  left: '-10%',
+                  right: '-10%',
+                  top: '50%',
+                  height: '0',
+                  borderTop: '3px dashed rgba(212,175,55,0.65)',
                   transform: 'rotate(-13deg)',
-                  opacity: 0.8,
-                  filter: 'invert(73%) sepia(61%) saturate(562%) hue-rotate(5deg) brightness(95%)',
                 }} />
                 {/* Lock circle center */}
                 <div className="flex flex-col items-center gap-1.5 drop-shadow-lg">
