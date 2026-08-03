@@ -1387,7 +1387,7 @@ const Booking = () => {
                   Indique e Ganhe
                 </h3>
                 <div className="text-muted-foreground text-sm space-y-0.5 mb-4 max-w-[70%] sm:max-w-[80%] drop-shadow-md">
-                  <p className="font-medium text-foreground">Compartilhe seu link com amigos.</p>
+                  <p className="font-medium text-foreground">convide 5 amigos e ganhe um corte gratis</p>
                   <p className="text-xs">A cada amigo cadastrado, você ganha saldo e tickets para trocar por prêmios e produtos!</p>
                 </div>
                 <Button 
