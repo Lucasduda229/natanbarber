@@ -19,7 +19,7 @@ export function Footer() {
         <div className="flex flex-col gap-4 max-w-sm">
           <div className="flex items-center gap-2">
             <span className="text-white text-xl font-serif tracking-widest uppercase">
-              Natan Barbershop
+              Natan Barber
             </span>
           </div>
           <p className="text-sm leading-relaxed">
@@ -64,7 +64,7 @@ export function Footer() {
           </h3>
           <div className="flex items-center gap-2 text-sm hover:text-white transition-colors cursor-pointer">
             <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5" />
-            <span>(48) 9952-0220</span>
+            <span>(48) 9182-4897</span>
           </div>
           <div className="flex items-center mt-2">
             <a 
@@ -94,7 +94,7 @@ export function Footer() {
 
       {/* Bottom Separator & Copyright */}
       <div className="max-w-6xl mx-auto border-t border-white/10 pt-6 text-center text-xs text-[#71717a]">
-        © 2026 Barbearia Natan Barbershop. Todos os direitos reservados.
+        © 2026 Barbearia Natan Barber. Todos os direitos reservados.
       </div>
     </footer>
   );

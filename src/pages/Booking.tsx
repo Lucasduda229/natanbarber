@@ -1292,7 +1292,7 @@ const Booking = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <img 
             src={logoImage} 
-            alt="Natan Barbershop" 
+            alt="Natan Barber" 
             className="w-9 h-9 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
           />
           <OpenClosedBadge />

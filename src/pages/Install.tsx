@@ -25,7 +25,7 @@ const Install = () => {
           <Link to="/">
             <img
               src={logo}
-              alt="Natan Barbershop Logo"
+              alt="Natan Barber Logo"
               className="w-24 h-24 object-contain mb-4"
             />
           </Link>
@@ -46,7 +46,7 @@ const Install = () => {
                 </div>
                 <CardTitle className="text-green-500">App Instalado!</CardTitle>
                 <CardDescription>
-                  O Natan Barbershop já está instalado no seu dispositivo.
+                  O Natan Barber já está instalado no seu dispositivo.
                 </CardDescription>
               </CardHeader>
               <CardContent>

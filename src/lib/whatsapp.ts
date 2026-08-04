@@ -25,7 +25,7 @@ Seu agendamento foi *CONFIRMADO*! ✅
 
 Até lá! 💈
 
-_Natan BarberShop_`;
+_Natan Barber_`;
 };
 
 export const getCancellationMessage = (
@@ -46,5 +46,5 @@ Se desejar, você pode reagendar pelo nosso site ou entrar em contato.
 
 Desculpe pelo inconveniente! 🙏
 
-_Natan BarberShop_`;
+_Natan Barber_`;
 };

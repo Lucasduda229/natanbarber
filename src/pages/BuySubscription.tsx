@@ -421,7 +421,7 @@ const BuySubscription = () => {
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Natan Barbershop" className="w-10 h-10 rounded-full object-cover border-2 border-primary/30" />
+          <img src={logoImage} alt="Natan Barber" className="w-10 h-10 rounded-full object-cover border-2 border-primary/30" />
           <span className="font-bold text-foreground">Assinar Pacote</span>
         </div>
         <div className="w-10" />

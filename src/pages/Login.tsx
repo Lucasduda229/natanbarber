@@ -81,8 +81,8 @@ const Login = () => {
       <AnimatedBackground />
       <header className="auth-header relative z-10 flex items-center justify-between px-3 sm:px-6 py-4 sm:py-6 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
-          <img src={logoImage} alt="Natan Barbershop" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
-          <span className="text-base sm:text-xl font-bold text-foreground group-hover:text-primary transition-colors hidden sm:block">Natan Barbershop</span>
+          <img src={logoImage} alt="Natan Barber" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
+          <span className="text-base sm:text-xl font-bold text-foreground group-hover:text-primary transition-colors hidden sm:block">Natan Barber</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
           <OpenClosedBadge />

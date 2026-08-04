@@ -25,7 +25,7 @@ const Index = () => {
           <div className="flex justify-center mb-4 sm:mb-6">
             <img 
               src={logoImage} 
-              alt="Natan Barbershop Logo" 
+              alt="Natan Barber Logo" 
               className="w-24 h-24 xs:w-28 xs:h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-primary/30 shadow-gold-glow-strong animate-float" 
             />
           </div>
@@ -45,7 +45,7 @@ const Index = () => {
           </div>
           
           <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-bold text-foreground animate-fade-in leading-tight">
-            Natan Barbershop
+            Natan Barber
           </h1>
           
           <p className="text-base xs:text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto animate-fade-in px-2">

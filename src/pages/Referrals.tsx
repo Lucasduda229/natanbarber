@@ -82,8 +82,8 @@ export default function Referrals() {
     if (!referralLink) return;
     try {
       await navigator.share({
-        title: "Natan Barbershop",
-        text: `${firstName} convidou você para a Natan Barbershop! Cadastre-se e agende seu horário:`,
+        title: "Natan Barber",
+        text: `${firstName} convidou você para a Natan Barber! Cadastre-se e agende seu horário:`,
         url: referralLink,
       });
     } catch (error) {

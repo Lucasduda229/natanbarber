@@ -1280,7 +1280,7 @@ const Admin = () => {
         </Button>
         <div className="flex items-center gap-2 sm:gap-3">
           <NotificationsDropdown />
-          <img src={logoImage} alt="Natan Barbershop" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-primary/30" />
+          <img src={logoImage} alt="Natan Barber" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-primary/30" />
           <Badge className="bg-primary/20 text-primary border-primary/30 text-xs sm:text-sm">Admin</Badge>
         </div>
       </header>

@@ -351,7 +351,7 @@ const Pedido = () => {
         <div className="flex items-center gap-3">
           <img 
             src={logoImage} 
-            alt="Natan Barbershop" 
+            alt="Natan Barber" 
             className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow" 
           />
           <div>

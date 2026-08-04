@@ -127,8 +127,8 @@ const ResetPassword = () => {
       
       <header className="auth-header relative z-10 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-3 group">
-          <img src={logoImage} alt="Natan Barbershop" className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
-          <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">Natan Barbershop</span>
+          <img src={logoImage} alt="Natan Barber" className="w-12 h-12 rounded-full object-cover border-2 border-primary/30 shadow-gold-glow transition-all group-hover:scale-110" />
+          <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">Natan Barber</span>
         </Link>
       </header>
 
