@@ -1685,10 +1685,17 @@ const Booking = () => {
                             </span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <p className="text-base font-bold text-primary">
-                              R$ {service.price.toFixed(2)}
-                            </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {activeReward && activeReward.isFreeService && getServicePrice(service) === 0 ? (
+                              <>
+                                <p className="text-xs text-muted-foreground line-through">R$ {service.price.toFixed(2)}</p>
+                                <p className="text-base font-bold text-green-500">Grátis</p>
+                              </>
+                            ) : (
+                              <p className="text-base font-bold text-primary">
+                                R$ {service.price.toFixed(2)}
+                              </p>
+                            )}
                             <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                               <Clock className="w-2.5 h-2.5" />
                               {service.duration_minutes}min
