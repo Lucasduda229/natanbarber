@@ -38,7 +38,7 @@ export default function ReferralRedemptionsManager() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: "completed" | "rejected" | "pending") => {
+  const updateStatus = async (id: string, newStatus: "fulfilled" | "cancelled" | "pending") => {
     try {
       const { error } = await supabase
         .from("referral_redemptions")
@@ -57,8 +57,8 @@ export default function ReferralRedemptionsManager() {
       );
 
       const messages: Record<string, string> = {
-        completed: "Resgate aprovado! ✅",
-        rejected: "Resgate recusado. ❌",
+        fulfilled: "Resgate aprovado! ✅",
+        cancelled: "Resgate recusado. ❌",
         pending: "Resgate marcado como pendente. ⏳",
       };
       toast.success(messages[newStatus]);
@@ -69,14 +69,14 @@ export default function ReferralRedemptionsManager() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
+      case "fulfilled":
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-xs font-semibold">
             <CheckCircle className="w-3.5 h-3.5" />
             Aprovado
           </div>
         );
-      case "rejected":
+      case "cancelled":
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-xs font-semibold">
             <XCircle className="w-3.5 h-3.5" />
@@ -153,24 +153,24 @@ export default function ReferralRedemptionsManager() {
                 <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
                   {getStatusBadge(r.status)}
 
-                  {r.status !== "completed" && (
+                  {r.status !== "fulfilled" && (
                     <Button
                       size="sm"
                       variant="outline"
                       className="border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500 text-xs"
-                      onClick={() => updateStatus(r.id, "completed")}
+                      onClick={() => updateStatus(r.id, "fulfilled")}
                     >
                       <CheckCircle className="w-3.5 h-3.5 mr-1" />
                       Aprovar
                     </Button>
                   )}
 
-                  {r.status !== "rejected" && (
+                  {r.status !== "cancelled" && (
                     <Button
                       size="sm"
                       variant="outline"
                       className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 text-xs"
-                      onClick={() => updateStatus(r.id, "rejected")}
+                      onClick={() => updateStatus(r.id, "cancelled")}
                     >
                       <XCircle className="w-3.5 h-3.5 mr-1" />
                       Recusar

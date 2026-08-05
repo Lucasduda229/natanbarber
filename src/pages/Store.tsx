@@ -24,11 +24,14 @@ export default function Store() {
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [ticketsBalance, setTicketsBalance] = useState(0);
   const [activeTab, setActiveTab] = useState("Vales");
+  const [myRedemptions, setMyRedemptions] = useState<any[]>([]);
+  const [loadingRedemptions, setLoadingRedemptions] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
       fetchProducts();
       fetchProfile();
+      fetchMyRedemptions();
     } else if (user === null) {
       navigate("/login");
     }
@@ -48,6 +51,30 @@ export default function Store() {
       }
     } catch (error) {
       console.error("Error fetching profile tickets:", error);
+    }
+  };
+
+  const fetchMyRedemptions = async () => {
+    if (!user) return;
+    setLoadingRedemptions(true);
+    try {
+      const { data, error } = await supabase
+        .from("store_redemptions")
+        .select(`
+          id,
+          status,
+          created_at,
+          store_products (name, image_url)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setMyRedemptions(data || []);
+    } catch (error: any) {
+      console.error("Error fetching store redemptions:", error);
+    } finally {
+      setLoadingRedemptions(false);
     }
   };
 
@@ -95,6 +122,7 @@ export default function Store() {
       });
       
       fetchProfile();
+      fetchMyRedemptions();
     } catch (error: any) {
       console.error("Redeem error:", error);
       toast.error("Erro ao resgatar", { description: error.message });
@@ -206,6 +234,56 @@ export default function Store() {
             </Tabs>
           )}
         </div>
+
+        {/* Section: Prêmios Resgatados */}
+        {myRedemptions.length > 0 && (
+          <div className="mt-12 mb-8 animate-fade-in-up">
+            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+              <Gift className="w-5 h-5 text-[#00D4AA]" />
+              Meus Resgates
+            </h2>
+            <div className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-4 sm:p-6 shadow-xl">
+              {loadingRedemptions ? (
+                <div className="flex justify-center py-8">
+                  <span className="w-6 h-6 border-2 border-[#00D4AA] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myRedemptions.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-border/40">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#00D4AA]/10 flex items-center justify-center shrink-0">
+                          {r.store_products?.image_url ? (
+                            <img src={r.store_products.image_url} alt={r.store_products.name} className="w-6 h-6 object-contain" />
+                          ) : (
+                            <Gift className="w-5 h-5 text-[#00D4AA]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm sm:text-base">
+                            {r.store_products?.name || "Produto da Loja"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(r.created_at).toLocaleDateString("pt-BR")} às {new Date(r.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                        r.status === 'fulfilled'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : r.status === 'cancelled'
+                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {r.status === 'fulfilled' ? '✅ Retirado' : r.status === 'cancelled' ? '❌ Cancelado' : '⏳ Disponível'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

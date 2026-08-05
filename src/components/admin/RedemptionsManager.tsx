@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckCircle, Clock, ShoppingBag, Search, ExternalLink } from "lucide-react";
@@ -74,6 +74,24 @@ export function RedemptionsManager() {
     } catch (error: any) {
       console.error("Error fulfilling redemption:", error);
       toast.error("Erro ao atualizar resgate", { description: error.message });
+    }
+  };
+
+  const handleCancelRedemption = async (id: string) => {
+    if (!confirm("Tem certeza que deseja cancelar/recusar este resgate? O produto ou cupom não será entregue.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("store_redemptions")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Resgate cancelado!");
+      fetchRedemptions();
+    } catch (error: any) {
+      console.error("Error cancelling redemption:", error);
+      toast.error("Erro ao cancelar resgate", { description: error.message });
     }
   };
 
@@ -189,14 +207,24 @@ export function RedemptionsManager() {
                     )}
                     
                     {isPending && (
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleMarkFulfilled(redemption.id)}
-                        className="w-full sm:w-auto bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black font-semibold shadow-[0_0_10px_rgba(0,212,170,0.2)]"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1.5" />
-                        Concluir Resgate
-                      </Button>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleMarkFulfilled(redemption.id)}
+                          className="flex-1 bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black font-semibold shadow-[0_0_10px_rgba(0,212,170,0.2)]"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1.5" />
+                          Concluir
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleCancelRedemption(redemption.id)}
+                          className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 flex-1 sm:flex-none"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
