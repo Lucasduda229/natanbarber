@@ -79,12 +79,13 @@ export default function Referrals() {
           // Update referral_history to valid
           for (const referral of pendingReferrals) {
             if (newlyValidatedIds.has(referral.referred_id)) {
-              const { error } = await supabase
+              const { data, error } = await supabase
                 .from("referral_history")
                 .update({ is_valid: true })
-                .eq("id", referral.id);
+                .eq("id", referral.id)
+                .select();
                 
-              if (!error) {
+              if (!error && data && data.length > 0) {
                 newlyValidatedCount++;
               } else {
                 console.error("Failed to update referral history (RLS policy issue?):", error);

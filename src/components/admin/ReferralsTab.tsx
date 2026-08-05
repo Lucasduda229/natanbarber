@@ -92,9 +92,9 @@ export default function ReferralsTab() {
             for (const referral of pendingReferrals) {
               if (newlyValidatedIds.has(referral.referred_id)) {
                 // Set valid in DB
-                const { error } = await supabase.from("referral_history").update({ is_valid: true }).eq("id", referral.id);
+                const { data, error } = await supabase.from("referral_history").update({ is_valid: true }).eq("id", referral.id).select();
                 
-                if (!error) {
+                if (!error && data && data.length > 0) {
                   autoValidatedCount++;
                   
                   // Add tickets to referrer
@@ -235,12 +235,14 @@ export default function ReferralsTab() {
         }
       }
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("referral_history")
         .delete()
-        .eq("id", referral.id);
+        .eq("id", referral.id)
+        .select();
         
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("A indicação não pôde ser excluída. Verifique as permissões do banco de dados (RLS).");
       
       toast.success("Indicação excluída!");
       fetchData();
