@@ -34,7 +34,7 @@ export default function Referrals() {
     try {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("referral_code, referrals_balance, total_referrals, tickets_balance, full_name")
+        .select("referral_code, referrals_balance, total_referrals, tickets_balance, full_name, phone")
         .eq("user_id", user?.id)
         .single();
       
@@ -169,8 +169,10 @@ export default function Referrals() {
   const firstName = profile?.full_name
     ? profile.full_name.split(' ')[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
     : (profile?.referral_code || "");
+  const last4Phone = profile?.phone ? profile.phone.replace(/\D/g, '').slice(-4) : "";
+  const refCodeUrl = last4Phone ? `${firstName}-${last4Phone}` : firstName;
   const referralLink = profile?.referral_code 
-    ? `${window.location.origin}/register?ref=${firstName}`
+    ? `${window.location.origin}/register?ref=${refCodeUrl}`
     : "";
 
   const handleCopyLink = () => {

@@ -84,13 +84,22 @@ const Register = () => {
             // Try to find the user by exact referral_code match
           const { data: exactMatch } = await supabase.from('profiles').select('referral_code').eq('referral_code', refCode).maybeSingle();
           
-          if (!exactMatch) {
-            // It might be a first name - search by first name (with or without surname)
-            const { data: nameMatch } = await supabase
-              .from('profiles')
-              .select('referral_code')
-              .or(`full_name.ilike.${refCode} %,full_name.ilike.${refCode}`)
-              .limit(1).maybeSingle();
+          if (!exactMatch && refCode) {
+            let query = supabase.from('profiles').select('referral_code');
+            
+            if (refCode.includes('-')) {
+              const parts = refCode.split('-');
+              const last4Phone = parts.pop();
+              const firstName = parts.join('-'); // in case name had hyphen
+              query = query
+                .or(`full_name.ilike.${firstName} %,full_name.ilike.${firstName}`)
+                .like('phone', `%${last4Phone}`);
+            } else {
+              // It might be a first name - search by first name (with or without surname)
+              query = query.or(`full_name.ilike.${refCode} %,full_name.ilike.${refCode}`);
+            }
+            
+            const { data: nameMatch } = await query.limit(1).maybeSingle();
             if (nameMatch) {
               actualReferralCode = nameMatch.referral_code;
             }
