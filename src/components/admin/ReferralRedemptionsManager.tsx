@@ -38,21 +38,26 @@ export default function ReferralRedemptionsManager() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: "approved" | "rejected" | "pending") => {
+  const updateStatus = async (id: string, newStatus: "completed" | "rejected" | "pending") => {
     try {
       const { error } = await supabase
         .from("referral_redemptions")
         .update({ status: newStatus })
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        // If constraint fails, try alternative status values
+        console.error('Status update error:', error);
+        toast.error("Erro ao atualizar status", { description: `Valor '${newStatus}' não aceito. Verifique o banco de dados.` });
+        return;
+      }
 
       setRedemptions(prev =>
         prev.map(r => r.id === id ? { ...r, status: newStatus } : r)
       );
 
       const messages: Record<string, string> = {
-        approved: "Resgate aprovado! ✅",
+        completed: "Resgate aprovado! ✅",
         rejected: "Resgate recusado. ❌",
         pending: "Resgate marcado como pendente. ⏳",
       };
@@ -64,7 +69,7 @@ export default function ReferralRedemptionsManager() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "approved":
+      case "completed":
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-xs font-semibold">
             <CheckCircle className="w-3.5 h-3.5" />
@@ -148,12 +153,12 @@ export default function ReferralRedemptionsManager() {
                 <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
                   {getStatusBadge(r.status)}
 
-                  {r.status !== "approved" && (
+                  {r.status !== "completed" && (
                     <Button
                       size="sm"
                       variant="outline"
                       className="border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500 text-xs"
-                      onClick={() => updateStatus(r.id, "approved")}
+                      onClick={() => updateStatus(r.id, "completed")}
                     >
                       <CheckCircle className="w-3.5 h-3.5 mr-1" />
                       Aprovar

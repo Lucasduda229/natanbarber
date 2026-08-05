@@ -430,13 +430,13 @@ export default function Referrals() {
                         </div>
                       </div>
                       <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                        r.status === 'approved'
+                        r.status === 'completed'
                           ? 'bg-green-500/10 text-green-400 border-green-500/20'
                           : r.status === 'rejected'
                           ? 'bg-red-500/10 text-red-400 border-red-500/20'
                           : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                       }`}>
-                        {r.status === 'approved' ? '✅ Aprovado' : r.status === 'rejected' ? '❌ Recusado' : '⏳ Pendente'}
+                        {r.status === 'completed' ? '✅ Aprovado' : r.status === 'rejected' ? '❌ Recusado' : '⏳ Pendente'}
                       </div>
                     </div>
                   ))}
