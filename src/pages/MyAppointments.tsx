@@ -38,6 +38,8 @@ interface Appointment {
   } | null;
   extra_services?: { name: string; price: number }[];
   total_price?: number;
+  original_price?: number;
+  coupon_discount?: number;
   combined_name?: string;
   hasReview?: boolean;
 }
@@ -131,11 +133,21 @@ const MyAppointments = () => {
         const mainPrice = apt.services?.price || 0;
         const extrasPrice = extras.reduce((sum, s) => sum + (s.price || 0), 0);
         const allNames = [apt.services?.name, ...extras.map(e => e.name)].filter(Boolean);
+        
+        // Parse coupon discount from notes if present
+        let couponDiscount = 0;
+        if (apt.notes) {
+          const couponMatch = apt.notes.match(/Cupom:.*?\(-R\$(\d+(?:\.\d+)?)\)/);
+          if (couponMatch) couponDiscount = parseFloat(couponMatch[1]);
+        }
+        const rawTotal = mainPrice + extrasPrice;
 
         return {
           ...apt,
           extra_services: extras,
-          total_price: mainPrice + extrasPrice,
+          total_price: Math.max(0, rawTotal - couponDiscount),
+          original_price: rawTotal,
+          coupon_discount: couponDiscount,
           combined_name: allNames.join(" + "),
         } as Appointment;
       });
@@ -259,17 +271,31 @@ const MyAppointments = () => {
                                   <Clock className="w-4 h-4" />
                                   {appointment.appointment_time.slice(0, 5)}
                                 </span>
-                                <span className="text-lg font-bold text-primary">
-                                  R$ {(appointment.total_price ?? appointment.services?.price ?? 0).toFixed(2)}
-                                </span>
+                                {appointment.coupon_discount && appointment.coupon_discount > 0 ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="text-sm text-muted-foreground line-through">R$ {(appointment.original_price ?? 0).toFixed(2)}</span>
+                                    <span className="text-lg font-bold text-green-500">R$ {(appointment.total_price ?? 0).toFixed(2)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-lg font-bold text-primary">
+                                    R$ {(appointment.total_price ?? appointment.services?.price ?? 0).toFixed(2)}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-wrap items-center gap-2 mt-2">
                                 <Badge variant="outline" className={statusColors[appointment.status]}>
                                   {statusLabels[appointment.status]}
                                 </Badge>
-                                <Badge variant="outline" className="bg-muted/50 text-xs">
-                                  {paymentLabels[appointment.payment_status]} ({paymentMethodLabels[appointment.payment_method || 'pix'] || appointment.payment_method || 'PIX'})
-                                </Badge>
+                                {appointment.coupon_discount && appointment.coupon_discount > 0 ? (
+                                  <Badge variant="outline" className="text-xs text-green-500 bg-green-500/10 border-green-500/30 flex items-center gap-1">
+                                    <Tag className="w-3 h-3" />
+                                    Cupom aplicado (-R$ {appointment.coupon_discount.toFixed(2)})
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-muted/50 text-xs">
+                                    {paymentLabels[appointment.payment_status]} ({paymentMethodLabels[appointment.payment_method || 'pix'] || appointment.payment_method || 'PIX'})
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>

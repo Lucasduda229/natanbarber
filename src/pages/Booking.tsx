@@ -242,12 +242,15 @@ const Booking = () => {
           
         if (data && (data.status === 'completed' || data.status === 'approved')) { // Fallback to 'completed' for existing records
           const name = data.referral_rewards?.name || '';
+          const isPercent = name.includes('%');
+          const discountValue = parseInt(name.replace(/\D/g, '')) || 10;
           setActiveReward({
             id: data.id,
             type: 'referral',
             name: name,
             isFreeService: normalizeString(name).includes('gratis'),
-            discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+            discountPercentage: (normalizeString(name).includes('desconto') && isPercent) ? discountValue : undefined,
+            discountAmount: (normalizeString(name).includes('desconto') && !isPercent) ? discountValue : undefined,
           });
           if (!sessionStorage.getItem(sessionKey)) {
             toast.success(`Prêmio ativado: ${name}`, {
@@ -267,12 +270,15 @@ const Booking = () => {
           
         if (data && data.status === 'pending') {
           const name = data.store_products?.name || '';
+          const isPercent = name.includes('%');
+          const discountValue = parseInt(name.replace(/\D/g, '')) || 10;
           setActiveReward({
             id: data.id,
             type: 'store',
             name: name,
             isFreeService: normalizeString(name).includes('gratis'),
-            discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+            discountPercentage: (normalizeString(name).includes('desconto') && isPercent) ? discountValue : undefined,
+            discountAmount: (normalizeString(name).includes('desconto') && !isPercent) ? discountValue : undefined,
           });
           if (!sessionStorage.getItem(sessionKey)) {
             toast.success(`Vale ativado: ${name}`, {
@@ -835,10 +841,20 @@ const Booking = () => {
   const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + getServicePrice(s), 0);
   let computedTotal = basePrice + thursdaySurcharge + extraFeeAmount;
   
+  // Apply percentage discount
+  if (activeReward?.discountPercentage) {
+    const discountAmt = computedTotal * (activeReward.discountPercentage / 100);
+    computedTotal = Math.max(0, computedTotal - discountAmt);
+  }
+  // Apply fixed amount discount
   if (activeReward?.discountAmount) {
     computedTotal = Math.max(0, computedTotal - activeReward.discountAmount);
   }
   const totalPrice = computedTotal;
+  // Compute the actual discount amount for display/notes
+  const actualDiscountAmount = activeReward?.discountPercentage
+    ? Math.round((basePrice + thursdaySurcharge + extraFeeAmount) * (activeReward.discountPercentage / 100) * 100) / 100
+    : (activeReward?.discountAmount || 0);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -1028,8 +1044,8 @@ const Booking = () => {
           if (activeReward) {
             if (activeReward.isFreeService) {
               parts.push(`🎁 Prêmio: ${activeReward.name}`);
-            } else if (activeReward.discountAmount && activeReward.discountAmount > 0) {
-              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${activeReward.discountAmount.toFixed(2)})`);
+            } else if (actualDiscountAmount > 0) {
+              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`);
             }
           }
           if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
@@ -1290,8 +1306,8 @@ const Booking = () => {
           if (activeReward) {
             if (activeReward.isFreeService) {
               parts.push(`🎁 Prêmio: ${activeReward.name}`);
-            } else if (activeReward.discountAmount && activeReward.discountAmount > 0) {
-              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${activeReward.discountAmount.toFixed(2)})`);
+            } else if (actualDiscountAmount > 0) {
+              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`); 
             }
           }
           if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
@@ -2175,10 +2191,10 @@ const Booking = () => {
                       <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                  {activeReward && actualDiscountAmount > 0 && (
                     <div className="flex items-center justify-between text-sm text-green-500">
                       <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
-                      <span>- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                      <span>- R$ {actualDiscountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
@@ -2291,10 +2307,10 @@ const Booking = () => {
                   <Clock className="w-4 h-4 ml-2" />
                   <span>{selectedTime?.slice(0, 5)}</span>
                 </div>
-                {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                {activeReward && actualDiscountAmount > 0 && (
                   <div className="flex items-center justify-between text-sm text-green-500">
                     <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
-                    <span>- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                    <span>- R$ {actualDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-2">
@@ -2416,10 +2432,10 @@ const Booking = () => {
                   <span className="text-muted-foreground">Horário</span>
                   <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
                 </div>
-                {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                {activeReward && actualDiscountAmount > 0 && (
                   <div className="flex items-center justify-between text-green-500">
                     <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
-                    <span className="font-semibold">- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                    <span className="font-semibold">- R$ {actualDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-3 border-t border-border">
