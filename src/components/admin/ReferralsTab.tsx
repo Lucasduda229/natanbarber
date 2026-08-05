@@ -207,6 +207,43 @@ export default function ReferralsTab() {
     return acc;
   }, {} as Record<string, { referrer: any, items: any[] }>);
 
+  const deleteReferral = async (referral: any) => {
+    if (!confirm(`Tem certeza que deseja excluir a indicação de "${referral.referred?.full_name || 'Amigo'}"?`)) return;
+    
+    try {
+      // If it was valid, deduct points
+      if (referral.is_valid) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tickets_balance, total_referrals")
+          .eq("user_id", referral.referrer_id)
+          .maybeSingle();
+          
+        if (profile) {
+          const newTickets = Math.max(0, (profile.tickets_balance || 0) - 2);
+          const newTotal = Math.max(0, (profile.total_referrals || 0) - 1);
+          
+          await supabase.from("profiles").update({
+            tickets_balance: newTickets,
+            total_referrals: newTotal
+          }).eq("user_id", referral.referrer_id);
+        }
+      }
+      
+      const { error } = await supabase
+        .from("referral_history")
+        .delete()
+        .eq("id", referral.id);
+        
+      if (error) throw error;
+      
+      toast.success("Indicação excluída!");
+      fetchData();
+    } catch (error: any) {
+      toast.error("Erro ao excluir indicação", { description: error.message });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -413,15 +450,29 @@ export default function ReferralsTab() {
                                 </span>
                               </div>
                             </div>
-                            {item.is_valid ? (
-                              <div className="bg-green-500/20 text-green-500 p-1.5 rounded-full" title="Válida (Ganhou pontos)">
-                                <CheckCircle className="w-4 h-4" />
-                              </div>
-                            ) : (
-                              <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 text-[10px]" title="Aguardando primeiro pagamento">
-                                Pendente
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {item.is_valid ? (
+                                <div className="bg-green-500/20 text-green-500 p-1.5 rounded-full" title="Válida (Ganhou pontos)">
+                                  <CheckCircle className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 text-[10px]" title="Aguardando primeiro pagamento">
+                                  Pendente
+                                </Badge>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 -mr-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteReferral(item);
+                                }}
+                                title="Excluir indicação"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
