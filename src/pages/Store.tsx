@@ -58,19 +58,37 @@ export default function Store() {
     if (!user) return;
     setLoadingRedemptions(true);
     try {
-      const { data, error } = await supabase
-        .from("store_redemptions")
-        .select(`
-          id,
-          status,
-          created_at,
-          store_products (name, image_url)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      const [productsData, redemptionsData, appointmentsData] = await Promise.all([
+        supabase
+          .from("store_products")
+          .select("*")
+          .eq("active", true)
+          .order("cost_in_tickets", { ascending: true }),
+        supabase
+          .from("store_redemptions")
+          .select("id, status, created_at, store_products(name, image_url)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("appointments")
+          .select("used_store_redemption_id")
+          .eq("user_id", user.id)
+          .neq("status", "cancelled")
+          .neq("status", "no_show")
+      ]);
 
-      if (error) throw error;
-      setMyRedemptions(data || []);
+      if (productsData.data) setProducts(productsData.data);
+      
+      if (redemptionsData.data) {
+        const usedStoreIds = new Set(appointmentsData.data?.map(a => a.used_store_redemption_id).filter(Boolean));
+        
+        const mappedRedemptions = redemptionsData.data.map((r: any) => ({
+          ...r,
+          status: usedStoreIds.has(r.id) ? 'fulfilled' : r.status
+        }));
+        
+        setMyRedemptions(mappedRedemptions);
+      }
     } catch (error: any) {
       console.error("Error fetching store redemptions:", error);
     } finally {

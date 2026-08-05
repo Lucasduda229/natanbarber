@@ -48,6 +48,16 @@ export default function Referrals() {
       
       setRewards(rewardsData || []);
 
+      // Fetch user's appointments to see which redemptions were actually used
+      const { data: userAppointments } = await supabase
+        .from("appointments")
+        .select("used_referral_redemption_id")
+        .eq("user_id", user?.id)
+        .neq("status", "cancelled")
+        .neq("status", "no_show");
+
+      const usedReferralIds = new Set(userAppointments?.map(a => a.used_referral_redemption_id).filter(Boolean));
+
       // Fetch user's redemptions
       const { data: redemptionsData } = await supabase
         .from("referral_redemptions")
@@ -55,7 +65,12 @@ export default function Referrals() {
         .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
       
-      setRedemptions(redemptionsData || []);
+      const mappedRedemptions = (redemptionsData || []).map(r => ({
+        ...r,
+        status: usedReferralIds.has(r.id) ? 'used' : r.status
+      }));
+
+      setRedemptions(mappedRedemptions);
 
       // Fetch history with the referred user's name, ID, and is_valid status
       const { data: historyData, error: historyError } = await supabase
