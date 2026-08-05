@@ -95,6 +95,7 @@ const Register = () => {
               actualReferralCode = nameMatch.referral_code;
             }
           }
+          }
 
           await supabase.rpc('process_referral', { 
             p_referrer_code: actualReferralCode, 

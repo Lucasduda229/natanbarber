@@ -355,7 +355,6 @@ export default function Referrals() {
                     Você ainda não indicou nenhum amigo. Compartilhe seu link!
                   </p>
                 ) : (
-                  history.map((item, index) => (
                   history.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-white/5">
                         <div className="flex items-center gap-3">
