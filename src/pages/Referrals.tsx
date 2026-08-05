@@ -99,19 +99,22 @@ export default function Referrals() {
           if (newlyValidatedCount > 0 && profileData) {
             const newTickets = (profileData.tickets_balance || 0) + (newlyValidatedCount * 2);
             const newTotal = (profileData.total_referrals || 0) + newlyValidatedCount;
+            const newBalance = (profileData.referrals_balance || 0) + newlyValidatedCount;
             
             await supabase
               .from("profiles")
               .update({ 
                 tickets_balance: newTickets,
-                total_referrals: newTotal
+                total_referrals: newTotal,
+                referrals_balance: newBalance
               })
               .eq("user_id", user?.id);
               
             setProfile(prev => prev ? ({
               ...prev,
               tickets_balance: newTickets,
-              total_referrals: newTotal
+              total_referrals: newTotal,
+              referrals_balance: newBalance
             }) : prev);
             
             toast.success("Indicações validadas! 🎉", {

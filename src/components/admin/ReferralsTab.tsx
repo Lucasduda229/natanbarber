@@ -97,12 +97,13 @@ export default function ReferralsTab() {
                 if (!error && data && data.length > 0) {
                   autoValidatedCount++;
                   
-                  // Add tickets to referrer
-                  const { data: profile } = await supabase.from("profiles").select("tickets_balance, total_referrals").eq("user_id", referral.referrer_id).maybeSingle();
+                  // Add tickets and balance to referrer
+                  const { data: profile } = await supabase.from("profiles").select("tickets_balance, total_referrals, referrals_balance").eq("user_id", referral.referrer_id).maybeSingle();
                   if (profile) {
                     await supabase.from("profiles").update({
                       tickets_balance: (profile.tickets_balance || 0) + 2,
-                      total_referrals: (profile.total_referrals || 0) + 1
+                      total_referrals: (profile.total_referrals || 0) + 1,
+                      referrals_balance: (profile.referrals_balance || 0) + 1
                     }).eq("user_id", referral.referrer_id);
                   }
                   
@@ -220,17 +221,19 @@ export default function ReferralsTab() {
       if (referral.is_valid) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("tickets_balance, total_referrals")
+          .select("tickets_balance, total_referrals, referrals_balance")
           .eq("user_id", referral.referrer_id)
           .maybeSingle();
           
         if (profile) {
           const newTickets = Math.max(0, (profile.tickets_balance || 0) - 2);
           const newTotal = Math.max(0, (profile.total_referrals || 0) - 1);
+          const newBalance = Math.max(0, (profile.referrals_balance || 0) - 1);
           
           await supabase.from("profiles").update({
             tickets_balance: newTickets,
-            total_referrals: newTotal
+            total_referrals: newTotal,
+            referrals_balance: newBalance
           }).eq("user_id", referral.referrer_id);
         }
       }
