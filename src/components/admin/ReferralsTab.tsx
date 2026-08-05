@@ -19,6 +19,13 @@ export default function ReferralsTab() {
   const [history, setHistory] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("adminReferralsTab") || "gerenciamento";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("adminReferralsTab", activeTab);
+  }, [activeTab]);
 
   // New reward form state
   const [newRewardName, setNewRewardName] = useState("");
@@ -63,7 +70,52 @@ export default function ReferralsTab() {
 
       setRewards(rewardsRes.data || []);
       setRedemptions(redemptionsRes.data || []);
-      setHistory(historyRes.data || []);
+      
+      let historyItems = historyRes.data || [];
+      
+      // Auto-validate any pending referrals
+      const pendingReferrals = historyItems.filter((h: any) => h.is_valid === false || h.is_valid === null);
+      if (pendingReferrals.length > 0) {
+        const pendingIds = pendingReferrals.map((h: any) => h.referred_id).filter(Boolean);
+        
+        if (pendingIds.length > 0) {
+          const { data: aptData } = await supabase
+            .from("appointments")
+            .select("user_id")
+            .in("user_id", pendingIds);
+            
+          if (aptData && aptData.length > 0) {
+            const newlyValidatedIds = new Set(aptData.map(a => a.user_id));
+            let autoValidatedCount = 0;
+            
+            for (const referral of pendingReferrals) {
+              if (newlyValidatedIds.has(referral.referred_id)) {
+                autoValidatedCount++;
+                // Set valid in DB
+                await supabase.from("referral_history").update({ is_valid: true }).eq("id", referral.id);
+                
+                // Add tickets to referrer
+                const { data: profile } = await supabase.from("profiles").select("tickets_balance, total_referrals").eq("user_id", referral.referrer_id).maybeSingle();
+                if (profile) {
+                  await supabase.from("profiles").update({
+                    tickets_balance: (profile.tickets_balance || 0) + 2,
+                    total_referrals: (profile.total_referrals || 0) + 1
+                  }).eq("user_id", referral.referrer_id);
+                }
+                
+                // Update local state
+                const index = historyItems.findIndex((h: any) => h.id === referral.id);
+                if (index !== -1) historyItems[index].is_valid = true;
+              }
+            }
+            if (autoValidatedCount > 0) {
+              toast.success(`${autoValidatedCount} indicações foram validadas automaticamente!`);
+            }
+          }
+        }
+      }
+      
+      setHistory(historyItems);
     } catch (error: any) {
       toast.error("Erro ao carregar dados", { description: error.message });
     } finally {
@@ -163,7 +215,7 @@ export default function ReferralsTab() {
   }
 
   return (
-    <Tabs defaultValue="gerenciamento" className="w-full">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="mb-6 grid w-full grid-cols-2">
         <TabsTrigger value="gerenciamento">Prêmios e Resgates</TabsTrigger>
         <TabsTrigger value="historico">Histórico de Indicações</TabsTrigger>

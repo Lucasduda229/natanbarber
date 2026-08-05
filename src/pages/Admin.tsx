@@ -292,7 +292,13 @@ const Admin = () => {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
   const [selectedCompletedAppointment, setSelectedCompletedAppointment] = useState<Appointment | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("appointments");
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return localStorage.getItem("adminActiveTab") || "appointments";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("adminActiveTab", activeTab);
+  }, [activeTab]);
 
   const appointmentsRef = useRef<Appointment[]>([]);
   useEffect(() => {
