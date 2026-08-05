@@ -445,7 +445,7 @@ export default function Referrals() {
                           <Button 
                             size="sm"
                             className="bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black text-xs h-7 shadow-[0_0_10px_rgba(0,212,170,0.2)]"
-                            onClick={() => window.location.href = `/agendar?referral_reward_id=${r.id}`}
+                            onClick={() => window.location.href = `/booking?referral_reward_id=${r.id}`}
                           >
                             Usar
                           </Button>

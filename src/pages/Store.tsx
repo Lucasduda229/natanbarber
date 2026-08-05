@@ -282,7 +282,7 @@ export default function Store() {
                           <Button 
                             size="sm"
                             className="bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black text-xs h-7 shadow-[0_0_10px_rgba(0,212,170,0.2)]"
-                            onClick={() => navigate(`/agendar?store_reward_id=${r.id}`)}
+                            onClick={() => navigate(`/booking?store_reward_id=${r.id}`)}
                           >
                             Usar
                           </Button>
