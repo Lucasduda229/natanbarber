@@ -16,11 +16,30 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_referrer_id UUID;
+    v_first_name TEXT;
+    v_last_4_phone TEXT;
 BEGIN
-    -- Find referrer by code
+    -- 1. First try to find by exact referral_code (UUID)
     SELECT user_id INTO v_referrer_id 
     FROM public.profiles 
     WHERE referral_code = p_referrer_code;
+
+    -- 2. If not found and code contains a hyphen, try to parse as name-phone (e.g., lucas-5303)
+    IF NOT FOUND AND p_referrer_code LIKE '%-%' THEN
+        -- Split from the right to get the last part (phone digits)
+        v_last_4_phone := right(p_referrer_code, 4);
+        -- Get the name part (everything before the last 4 digits and the hyphen)
+        v_first_name := left(p_referrer_code, length(p_referrer_code) - 5);
+        
+        SELECT user_id INTO v_referrer_id 
+        FROM public.profiles 
+        WHERE (
+            lower(translate(split_part(full_name, ' ', 1), 'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ', 'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')) = lower(v_first_name)
+        ) AND (
+            phone LIKE '%' || v_last_4_phone
+        )
+        LIMIT 1;
+    END IF;
 
     IF FOUND AND v_referrer_id != p_referred_id THEN
         -- Check if a referral already exists for this referred user

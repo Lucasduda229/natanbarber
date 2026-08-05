@@ -76,35 +76,10 @@ const Register = () => {
     
     if ((refCode || exactCodeParam) && userId) {
       try {
-          let actualReferralCode = exactCodeParam || refCode || "";
-          
-          if (exactCodeParam) {
-            // We have the exact code! No need to guess by name
-          } else {
-            // Try to find the user by exact referral_code match
-          const { data: exactMatch } = await supabase.from('profiles').select('referral_code').eq('referral_code', refCode).maybeSingle();
-          
-          if (!exactMatch && refCode) {
-            let query = supabase.from('profiles').select('referral_code');
-            
-            if (refCode.includes('-')) {
-              const parts = refCode.split('-');
-              const last4Phone = parts.pop();
-              const firstName = parts.join('-'); // in case name had hyphen
-              query = query
-                .or(`full_name.ilike.${firstName} %,full_name.ilike.${firstName}`)
-                .like('phone', `%${last4Phone}`);
-            } else {
-              // It might be a first name - search by first name (with or without surname)
-              query = query.or(`full_name.ilike.${refCode} %,full_name.ilike.${refCode}`);
-            }
-            
-            const { data: nameMatch } = await query.limit(1).maybeSingle();
-            if (nameMatch) {
-              actualReferralCode = nameMatch.referral_code;
-            }
-          }
-          }
+          // We pass the refCode directly (whether it is a UUID or a name-phone code like lucas-5303).
+          // The process_referral database function runs securely on the server (SECURITY DEFINER)
+          // and will handle parsing/looking up the referrer.
+          const actualReferralCode = exactCodeParam || refCode || "";
 
           await supabase.rpc('process_referral', { 
             p_referrer_code: actualReferralCode, 
