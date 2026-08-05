@@ -171,7 +171,7 @@ export default function Referrals() {
     : (profile?.referral_code || "");
   const last4Phone = profile?.phone ? profile.phone.replace(/\D/g, '').slice(-4) : "";
   const refCodeUrl = last4Phone ? `${firstName}-${last4Phone}` : firstName;
-  const referralLink = profile?.referral_code 
+  const referralLink = profile 
     ? `${window.location.origin}/register?ref=${refCodeUrl}`
     : "";
 
