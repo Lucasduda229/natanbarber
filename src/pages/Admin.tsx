@@ -170,9 +170,24 @@ const getExtrasTotal = (notes: string | null): number =>
   getNightSurcharge(notes) + getExtraFeeFromNotes(notes);
 
 const getServicesTotal = (services: AppointmentService[], notes?: string | null, isReward?: boolean): number => {
-  if (isReward) return 0;
-  if (!services || services.length === 0) return getExtrasTotal(notes ?? null);
-  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
+  const baseTotal = (!services || services.length === 0)
+    ? getExtrasTotal(notes ?? null)
+    : services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
+
+  if (isReward && notes) {
+    // If it's a coupon discount (not a free service), apply the discount from notes
+    const couponMatch = notes.match(/Cupom:.*?\(-R\$(\d+(?:\.\d+)?)\)/);
+    if (couponMatch) {
+      const discountAmount = parseFloat(couponMatch[1]);
+      return Math.max(0, baseTotal - discountAmount);
+    }
+    // It's a free service reward (Prêmio:), return 0
+    if (notes.includes('Prêmio:')) return 0;
+  }
+  
+  if (isReward && !notes) return 0;
+  
+  return baseTotal;
 };
 
 // Helper function to get services total considering subscription (R$ 0 for subscriptions)
