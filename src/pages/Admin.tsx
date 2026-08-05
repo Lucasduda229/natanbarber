@@ -1689,7 +1689,7 @@ const Admin = () => {
                                     className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 text-purple-500 bg-purple-500/10 border-purple-500/30"
                                   >
                                     <Gift className="w-3 h-3" />
-                                    Prêmio
+                                    {appointment.notes?.includes('Cupom:') ? 'Cupom' : 'Prêmio'}
                                   </Badge>
                                 );
                               }
@@ -2057,6 +2057,18 @@ const Admin = () => {
                               </span>
                               {/* Payment Method Badge */}
                               {(() => {
+                                if (appointment.used_referral_redemption_id || appointment.used_store_redemption_id) {
+                                  return (
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-[10px] px-1.5 py-0.5 flex items-center gap-1 text-purple-500 bg-purple-500/10 border-purple-500/30"
+                                    >
+                                      <Gift className="w-3 h-3" />
+                                      {appointment.notes?.includes('Cupom:') ? 'Cupom' : 'Prêmio'}
+                                    </Badge>
+                                  );
+                                }
+                                
                                 const paymentInfo = getPaymentMethodInfo(appointment.payment_method);
                                 return (
                                   <Badge 

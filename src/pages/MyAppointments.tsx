@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, isPast, subHours, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy, CreditCard, Receipt, Hash } from "lucide-react";
+import { Calendar, Clock, Scissors, ChevronLeft, X, Check, AlertCircle, Star, Trophy, CreditCard, Receipt, Hash, Gift, Tag } from "lucide-react";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -29,6 +29,9 @@ interface Appointment {
   status: string;
   payment_status: string;
   payment_method: string | null;
+  notes: string | null;
+  used_referral_redemption_id?: string | null;
+  used_store_redemption_id?: string | null;
   services: {
     name: string;
     price: number;
@@ -91,6 +94,9 @@ const MyAppointments = () => {
         status,
         payment_status,
         payment_method,
+        notes,
+        used_referral_redemption_id,
+        used_store_redemption_id,
         services (
           name,
           price
@@ -437,6 +443,23 @@ const MyAppointments = () => {
                         <span className="text-muted-foreground">R$ {s.price.toFixed(2)}</span>
                       </div>
                     ))}
+                    {/* Coupon/Prize info */}
+                    {selectedAppointment.notes && selectedAppointment.notes.includes('Cupom:') && (
+                      <div className="flex items-center justify-between text-sm text-green-500">
+                        <span className="flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5" />
+                          {selectedAppointment.notes.split('\n').find(n => n.includes('Cupom:'))?.replace('🎟️ ', '')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedAppointment.notes && selectedAppointment.notes.includes('Prêmio:') && (
+                      <div className="flex items-center justify-between text-sm text-purple-500">
+                        <span className="flex items-center gap-1.5">
+                          <Gift className="w-3.5 h-3.5" />
+                          {selectedAppointment.notes.split('\n').find(n => n.includes('Prêmio:'))?.replace('🎁 ', '')}
+                        </span>
+                      </div>
+                    )}
                     <Separator className="my-2 bg-border/50" />
                     <div className="flex items-center justify-between font-bold">
                       <span className="text-foreground">Total</span>

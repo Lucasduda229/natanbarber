@@ -1025,6 +1025,13 @@ const Booking = () => {
         notes: (() => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
+          if (activeReward) {
+            if (activeReward.isFreeService) {
+              parts.push(`🎁 Prêmio: ${activeReward.name}`);
+            } else if (activeReward.discountAmount && activeReward.discountAmount > 0) {
+              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${activeReward.discountAmount.toFixed(2)})`);
+            }
+          }
           if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
@@ -1280,6 +1287,13 @@ const Booking = () => {
         notes: (() => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
+          if (activeReward) {
+            if (activeReward.isFreeService) {
+              parts.push(`🎁 Prêmio: ${activeReward.name}`);
+            } else if (activeReward.discountAmount && activeReward.discountAmount > 0) {
+              parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${activeReward.discountAmount.toFixed(2)})`);
+            }
+          }
           if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
@@ -2161,6 +2175,12 @@ const Booking = () => {
                       <span>+ R$ {extraFeeAmount.toFixed(2)}</span>
                     </div>
                   )}
+                  {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                    <div className="flex items-center justify-between text-sm text-green-500">
+                      <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
+                      <span>- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-2 border-t border-border mt-2">
                     <span className="font-semibold text-foreground text-sm sm:text-base">Total</span>
                     <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
@@ -2271,6 +2291,12 @@ const Booking = () => {
                   <Clock className="w-4 h-4 ml-2" />
                   <span>{selectedTime?.slice(0, 5)}</span>
                 </div>
+                {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm text-green-500">
+                    <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
+                    <span>- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-2">
                   <span className="font-semibold text-foreground">Total</span>
                   <span className="text-primary font-bold">R$ {totalPrice.toFixed(2)}</span>
@@ -2390,6 +2416,12 @@ const Booking = () => {
                   <span className="text-muted-foreground">Horário</span>
                   <span className="font-semibold text-foreground">{selectedTime?.slice(0, 5)}</span>
                 </div>
+                {activeReward && activeReward.discountAmount && activeReward.discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-green-500">
+                    <span className="flex items-center gap-2">🎟️ Cupom: {activeReward.name}</span>
+                    <span className="font-semibold">- R$ {activeReward.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-3 border-t border-border">
                   <span className="font-semibold text-foreground">Total</span>
                   <span className="text-xl font-bold text-primary">R$ {totalPrice.toFixed(2)}</span>
