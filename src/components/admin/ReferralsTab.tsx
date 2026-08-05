@@ -437,7 +437,7 @@ export default function ReferralsTab() {
                           <div key={item.id} className="flex justify-between items-center bg-card/50 p-3 rounded-lg border border-primary/10">
                             <div>
                               <p className="text-sm font-medium text-foreground">
-                                {item.referred?.full_name || "Amigo"}
+                                {item.referrer_id === item.referred_id ? "Registro Manual" : (item.referred?.full_name || "Amigo")}
                               </p>
                               <div className="flex items-center gap-3 mt-1 opacity-80">
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">

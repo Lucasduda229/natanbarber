@@ -404,7 +404,9 @@ export default function Referrals() {
                             <Users className="w-5 h-5 text-primary" />
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">{item.profiles?.full_name || "Usuário"}</p>
+                            <p className="font-medium text-foreground">
+                              {item.referred_id === user?.id ? "Registro Manual" : (item.profiles?.full_name || "Usuário")}
+                            </p>
                             <p className="text-sm text-muted-foreground">
                               {format(new Date(item.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                             </p>

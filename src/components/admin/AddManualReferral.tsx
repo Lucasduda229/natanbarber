@@ -86,16 +86,10 @@ export function AddManualReferral({ onAdded }: { onAdded: () => void }) {
       // 4. Register in history for each added referral
       const historyInserts = Array.from({ length: amount }).map(() => ({
         referrer_id: selectedClient.user_id,
+        referred_id: selectedClient.user_id, // Same ID indicates manual entry
         is_valid: true,
-        // Since it's manual, we don't have a specific referred user ID
-        // We can just omit referred_id or put a comment if the schema allows
-        // The schema might require referred_id to be a valid user, so let's check schema.
-        // Wait, referred_id might be nullable.
       }));
       
-      // Let's check if referred_id is nullable before inserting history.
-      // Usually, manual adjustments don't strictly need a history row if it causes issues,
-      // but it's good to try.
       const { error: historyError } = await supabase
         .from("referral_history")
         .insert(historyInserts);
