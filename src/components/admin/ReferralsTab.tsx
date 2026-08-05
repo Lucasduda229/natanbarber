@@ -59,6 +59,7 @@ export default function ReferralsTab() {
             created_at,
             is_valid,
             referrer_id,
+            referred_id,
             referrer:profiles!referral_history_referrer_id_fkey(full_name, phone),
             referred:profiles!referral_history_referred_id_fkey(full_name, phone)
           `)
