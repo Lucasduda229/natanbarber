@@ -228,8 +228,12 @@ const Booking = () => {
       const referralRewardId = searchParams.get('referral_reward_id');
       const storeRewardId = searchParams.get('store_reward_id');
 
+      const targetId = referralRewardId || storeRewardId;
+      if (!targetId) return;
+      
+      const sessionKey = 'toasted_reward_' + targetId;
+
       if (referralRewardId) {
-        toastedRewardId.current = referralRewardId;
         const { data, error } = await supabase
           .from('referral_redemptions')
           .select('id, status, referral_rewards(name)')
@@ -245,12 +249,16 @@ const Booking = () => {
             isFreeService: normalizeString(name).includes('gratis'),
             discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
           });
-          toast.success(`Prêmio ativado: ${name}`, {
-            description: "O benefício será aplicado no resumo do agendamento."
-          });
+          if (!sessionStorage.getItem(sessionKey)) {
+            toast.success(`Prêmio ativado: ${name}`, {
+              description: "O benefício será aplicado no resumo do agendamento."
+            });
+            sessionStorage.setItem(sessionKey, 'true');
+          }
+          // Remove query param to avoid re-triggering
+          window.history.replaceState({}, '', '/booking');
         }
       } else if (storeRewardId) {
-        toastedRewardId.current = storeRewardId;
         const { data, error } = await supabase
           .from('store_redemptions')
           .select('id, status, store_products(name, category)')
@@ -266,9 +274,13 @@ const Booking = () => {
             isFreeService: normalizeString(name).includes('gratis'),
             discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
           });
-          toast.success(`Vale ativado: ${name}`, {
-            description: "O benefício será aplicado no resumo do agendamento."
-          });
+          if (!sessionStorage.getItem(sessionKey)) {
+            toast.success(`Vale ativado: ${name}`, {
+              description: "O benefício será aplicado no resumo do agendamento."
+            });
+            sessionStorage.setItem(sessionKey, 'true');
+          }
+          window.history.replaceState({}, '', '/booking');
         }
       }
     };
