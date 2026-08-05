@@ -268,14 +268,25 @@ export default function Store() {
                           </p>
                         </div>
                       </div>
-                      <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                        r.status === 'fulfilled'
-                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                          : r.status === 'cancelled'
-                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                      }`}>
-                        {r.status === 'fulfilled' ? '✅ Retirado' : r.status === 'cancelled' ? '❌ Cancelado' : '⏳ Disponível'}
+                      <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                        <div className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                          r.status === 'fulfilled'
+                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                            : r.status === 'cancelled'
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {r.status === 'fulfilled' ? '✅ Retirado' : r.status === 'cancelled' ? '❌ Cancelado' : '⏳ Disponível'}
+                        </div>
+                        {r.status === 'pending' && (
+                          <Button 
+                            size="sm"
+                            className="bg-[#00D4AA] hover:bg-[#00D4AA]/90 text-black text-xs h-7 shadow-[0_0_10px_rgba(0,212,170,0.2)]"
+                            onClick={() => navigate(`/agendar?store_reward_id=${r.id}`)}
+                          >
+                            Usar
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

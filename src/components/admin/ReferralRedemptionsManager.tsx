@@ -38,7 +38,7 @@ export default function ReferralRedemptionsManager() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: "fulfilled" | "cancelled" | "pending") => {
+  const updateStatus = async (id: string, newStatus: "completed" | "rejected" | "pending" | "used") => {
     try {
       const { error } = await supabase
         .from("referral_redemptions")
@@ -57,8 +57,9 @@ export default function ReferralRedemptionsManager() {
       );
 
       const messages: Record<string, string> = {
-        fulfilled: "Resgate aprovado! ✅",
-        cancelled: "Resgate recusado. ❌",
+        completed: "Resgate aprovado! ✅",
+        rejected: "Resgate recusado. ❌",
+        used: "Marcado como usado! 🎁",
         pending: "Resgate marcado como pendente. ⏳",
       };
       toast.success(messages[newStatus]);
@@ -69,14 +70,21 @@ export default function ReferralRedemptionsManager() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "fulfilled":
+      case "completed":
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-xs font-semibold">
             <CheckCircle className="w-3.5 h-3.5" />
             Aprovado
           </div>
         );
-      case "cancelled":
+      case "used":
+        return (
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-semibold">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Usado
+          </div>
+        );
+      case "rejected":
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-xs font-semibold">
             <XCircle className="w-3.5 h-3.5" />
@@ -153,24 +161,36 @@ export default function ReferralRedemptionsManager() {
                 <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
                   {getStatusBadge(r.status)}
 
-                  {r.status !== "fulfilled" && (
+                  {r.status === "pending" && (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500 text-xs"
-                      onClick={() => updateStatus(r.id, "fulfilled")}
+                      className="border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500 text-xs"
+                      onClick={() => updateStatus(r.id, "completed")}
                     >
                       <CheckCircle className="w-3.5 h-3.5 mr-1" />
                       Aprovar
                     </Button>
                   )}
 
-                  {r.status !== "cancelled" && (
+                  {r.status === "completed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500 text-xs"
+                      onClick={() => updateStatus(r.id, "used")}
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                      Marcar como Usado
+                    </Button>
+                  )}
+
+                  {r.status === "pending" && (
                     <Button
                       size="sm"
                       variant="outline"
                       className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 text-xs"
-                      onClick={() => updateStatus(r.id, "cancelled")}
+                      onClick={() => updateStatus(r.id, "rejected")}
                     >
                       <XCircle className="w-3.5 h-3.5 mr-1" />
                       Recusar

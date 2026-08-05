@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format, getDay, startOfWeek, endOfWeek, parseISO, isSameWeek, isSameMonth, startOfMonth, endOfMonth, addDays, isAfter, isBefore, isEqual, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, Clock, Scissors, CreditCard, Calendar as CalendarIcon, Check, ChevronLeft, ChevronDown, User, Phone, Copy, Navigation, Instagram, Package, Crown, Banknote, Store, Gift, Lock } from "lucide-react";
@@ -126,6 +126,15 @@ const Booking = () => {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const { config: extraFee } = useExtraFee();
+  const [searchParams] = useSearchParams();
+  const [activeReward, setActiveReward] = useState<{
+    id: string;
+    type: 'referral' | 'store';
+    name: string;
+    isFreeService?: boolean;
+    discountAmount?: number;
+    discountPercentage?: number;
+  } | null>(null);
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -209,6 +218,60 @@ const Booking = () => {
   }, []);
 
 
+
+  // Fetch active reward if provided in URL
+  useEffect(() => {
+    const fetchReward = async () => {
+      const referralRewardId = searchParams.get('referral_reward_id');
+      const storeRewardId = searchParams.get('store_reward_id');
+
+      if (referralRewardId) {
+        const { data, error } = await supabase
+          .from('referral_redemptions')
+          .select('id, status, referral_rewards(name)')
+          .eq('id', referralRewardId)
+          .single();
+          
+        if (data && (data.status === 'completed' || data.status === 'approved')) { // Fallback to 'completed' for existing records
+          const name = data.referral_rewards?.name || '';
+          setActiveReward({
+            id: data.id,
+            type: 'referral',
+            name: name,
+            isFreeService: name.toLowerCase().includes('grátis'),
+            discountAmount: name.toLowerCase().includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+          });
+          toast.success(`Prêmio ativado: ${name}`, {
+            description: "O benefício será aplicado no resumo do agendamento."
+          });
+        }
+      } else if (storeRewardId) {
+        const { data, error } = await supabase
+          .from('store_redemptions')
+          .select('id, status, store_products(name, category)')
+          .eq('id', storeRewardId)
+          .single();
+          
+        if (data && data.status === 'pending') {
+          const name = data.store_products?.name || '';
+          setActiveReward({
+            id: data.id,
+            type: 'store',
+            name: name,
+            isFreeService: name.toLowerCase().includes('grátis'),
+            discountAmount: name.toLowerCase().includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+          });
+          toast.success(`Vale ativado: ${name}`, {
+            description: "O benefício será aplicado no resumo do agendamento."
+          });
+        }
+      }
+    };
+    
+    if (user) {
+      fetchReward();
+    }
+  }, [searchParams, user]);
   useEffect(() => {
     gsap.fromTo(".booking-container", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" });
     fetchServices();
@@ -738,8 +801,22 @@ const Booking = () => {
   const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Cálculos de totais
-  const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const totalPrice = basePrice + thursdaySurcharge + extraFeeAmount;
+  const getServicePrice = (s: Service) => {
+    if (activeReward?.isFreeService) {
+      if (activeReward.name.toLowerCase().includes("corte") && s.name.toLowerCase().includes("corte")) return 0;
+      if (activeReward.name.toLowerCase().includes("barba") && s.name.toLowerCase().includes("barba")) return 0;
+      if (activeReward.name.toLowerCase().includes("pezinho") && s.name.toLowerCase().includes("pezinho")) return 0;
+    }
+    return s.price;
+  }
+  
+  const basePrice = selectedPackage ? selectedPackage.price : selectedServices.reduce((sum, s) => sum + getServicePrice(s), 0);
+  let computedTotal = basePrice + thursdaySurcharge + extraFeeAmount;
+  
+  if (activeReward?.discountAmount) {
+    computedTotal = Math.max(0, computedTotal - activeReward.discountAmount);
+  }
+  const totalPrice = computedTotal;
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -919,8 +996,10 @@ const Booking = () => {
         appointment_date: appointmentDate,
         appointment_time: selectedTime,
         status: "pending",
-        payment_status: usingSubscription ? "paid" : "pending",
-        payment_method: usingSubscription ? "subscription" : paymentMethod,
+        payment_status: (usingSubscription || (activeReward && totalPrice === 0)) ? "paid" : "pending",
+        payment_method: usingSubscription ? "subscription" : (activeReward && totalPrice === 0 ? "reception" : paymentMethod),
+        used_referral_redemption_id: activeReward?.type === 'referral' ? activeReward.id : null,
+        used_store_redemption_id: activeReward?.type === 'store' ? activeReward.id : null,
         notes: (() => {
           if (usingSubscription) return "Agendamento via assinatura";
           const parts: string[] = [];
@@ -943,6 +1022,21 @@ const Booking = () => {
         toast.error("Erro ao agendar", { description: "Tente novamente mais tarde." });
       }
       return;
+    }
+
+    // Marcar prêmio como usado
+    if (activeReward) {
+      if (activeReward.type === 'referral') {
+        await supabase
+          .from('referral_redemptions')
+          .update({ status: 'used' })
+          .eq('id', activeReward.id);
+      } else if (activeReward.type === 'store') {
+        await supabase
+          .from('store_redemptions')
+          .update({ status: 'fulfilled' })
+          .eq('id', activeReward.id);
+      }
     }
 
     if (selectedServices.length > 1) {
@@ -1187,6 +1281,21 @@ const Booking = () => {
     }
 
     // Inserir apenas serviços adicionais na tabela de junção (o primeiro já está em service_id)
+    // Marcar prêmio como usado
+    if (activeReward) {
+      if (activeReward.type === 'referral') {
+        await supabase
+          .from('referral_redemptions')
+          .update({ status: 'used' })
+          .eq('id', activeReward.id);
+      } else if (activeReward.type === 'store') {
+        await supabase
+          .from('store_redemptions')
+          .update({ status: 'fulfilled' })
+          .eq('id', activeReward.id);
+      }
+    }
+
     if (selectedServices.length > 1) {
       const additionalServices = selectedServices.slice(1).map(service => ({
         appointment_id: appointment.id,
@@ -2002,7 +2111,13 @@ const Booking = () => {
                         <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
                         <span className="text-foreground truncate">{service.name}</span>
                       </div>
-                      <span className="text-muted-foreground flex-shrink-0">R$ {service.price.toFixed(2)}</span>
+                      <span className="text-muted-foreground flex-shrink-0">
+                        {activeReward && activeReward.isFreeService && getServicePrice(service) === 0 ? (
+                          <span className="text-green-500 font-bold">Grátis</span>
+                        ) : (
+                          `R$ ${service.price.toFixed(2)}`
+                        )}
+                      </span>
                     </div>
                   ))}
                   {isNightSurcharge && (
@@ -2100,7 +2215,13 @@ const Booking = () => {
                       <Scissors className="w-4 h-4 text-primary" />
                       <span className="text-foreground">{service.name}</span>
                     </div>
-                    <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                    <span className="text-muted-foreground">
+                      {activeReward && activeReward.isFreeService && getServicePrice(service) === 0 ? (
+                        <span className="text-green-500 font-bold">Grátis</span>
+                      ) : (
+                        `R$ ${service.price.toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                 ))}
                 {isNightSurcharge && (
@@ -2208,7 +2329,13 @@ const Booking = () => {
                   {selectedServices.map((service) => (
                     <div key={service.id} className="flex items-center justify-between text-sm">
                       <span className="text-foreground">{service.name}</span>
-                      <span className="text-muted-foreground">R$ {service.price.toFixed(2)}</span>
+                      <span className="text-muted-foreground">
+                      {activeReward && activeReward.isFreeService && getServicePrice(service) === 0 ? (
+                        <span className="text-green-500 font-bold">Grátis</span>
+                      ) : (
+                        `R$ ${service.price.toFixed(2)}`
+                      )}
+                    </span>
                     </div>
                   ))}
                 </div>
@@ -2242,7 +2369,7 @@ const Booking = () => {
             </Card>
 
             {/* Payment section - shown after booking is created */}
-            {!usingSubscription && (
+            {!usingSubscription && totalPrice > 0 && (
               <Card className="bg-card/60 backdrop-blur-xl border-primary/20 max-w-md mx-auto text-left">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
