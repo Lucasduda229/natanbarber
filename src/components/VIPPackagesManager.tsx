@@ -680,6 +680,9 @@ const VIPPackagesManager = () => {
         type: "subscription_activated",
       });
 
+      // Validate referral since they just paid for a subscription
+      await supabase.rpc('validate_referral', { p_referred_id: order.user_id });
+
       toast.success(`Pagamento confirmado e assinatura ativada!`);
       fetchData();
     } catch (error) {

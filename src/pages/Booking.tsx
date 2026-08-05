@@ -1399,36 +1399,6 @@ const Booking = () => {
                 </Button>
               </div>
 
-              {/* Lock overlay - Em breve */}
-              <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none overflow-hidden">
-                {/* Chain: top-left to bottom-right */}
-                <div className="absolute" style={{
-                  left: '-10%',
-                  right: '-10%',
-                  top: '50%',
-                  height: '0',
-                  borderTop: '3px dashed rgba(212,175,55,0.65)',
-                  transform: 'rotate(13deg)',
-                }} />
-                {/* Chain: top-right to bottom-left */}
-                <div className="absolute" style={{
-                  left: '-10%',
-                  right: '-10%',
-                  top: '50%',
-                  height: '0',
-                  borderTop: '3px dashed rgba(212,175,55,0.65)',
-                  transform: 'rotate(-13deg)',
-                }} />
-                {/* Lock circle center */}
-                <div className="flex flex-col items-center gap-1.5 drop-shadow-lg">
-                  <div className="w-12 h-12 rounded-full bg-background/80 border-2 border-primary shadow-gold-glow flex items-center justify-center backdrop-blur-sm">
-                    <Lock className="w-6 h-6 text-primary" />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-bold text-primary tracking-widest uppercase bg-background/70 px-2 py-0.5 rounded-full backdrop-blur-sm border border-primary/30">
-                    Em breve
-                  </span>
-                </div>
-              </div>
             </div>
 
 

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddManualReferral } from "./AddManualReferral";
 
 export default function ReferralsTab() {
   const [rewards, setRewards] = useState<any[]>([]);
@@ -49,6 +50,7 @@ export default function ReferralsTab() {
           .select(`
             id,
             created_at,
+            is_valid,
             referrer_id,
             referrer:profiles!referral_history_referrer_id_fkey(full_name, phone),
             referred:profiles!referral_history_referred_id_fkey(full_name, phone)
@@ -296,14 +298,17 @@ export default function ReferralsTab() {
 
       <TabsContent value="historico">
         <Card className="bg-card/40 backdrop-blur-xl border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <History className="w-5 h-5 text-primary" />
-              Histórico Geral de Indicações
-            </CardTitle>
-            <CardDescription>
-              Visualize quem indicou quem e as datas exatas.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                Histórico Geral de Indicações
+              </CardTitle>
+              <CardDescription>
+                Visualize quem indicou quem e as datas exatas.
+              </CardDescription>
+            </div>
+            <AddManualReferral onAdded={fetchData} />
           </CardHeader>
           <CardContent>
             {Object.keys(groupedHistory).length === 0 ? (
@@ -355,9 +360,15 @@ export default function ReferralsTab() {
                                 </span>
                               </div>
                             </div>
-                            <div className="bg-green-500/20 text-green-500 p-1.5 rounded-full">
-                              <CheckCircle className="w-4 h-4" />
-                            </div>
+                            {item.is_valid ? (
+                              <div className="bg-green-500/20 text-green-500 p-1.5 rounded-full" title="Válida (Ganhou pontos)">
+                                <CheckCircle className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500/30 bg-amber-500/10 text-[10px]" title="Aguardando primeiro pagamento">
+                                Pendente
+                              </Badge>
+                            )}
                           </div>
                         ))}
                       </div>

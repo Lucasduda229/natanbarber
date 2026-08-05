@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import SubscriptionProgress from "@/components/SubscriptionProgress";
 import CustomerLoyaltyCard from "@/components/CustomerLoyaltyCard";
+import { RedemptionsHistory } from "@/components/RedemptionsHistory";
 
 interface Profile {
   full_name: string | null;
@@ -228,8 +229,10 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Loyalty Program */}
         <CustomerLoyaltyCard />
+
+        {/* Store Redemptions */}
+        <RedemptionsHistory />
 
         {/* Logout */}
         <Card className="bg-card/80 backdrop-blur-sm border-border">

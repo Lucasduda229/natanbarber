@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift } from "lucide-react";
+import { Menu, Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift, ShoppingBag } from "lucide-react";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
@@ -291,6 +292,7 @@ const Admin = () => {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [completionAppointmentId, setCompletionAppointmentId] = useState<string | null>(null);
   const [selectedCompletedAppointment, setSelectedCompletedAppointment] = useState<Appointment | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("appointments");
 
   const appointmentsRef = useRef<Appointment[]>([]);
   useEffect(() => {
@@ -1274,7 +1276,17 @@ const Admin = () => {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 max-w-7xl mx-auto safe-top">
-        <Button variant="ghost" onClick={() => navigate("/booking")} className="text-foreground hover:text-primary px-2 sm:px-4 touch-target">
+        <Button 
+          variant="ghost" 
+          onClick={() => {
+            if (activeTab === "appointments") {
+              navigate("/booking");
+            } else {
+              setActiveTab("appointments");
+            }
+          }} 
+          className="text-foreground hover:text-primary px-2 sm:px-4 touch-target"
+        >
           <ChevronLeft className="w-5 h-5 sm:mr-2" />
           <span className="hidden sm:inline">Voltar</span>
         </Button>
@@ -1306,10 +1318,50 @@ const Admin = () => {
               )}
             </div>
           </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+
+
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-6">
+            <FinancialReport
+              appointments={appointments}
+              packagePayments={packagePayments}
+              revenueAdjustments={revenueAdjustments}
+              cashClosingDay={cashClosingDay}
+              reportStartDate={reportStartDate}
+              reportEndDate={reportEndDate}
+              setReportStartDate={setReportStartDate}
+              setReportEndDate={setReportEndDate}
+              getAdjustedValue={getAdjustedValue}
+              getServicesTotal={getServicesTotal}
+              getServicesTotalForRevenue={getServicesTotalForRevenue}
+              getServicesNames={getServicesNames}
+              saveRevenueAdjustment={saveRevenueAdjustment}
+              deletePackagePayment={deletePackagePayment}
+              editingAppointmentId={editingAppointmentId}
+              setEditingAppointmentId={setEditingAppointmentId}
+              editValue={editValue}
+              setEditValue={setEditValue}
+              editingClosingDay={editingClosingDay}
+              setEditingClosingDay={setEditingClosingDay}
+              closingDayInput={closingDayInput}
+              setClosingDayInput={setClosingDayInput}
+              saveCashClosingDay={saveCashClosingDay}
+            />
+          </TabsContent>
+
+          {/* AI Assistant Tab */}
+          <TabsContent value="ai-assistant">
+            <AIAssistantPanel />
+          </TabsContent>
+
+          {/* Appointments Tab */}
+          <TabsContent value="appointments" className="space-y-6">
           <div className="w-full">
             <AdminStatusToggle />
           </div>
-        </div>
         
         {/* Last update indicator */}
         <div className="text-xs text-muted-foreground mb-3 sm:mb-4 flex items-center gap-2">
@@ -1547,101 +1599,6 @@ const Admin = () => {
             </CardContent>
           </Card>
         </div>
-
-        <Tabs defaultValue="appointments" className="space-y-4 sm:space-y-6">
-          <div className="overflow-x-auto pb-3 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-card/60 backdrop-blur-xl border border-primary/20 inline-flex w-max sm:w-auto gap-1 p-1.5 rounded-xl">
-              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Agendamentos">
-                <Scissors className="w-4 h-4" />
-                <span>Agenda</span>
-              </TabsTrigger>
-              <TabsTrigger value="ai-assistant" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assistente IA">
-                <img src={whatsappIcon} alt="WhatsApp" className="w-4 h-4" />
-                <span>IA</span>
-              </TabsTrigger>
-              <TabsTrigger value="schedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Horários">
-                <Lock className="w-4 h-4" />
-                <span>Horários</span>
-              </TabsTrigger>
-              <TabsTrigger value="subscriptions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Assinaturas">
-                <Crown className="w-4 h-4" />
-                <span>Assinat.</span>
-              </TabsTrigger>
-              <TabsTrigger value="subscribers-history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Histórico de Assinaturas">
-                <History className="w-4 h-4" />
-                <span>Hist. Assin.</span>
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Relatórios">
-                <BarChart3 className="w-4 h-4" />
-                <span>Relatórios</span>
-              </TabsTrigger>
-              <TabsTrigger value="gallery" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Galeria">
-                <Image className="w-4 h-4" />
-                <span>Galeria</span>
-              </TabsTrigger>
-              <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Clientes">
-                <UserCheck className="w-4 h-4" />
-                <span>Clientes</span>
-              </TabsTrigger>
-              <TabsTrigger value="loyalty" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Premiações">
-                <Trophy className="w-4 h-4" />
-                <span>Premiações</span>
-              </TabsTrigger>
-              <TabsTrigger value="referrals" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Indicações">
-                <Gift className="w-4 h-4" />
-                <span>Indicações</span>
-              </TabsTrigger>
-              <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Serviços">
-                <Settings className="w-4 h-4" />
-                <span>Serviços</span>
-              </TabsTrigger>
-              <TabsTrigger value="reminders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Lembretes">
-                <Bell className="w-4 h-4" />
-                <span>Lembretes</span>
-              </TabsTrigger>
-              <TabsTrigger value="data" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm rounded-lg whitespace-nowrap transition-all touch-target" title="Dados">
-                <Download className="w-4 h-4" />
-                <span>Dados</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Reports Tab */}
-          <TabsContent value="reports" className="space-y-6">
-            <FinancialReport
-              appointments={appointments}
-              packagePayments={packagePayments}
-              revenueAdjustments={revenueAdjustments}
-              cashClosingDay={cashClosingDay}
-              reportStartDate={reportStartDate}
-              reportEndDate={reportEndDate}
-              setReportStartDate={setReportStartDate}
-              setReportEndDate={setReportEndDate}
-              getAdjustedValue={getAdjustedValue}
-              getServicesTotal={getServicesTotal}
-              getServicesTotalForRevenue={getServicesTotalForRevenue}
-              getServicesNames={getServicesNames}
-              saveRevenueAdjustment={saveRevenueAdjustment}
-              deletePackagePayment={deletePackagePayment}
-              editingAppointmentId={editingAppointmentId}
-              setEditingAppointmentId={setEditingAppointmentId}
-              editValue={editValue}
-              setEditValue={setEditValue}
-              editingClosingDay={editingClosingDay}
-              setEditingClosingDay={setEditingClosingDay}
-              closingDayInput={closingDayInput}
-              setClosingDayInput={setClosingDayInput}
-              saveCashClosingDay={saveCashClosingDay}
-            />
-          </TabsContent>
-
-          {/* AI Assistant Tab */}
-          <TabsContent value="ai-assistant">
-            <AIAssistantPanel />
-          </TabsContent>
-
-          {/* Appointments Tab */}
-          <TabsContent value="appointments" className="space-y-6">
             {/* Pending Appointments Section - Always visible at top */}
             {appointments.filter(a => a.status === "pending").length > 0 && (
               <Card className="bg-yellow-500/5 backdrop-blur-xl border-yellow-500/30">
@@ -1903,6 +1860,84 @@ const Admin = () => {
                 </div>
               )}
             </div>
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2 border-primary/30 bg-card/60 hover:bg-primary/10">
+                <Menu className="w-5 h-5" />
+                <span className="text-sm font-medium">Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[280px] p-0">
+              <SheetHeader className="p-4 border-b text-left">
+                <SheetTitle>Menu Administrativo</SheetTitle>
+              </SheetHeader>
+              <div className="overflow-y-auto h-[calc(100vh-5rem)] p-3">
+                <TabsList className="flex flex-col w-full h-auto bg-transparent p-0 gap-1 items-stretch">
+                  <TabsTrigger value="appointments" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Agendamentos">
+                    <Scissors className="w-5 h-5 shrink-0" />
+                    <span>Agenda</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="ai-assistant" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Assistente IA">
+                    <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5 shrink-0 object-contain" />
+                    <span>Assistente IA</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="schedule" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Horários">
+                    <Lock className="w-5 h-5 shrink-0" />
+                    <span>Horários</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="subscriptions" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Assinaturas">
+                    <Crown className="w-5 h-5 shrink-0" />
+                    <span>Assinaturas</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="subscribers-history" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Histórico de Assinaturas">
+                    <History className="w-5 h-5 shrink-0" />
+                    <span>Hist. Assinaturas</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="reports" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Relatórios">
+                    <BarChart3 className="w-5 h-5 shrink-0" />
+                    <span>Relatórios</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="gallery" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Galeria">
+                    <Image className="w-5 h-5 shrink-0" />
+                    <span>Galeria</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="clients" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Clientes">
+                    <UserCheck className="w-5 h-5 shrink-0" />
+                    <span>Clientes</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="loyalty" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Premiações">
+                    <Trophy className="w-5 h-5 shrink-0" />
+                    <span>Premiações</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="referrals" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Indicações">
+                    <Gift className="w-5 h-5 shrink-0" />
+                    <span>Indicações</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="store" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Loja de Produtos">
+                    <Store className="w-5 h-5 shrink-0" />
+                    <span>Loja de Produtos</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="redemptions" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Resgates">
+                    <ShoppingBag className="w-5 h-5 shrink-0" />
+                    <span>Resgates</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="services" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Serviços">
+                    <Settings className="w-5 h-5 shrink-0" />
+                    <span>Serviços</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="reminders" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Lembretes">
+                    <Bell className="w-5 h-5 shrink-0" />
+                    <span>Lembretes</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="data" className="justify-start data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-3 px-4 py-3 text-sm rounded-lg w-full" title="Dados">
+                    <Download className="w-5 h-5 shrink-0" />
+                    <span>Dados</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </SheetContent>
+          </Sheet>
 
             {loading ? (
               <div className="space-y-3">
