@@ -222,6 +222,8 @@ const Booking = () => {
 
   // Fetch active reward if provided in URL
   useEffect(() => {
+    const normalizeString = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    
     const fetchReward = async () => {
       const referralRewardId = searchParams.get('referral_reward_id');
       const storeRewardId = searchParams.get('store_reward_id');
@@ -240,8 +242,8 @@ const Booking = () => {
             id: data.id,
             type: 'referral',
             name: name,
-            isFreeService: name.toLowerCase().includes('grátis'),
-            discountAmount: name.toLowerCase().includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+            isFreeService: normalizeString(name).includes('gratis'),
+            discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
           });
           toast.success(`Prêmio ativado: ${name}`, {
             description: "O benefício será aplicado no resumo do agendamento."
@@ -261,8 +263,8 @@ const Booking = () => {
             id: data.id,
             type: 'store',
             name: name,
-            isFreeService: name.toLowerCase().includes('grátis'),
-            discountAmount: name.toLowerCase().includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
+            isFreeService: normalizeString(name).includes('gratis'),
+            discountAmount: normalizeString(name).includes('desconto') ? parseInt(name.replace(/\D/g, '')) || 10 : 0
           });
           toast.success(`Vale ativado: ${name}`, {
             description: "O benefício será aplicado no resumo do agendamento."
@@ -804,11 +806,16 @@ const Booking = () => {
   const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Cálculos de totais
+  const normalizeString = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
   const getServicePrice = (s: Service) => {
     if (activeReward?.isFreeService) {
-      if (activeReward.name.toLowerCase().includes("corte") && s.name.toLowerCase().includes("corte")) return 0;
-      if (activeReward.name.toLowerCase().includes("barba") && s.name.toLowerCase().includes("barba")) return 0;
-      if (activeReward.name.toLowerCase().includes("pezinho") && s.name.toLowerCase().includes("pezinho")) return 0;
+      const rewardName = normalizeString(activeReward.name);
+      const serviceName = normalizeString(s.name);
+      
+      if (rewardName.includes("corte") && serviceName.includes("corte")) return 0;
+      if (rewardName.includes("barba") && serviceName.includes("barba")) return 0;
+      if (rewardName.includes("pezinho") && serviceName.includes("pezinho")) return 0;
     }
     return s.price;
   }
