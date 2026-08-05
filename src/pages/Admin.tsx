@@ -42,6 +42,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SubscribersHistory } from "@/components/SubscribersHistory";
 import ReferralsTab from "@/components/admin/ReferralsTab";
+import ReferralRedemptionsManager from "@/components/admin/ReferralRedemptionsManager";
 
 interface AppointmentService {
   name: string;
@@ -2483,6 +2484,11 @@ const Admin = () => {
           {/* Referrals Tab */}
           <TabsContent value="referrals" className="space-y-6">
             <ReferralsTab />
+          </TabsContent>
+
+          {/* Redemptions Tab */}
+          <TabsContent value="redemptions" className="space-y-6">
+            <ReferralRedemptionsManager />
           </TabsContent>
 
           {/* Subscriptions Tab */}

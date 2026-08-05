@@ -19,6 +19,7 @@ export default function Referrals() {
   const [profile, setProfile] = useState<any>(null);
   const [rewards, setRewards] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
   const [view, setView] = useState<"dashboard" | "history">("dashboard");
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +47,15 @@ export default function Referrals() {
         .order("cost_in_coupons", { ascending: true });
       
       setRewards(rewardsData || []);
+
+      // Fetch user's redemptions
+      const { data: redemptionsData } = await supabase
+        .from("referral_redemptions")
+        .select("id, created_at, status, referral_rewards(name, cost_in_coupons)")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+      
+      setRedemptions(redemptionsData || []);
 
       // Fetch history with the referred user's name, ID, and is_valid status
       const { data: historyData, error: historyError } = await supabase
@@ -391,9 +401,47 @@ export default function Referrals() {
               )}
             </div>
 
-            {/* Space for future additions */}
-            <div className="pt-8 text-center opacity-50">
-              <p className="text-xs text-muted-foreground">Em breve mais novidades...</p>
+            {/* Prêmios Resgatados */}
+            <div className="pt-6">
+              <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <span className="text-2xl">🏆</span>
+                Prêmios Resgatados
+              </h2>
+
+              {redemptions.length === 0 ? (
+                <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-2xl p-8 text-center">
+                  <div className="text-4xl mb-3">🎁</div>
+                  <p className="text-muted-foreground text-sm">Você ainda não resgatou nenhum prêmio.</p>
+                  <p className="text-muted-foreground text-xs mt-1">Acumule indicações e troque por recompensas!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {redemptions.map((r: any) => (
+                    <div key={r.id} className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Gift className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">{r.referral_rewards?.name || "Prêmio"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                        r.status === 'approved'
+                          ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                          : r.status === 'rejected'
+                          ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {r.status === 'approved' ? '✅ Aprovado' : r.status === 'rejected' ? '❌ Recusado' : '⏳ Pendente'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
