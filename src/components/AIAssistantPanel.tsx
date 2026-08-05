@@ -296,11 +296,16 @@ export const AIAssistantPanel = () => {
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Cliente</p>
                     <p className="text-lg font-bold text-foreground">{parsedData.client_name}</p>
                   </div>
-                  {parsedData.client_phone && (
-                    <Badge variant="outline" className="px-3 py-1.5 bg-muted/30 border-primary/20 text-muted-foreground">
-                      📱 {parsedData.client_phone}
-                    </Badge>
-                  )}
+                  <div className="flex flex-col">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Telefone (opcional - vincula cliente existente)</p>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: 11999999999"
+                      className="px-3 py-1.5 bg-background/50 border border-primary/20 rounded-lg text-sm text-foreground focus:outline-none focus:border-primary/50 w-full max-w-[180px]"
+                      value={parsedData.client_phone || ""}
+                      onChange={(e) => setParsedData({ ...parsedData, client_phone: e.target.value })}
+                    />
+                  </div>
                 </div>
                 
                 {/* Divider */}
