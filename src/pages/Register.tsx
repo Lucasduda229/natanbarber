@@ -72,10 +72,16 @@ const Register = () => {
     // Process referral if ?ref= exists
     const searchParams = new URLSearchParams(location.search);
     const refCode = searchParams.get('ref');
-    if (refCode && userId) {
+    const exactCodeParam = searchParams.get('code');
+    
+    if ((refCode || exactCodeParam) && userId) {
       try {
-          let actualReferralCode = refCode;
-          // Try to find the user by exact referral_code match
+          let actualReferralCode = exactCodeParam || refCode || "";
+          
+          if (exactCodeParam) {
+            // We have the exact code! No need to guess by name
+          } else {
+            // Try to find the user by exact referral_code match
           const { data: exactMatch } = await supabase.from('profiles').select('referral_code').eq('referral_code', refCode).maybeSingle();
           
           if (!exactMatch) {

@@ -47,16 +47,37 @@ export default function Referrals() {
       
       setRewards(rewardsData || []);
 
-      // Fetch history with the referred user's name
-      // We will try standard relation, if it fails gracefully fallback or adjust
+      // Fetch history with the referred user's name and ID
       const { data: historyData, error: historyError } = await supabase
         .from("referral_history")
-        .select("created_at, profiles!referral_history_referred_id_fkey(full_name)")
+        .select("created_at, referred_id, profiles!referral_history_referred_id_fkey(full_name)")
         .eq("referrer_id", user?.id)
         .order("created_at", { ascending: false });
       
-      if (!historyError && historyData) {
-        setHistory(historyData);
+      if (!historyError && historyData && historyData.length > 0) {
+        // Fetch appointments to check if they are valid
+        const referredIds = historyData.map((h: any) => h.referred_id).filter(Boolean);
+        let validIds = new Set();
+        
+        if (referredIds.length > 0) {
+          const { data: aptData } = await supabase
+            .from("appointments")
+            .select("user_id")
+            .in("user_id", referredIds);
+            
+          if (aptData) {
+            aptData.forEach(apt => validIds.add(apt.user_id));
+          }
+        }
+        
+        const enhancedHistory = historyData.map((h: any) => ({
+          ...h,
+          isValid: validIds.has(h.referred_id)
+        }));
+        
+        setHistory(enhancedHistory);
+      } else {
+        setHistory([]);
       }
 
     } catch (error) {
@@ -66,12 +87,12 @@ export default function Referrals() {
     }
   };
 
-  // Use first name sanitized for URL, fallback to referral_code hash
+  // Use first name sanitized for URL, and include actual code for exact matching
   const firstName = profile?.full_name
     ? profile.full_name.split(' ')[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
     : (profile?.referral_code || "");
   const referralLink = profile?.referral_code 
-    ? `${window.location.origin}/register?ref=${firstName}`
+    ? `${window.location.origin}/register?ref=${firstName}&code=${profile.referral_code}`
     : "";
 
   const handleCopyLink = () => {
@@ -335,26 +356,31 @@ export default function Referrals() {
                   </p>
                 ) : (
                   history.map((item, index) => (
-                    <div key={index} className="bg-background/80 border border-primary/10 rounded-xl p-4 flex justify-between items-center hover:border-primary/30 transition-colors">
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {item.profiles?.full_name || "Amigo"}
-                        </p>
-                        <div className="flex items-center gap-4 mt-1.5 opacity-70">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <CalendarIcon className="w-3.5 h-3.5" />
-                            {format(new Date(item.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5" />
-                            {format(new Date(item.created_at), "HH:mm")}
-                          </span>
+                  history.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{item.profiles?.full_name || "Usuário"}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(item.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
                         </div>
+                        {item.isValid ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-xs font-medium">
+                            <Check className="w-3.5 h-3.5" />
+                            Válido
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-full text-xs font-medium">
+                            <Clock className="w-3.5 h-3.5" />
+                            Pendente
+                          </div>
+                        )}
                       </div>
-                      <div className="bg-primary/20 p-2.5 rounded-full shadow-gold-glow">
-                        <Check className="w-5 h-5 text-primary" />
-                      </div>
-                    </div>
                   ))
                 )}
               </div>

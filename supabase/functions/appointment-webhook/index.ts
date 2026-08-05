@@ -59,6 +59,53 @@ serve(async (req) => {
     const appointmentTime = (appointment.appointment_time as string)?.slice(0, 5) || '';
     const appointmentDate = appointment.appointment_date as string || '';
 
+    // REFERRAL LOGIC: Check if this is the user's first appointment
+    try {
+      const { data: pastAppointments } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('user_id', appointment.user_id)
+        .limit(2);
+        
+      if (pastAppointments && pastAppointments.length === 1) {
+        // This is their first appointment! Check if they were referred
+        const { data: refHistory } = await supabase
+          .from('referral_history')
+          .select('referrer_id')
+          .eq('referred_id', appointment.user_id)
+          .single();
+          
+        if (refHistory && refHistory.referrer_id) {
+          // They were referred! Give the referrer 2 tickets
+          const { data: referrerProfile } = await supabase
+            .from('profiles')
+            .select('tickets_balance, total_referrals')
+            .eq('user_id', refHistory.referrer_id)
+            .single();
+            
+          if (referrerProfile) {
+            await supabase
+              .from('profiles')
+              .update({ 
+                tickets_balance: (referrerProfile.tickets_balance || 0) + 2,
+                total_referrals: (referrerProfile.total_referrals || 0) + 1
+              })
+              .eq('user_id', refHistory.referrer_id);
+              
+            await supabase.from('notifications').insert({
+              user_id: refHistory.referrer_id,
+              title: 'Indicação Válida! 🎉',
+              message: 'Seu amigo realizou o primeiro agendamento! Você ganhou 2 tickets.',
+              type: 'system'
+            });
+            console.log('Referral rewarded for user:', refHistory.referrer_id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error processing referral reward:', err);
+    }
+
     // Get all admin user IDs
     const { data: adminRoles } = await supabase
       .from('user_roles')
