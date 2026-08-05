@@ -170,7 +170,7 @@ export default function Referrals() {
     ? profile.full_name.split(' ')[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
     : (profile?.referral_code || "");
   const referralLink = profile?.referral_code 
-    ? `${window.location.origin}/register?ref=${firstName}&code=${profile.referral_code}`
+    ? `${window.location.origin}/register?ref=${firstName}`
     : "";
 
   const handleCopyLink = () => {
