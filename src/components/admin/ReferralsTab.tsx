@@ -91,22 +91,27 @@ export default function ReferralsTab() {
             
             for (const referral of pendingReferrals) {
               if (newlyValidatedIds.has(referral.referred_id)) {
-                autoValidatedCount++;
                 // Set valid in DB
-                await supabase.from("referral_history").update({ is_valid: true }).eq("id", referral.id);
+                const { error } = await supabase.from("referral_history").update({ is_valid: true }).eq("id", referral.id);
                 
-                // Add tickets to referrer
-                const { data: profile } = await supabase.from("profiles").select("tickets_balance, total_referrals").eq("user_id", referral.referrer_id).maybeSingle();
-                if (profile) {
-                  await supabase.from("profiles").update({
-                    tickets_balance: (profile.tickets_balance || 0) + 2,
-                    total_referrals: (profile.total_referrals || 0) + 1
-                  }).eq("user_id", referral.referrer_id);
+                if (!error) {
+                  autoValidatedCount++;
+                  
+                  // Add tickets to referrer
+                  const { data: profile } = await supabase.from("profiles").select("tickets_balance, total_referrals").eq("user_id", referral.referrer_id).maybeSingle();
+                  if (profile) {
+                    await supabase.from("profiles").update({
+                      tickets_balance: (profile.tickets_balance || 0) + 2,
+                      total_referrals: (profile.total_referrals || 0) + 1
+                    }).eq("user_id", referral.referrer_id);
+                  }
+                  
+                  // Update local state
+                  const index = historyItems.findIndex((h: any) => h.id === referral.id);
+                  if (index !== -1) historyItems[index].is_valid = true;
+                } else {
+                  console.error("Admin auto-validate failed for referral", referral.id, error);
                 }
-                
-                // Update local state
-                const index = historyItems.findIndex((h: any) => h.id === referral.id);
-                if (index !== -1) historyItems[index].is_valid = true;
               }
             }
             if (autoValidatedCount > 0) {

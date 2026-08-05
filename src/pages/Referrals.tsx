@@ -75,20 +75,27 @@ export default function Referrals() {
         
         // If we found any pending referral that now has an appointment, update DB
         if (newlyValidatedIds.size > 0) {
-          newlyValidatedCount = newlyValidatedIds.size;
           
           // Update referral_history to valid
           for (const referral of pendingReferrals) {
             if (newlyValidatedIds.has(referral.referred_id)) {
-              await supabase
+              const { error } = await supabase
                 .from("referral_history")
                 .update({ is_valid: true })
                 .eq("id", referral.id);
+                
+              if (!error) {
+                newlyValidatedCount++;
+              } else {
+                console.error("Failed to update referral history (RLS policy issue?):", error);
+                // We remove it from newlyValidatedIds so we don't mark it valid locally
+                newlyValidatedIds.delete(referral.referred_id);
+              }
             }
           }
           
-          // Update profile tickets and total_referrals
-          if (profileData) {
+          // Only update profile if we successfully updated at least one referral in the DB
+          if (newlyValidatedCount > 0 && profileData) {
             const newTickets = (profileData.tickets_balance || 0) + (newlyValidatedCount * 2);
             const newTotal = (profileData.total_referrals || 0) + newlyValidatedCount;
             
@@ -100,11 +107,11 @@ export default function Referrals() {
               })
               .eq("user_id", user?.id);
               
-            setProfile(prev => ({
+            setProfile(prev => prev ? ({
               ...prev,
               tickets_balance: newTickets,
               total_referrals: newTotal
-            }));
+            }) : prev);
             
             toast.success("Indicações validadas! 🎉", {
               description: `Você ganhou ${newlyValidatedCount * 2} tickets porque seus amigos agendaram!`
