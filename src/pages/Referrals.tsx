@@ -33,7 +33,7 @@ export default function Referrals() {
     try {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("referral_code, referrals_balance, total_referrals, tickets_balance")
+        .select("referral_code, referrals_balance, total_referrals, tickets_balance, full_name")
         .eq("user_id", user?.id)
         .single();
       
@@ -66,7 +66,10 @@ export default function Referrals() {
     }
   };
 
-  const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : (profile?.referral_code || "");
+  // Use first name sanitized for URL, fallback to referral_code hash
+  const firstName = profile?.full_name
+    ? profile.full_name.split(' ')[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")
+    : (profile?.referral_code || "");
   const referralLink = profile?.referral_code 
     ? `${window.location.origin}/register?ref=${firstName}`
     : "";
