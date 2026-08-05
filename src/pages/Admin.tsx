@@ -59,6 +59,8 @@ interface Appointment {
   payment_method: string | null;
   notes: string | null;
   updated_at?: string;
+  used_referral_redemption_id?: string | null;
+  used_store_redemption_id?: string | null;
   profiles: {
     full_name: string | null;
     phone: string | null;
@@ -167,7 +169,8 @@ const getExtraFeeFromNotes = (notes: string | null): number => {
 const getExtrasTotal = (notes: string | null): number =>
   getNightSurcharge(notes) + getExtraFeeFromNotes(notes);
 
-const getServicesTotal = (services: AppointmentService[], notes?: string | null): number => {
+const getServicesTotal = (services: AppointmentService[], notes?: string | null, isReward?: boolean): number => {
+  if (isReward) return 0;
   if (!services || services.length === 0) return getExtrasTotal(notes ?? null);
   return services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
 };
@@ -580,6 +583,8 @@ const Admin = () => {
         user_id,
         notes,
         updated_at,
+        used_referral_redemption_id,
+        used_store_redemption_id,
         service_id,
         services:service_id (
           name,
@@ -1584,7 +1589,7 @@ const Admin = () => {
                 <p className="text-base sm:text-xl font-bold text-primary">
                   R$ {filteredStatsAppointments
                     .filter(a => (a.status === 'confirmed' || a.status === 'completed') && a.payment_method !== 'subscription')
-                    .reduce((sum, a) => sum + getServicesTotal(a.services, a.notes), 0)
+                    .reduce((sum, a) => sum + getServicesTotal(a.services, a.notes, !!(a.used_referral_redemption_id || a.used_store_redemption_id)), 0)
                     .toFixed(0)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
@@ -1702,7 +1707,7 @@ const Admin = () => {
                                 );
                               }
                               return (
-                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>
+                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>
                               );
                             })()}
                           </div>
@@ -2073,7 +2078,7 @@ const Admin = () => {
                                   );
                                 }
                                 return (
-                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>
+                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>
                                 );
                               })()}
                             </div>
@@ -2094,7 +2099,7 @@ const Admin = () => {
                             if (sub && credits) {
                               return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
                             }
-                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services, appointment.notes).toFixed(2)}</span>;
+                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>;
                           })()}
 
                           <Select
@@ -2595,7 +2600,7 @@ const Admin = () => {
 
                 <span className="text-muted-foreground font-medium">Valor Total:</span>
                 <span className="font-semibold text-green-500">
-                  R$ {getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes).toFixed(2).replace('.', ',')}
+                  R$ {getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id)).toFixed(2).replace('.', ',')}
                 </span>
 
                 <span className="text-muted-foreground font-medium">Data/Hora:</span>
