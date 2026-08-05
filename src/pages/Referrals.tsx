@@ -47,32 +47,74 @@ export default function Referrals() {
       
       setRewards(rewardsData || []);
 
-      // Fetch history with the referred user's name and ID
+      // Fetch history with the referred user's name, ID, and is_valid status
       const { data: historyData, error: historyError } = await supabase
         .from("referral_history")
-        .select("created_at, referred_id, profiles!referral_history_referred_id_fkey(full_name)")
+        .select("id, created_at, referred_id, is_valid, profiles!referral_history_referred_id_fkey(full_name)")
         .eq("referrer_id", user?.id)
         .order("created_at", { ascending: false });
       
       if (!historyError && historyData && historyData.length > 0) {
-        // Fetch appointments to check if they are valid
-        const referredIds = historyData.map((h: any) => h.referred_id).filter(Boolean);
-        let validIds = new Set();
+        // Find referrals that are not yet valid
+        const pendingReferrals = historyData.filter((h: any) => h.is_valid === false || h.is_valid === null);
+        const pendingIds = pendingReferrals.map((h: any) => h.referred_id).filter(Boolean);
         
-        if (referredIds.length > 0) {
+        let newlyValidatedIds = new Set<string>();
+        let newlyValidatedCount = 0;
+        
+        if (pendingIds.length > 0) {
           const { data: aptData } = await supabase
             .from("appointments")
             .select("user_id")
-            .in("user_id", referredIds);
+            .in("user_id", pendingIds);
             
           if (aptData) {
-            aptData.forEach(apt => validIds.add(apt.user_id));
+            aptData.forEach(apt => newlyValidatedIds.add(apt.user_id));
+          }
+        }
+        
+        // If we found any pending referral that now has an appointment, update DB
+        if (newlyValidatedIds.size > 0) {
+          newlyValidatedCount = newlyValidatedIds.size;
+          
+          // Update referral_history to valid
+          for (const referral of pendingReferrals) {
+            if (newlyValidatedIds.has(referral.referred_id)) {
+              await supabase
+                .from("referral_history")
+                .update({ is_valid: true })
+                .eq("id", referral.id);
+            }
+          }
+          
+          // Update profile tickets and total_referrals
+          if (profileData) {
+            const newTickets = (profileData.tickets_balance || 0) + (newlyValidatedCount * 2);
+            const newTotal = (profileData.total_referrals || 0) + newlyValidatedCount;
+            
+            await supabase
+              .from("profiles")
+              .update({ 
+                tickets_balance: newTickets,
+                total_referrals: newTotal
+              })
+              .eq("user_id", user?.id);
+              
+            setProfile(prev => ({
+              ...prev,
+              tickets_balance: newTickets,
+              total_referrals: newTotal
+            }));
+            
+            toast.success("Indicações validadas! 🎉", {
+              description: `Você ganhou ${newlyValidatedCount * 2} tickets porque seus amigos agendaram!`
+            });
           }
         }
         
         const enhancedHistory = historyData.map((h: any) => ({
           ...h,
-          isValid: validIds.has(h.referred_id)
+          isValid: h.is_valid === true || newlyValidatedIds.has(h.referred_id)
         }));
         
         setHistory(enhancedHistory);
