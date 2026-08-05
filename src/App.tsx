@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import AuthRecoveryRedirect from "./components/AuthRecoveryRedirect";
 import Referrals from "./pages/Referrals";
 import Store from "./pages/Store";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ const App = () => (
         <OfflineIndicator />
         <BrowserRouter>
           <AuthRecoveryRedirect />
+          <PWAUpdatePrompt />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
