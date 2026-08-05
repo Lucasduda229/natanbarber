@@ -135,6 +135,7 @@ const Booking = () => {
     discountAmount?: number;
     discountPercentage?: number;
   } | null>(null);
+  const toastedRewardId = useRef<string | null>(null);
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -226,6 +227,7 @@ const Booking = () => {
       const storeRewardId = searchParams.get('store_reward_id');
 
       if (referralRewardId) {
+        toastedRewardId.current = referralRewardId;
         const { data, error } = await supabase
           .from('referral_redemptions')
           .select('id, status, referral_rewards(name)')
@@ -246,6 +248,7 @@ const Booking = () => {
           });
         }
       } else if (storeRewardId) {
+        toastedRewardId.current = storeRewardId;
         const { data, error } = await supabase
           .from('store_redemptions')
           .select('id, status, store_products(name, category)')
