@@ -50,7 +50,7 @@ const Register = () => {
     e.preventDefault();
     if (!validateForm()) return;
     setLoading(true);
-    const { error } = await signUp(formData.email, formData.password, { full_name: formData.name, phone: formData.phone });
+    const { error, userId } = await signUp(formData.email, formData.password, { full_name: formData.name, phone: formData.phone });
     setLoading(false);
     if (error) {
       // Handle specific error cases with friendly messages
@@ -72,32 +72,28 @@ const Register = () => {
     // Process referral if ?ref= exists
     const searchParams = new URLSearchParams(location.search);
     const refCode = searchParams.get('ref');
-    if (refCode) {
+    if (refCode && userId) {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          
           let actualReferralCode = refCode;
           // Try to find the user by exact referral_code match
           const { data: exactMatch } = await supabase.from('profiles').select('referral_code').eq('referral_code', refCode).maybeSingle();
           
           if (!exactMatch) {
-            // It might be a first name, let's search by first name (e.g. "Lucas %")
-            const { data: nameMatch } = await supabase.from('profiles').select('referral_code').ilike('full_name', `${refCode} %`).limit(1).maybeSingle();
+            // It might be a first name - search by first name (with or without surname)
+            const { data: nameMatch } = await supabase
+              .from('profiles')
+              .select('referral_code')
+              .or(`full_name.ilike.${refCode} %,full_name.ilike.${refCode}`)
+              .limit(1).maybeSingle();
             if (nameMatch) {
               actualReferralCode = nameMatch.referral_code;
-            } else {
-              // Try exact full name match just in case
-              const { data: exactNameMatch } = await supabase.from('profiles').select('referral_code').ilike('full_name', refCode).limit(1).maybeSingle();
-              if (exactNameMatch) actualReferralCode = exactNameMatch.referral_code;
             }
           }
 
           await supabase.rpc('process_referral', { 
             p_referrer_code: actualReferralCode, 
-            p_referred_id: session.user.id 
+            p_referred_id: userId
           });
-        }
       } catch (err) {
         console.error("Error processing referral:", err);
       }
