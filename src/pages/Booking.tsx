@@ -1956,60 +1956,80 @@ const Booking = () => {
                   </div>
                 )}
 
-                {hasExpiredSubscription ? (
-                  <div className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4">
-                    {renewalSuccess ? (
-                      <div className="text-center space-y-3 py-4 animate-in fade-in">
-                        <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-                          <Check className="w-6 h-6 text-green-500" />
+                {hasExpiredSubscription && expiredSubscriptionDetails && expiredSubscriptionDetails.price > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="rounded-xl bg-gradient-to-br from-primary/15 via-card/90 to-primary/5 border-2 border-primary/30 p-4">
+                      {renewalSuccess ? (
+                        <div className="text-center space-y-3 py-4 animate-in fade-in">
+                          <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+                            <Check className="w-6 h-6 text-green-500" />
+                          </div>
+                          <p className="font-bold text-foreground text-lg">Pedido Enviado!</p>
+                          <p className="text-xs text-muted-foreground">O barbeiro confirmará o pagamento em breve.</p>
                         </div>
-                        <p className="font-bold text-foreground text-lg">Pedido Enviado!</p>
-                        <p className="text-xs text-muted-foreground">O barbeiro confirmará o pagamento em breve.</p>
-                      </div>
-                    ) : isRenewing && expiredSubscriptionDetails ? (
-                      <div className="space-y-4 animate-in fade-in zoom-in-95">
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-foreground">Renovar {expiredSubscriptionDetails.package_name}</p>
-                          <p className="text-xs text-muted-foreground">R$ {expiredSubscriptionDetails.price.toFixed(2)}</p>
+                      ) : isRenewing && expiredSubscriptionDetails ? (
+                        <div className="space-y-4 animate-in fade-in zoom-in-95">
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-foreground">Renovar {expiredSubscriptionDetails.package_name}</p>
+                            <p className="text-xs text-muted-foreground">R$ {expiredSubscriptionDetails.price.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-white p-2 rounded-xl w-fit mx-auto shadow-lg">
+                            <QRCodeSVG
+                              value={generatePixPayload({
+                                pixKey: PIX_KEY,
+                                merchantName: "NATAN BARBER",
+                                merchantCity: "LAURO MULLER",
+                                amount: expiredSubscriptionDetails.price,
+                                description: `Renovacao ${expiredSubscriptionDetails.package_name}`.substring(0, 25),
+                              })}
+                              size={160}
+                              level="M"
+                              bgColor="#ffffff"
+                              fgColor="#000000"
+                            />
+                          </div>
+                          <p className="text-center text-[10px] text-muted-foreground">Escaneie o QR Code com seu banco</p>
+                          <div className="flex flex-col gap-2 mt-2">
+                            <Button 
+                              onClick={handleFastRenewal} 
+                              disabled={renewalLoading}
+                              className="bg-gold-gradient hover:opacity-90 text-background font-bold shadow-gold-glow w-full"
+                            >
+                              {renewalLoading ? "Aguarde..." : "Confirmar Assinatura (PIX Pago)"}
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setIsRenewing(false)} className="text-muted-foreground w-full">
+                              Cancelar
+                            </Button>
+                          </div>
                         </div>
-                        <div className="bg-white p-2 rounded-xl w-fit mx-auto shadow-lg">
-                          <QRCodeSVG
-                            value={generatePixPayload({
-                              pixKey: PIX_KEY,
-                              merchantName: "NATAN BARBER",
-                              merchantCity: "LAURO MULLER",
-                              amount: expiredSubscriptionDetails.price,
-                              description: `Renovacao ${expiredSubscriptionDetails.package_name}`.substring(0, 25),
-                            })}
-                            size={160}
-                            level="M"
-                            bgColor="#ffffff"
-                            fgColor="#000000"
-                          />
+                      ) : (
+                        <div className="flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setIsRenewing(true)}>
+                          <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
+                            <Crown className="w-7 h-7 text-background" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-foreground mb-1">Renovar Pacote</h4>
+                            <p className="text-xs text-muted-foreground mb-2">Clique aqui para gerar o PIX de renovação e confirmar o pagamento.</p>
+                          </div>
                         </div>
-                        <p className="text-center text-[10px] text-muted-foreground">Escaneie o QR Code com seu banco</p>
-                        <div className="flex flex-col gap-2 mt-2">
-                          <Button 
-                            onClick={handleFastRenewal} 
-                            disabled={renewalLoading}
-                            className="bg-gold-gradient hover:opacity-90 text-background font-bold shadow-gold-glow w-full"
-                          >
-                            {renewalLoading ? "Aguarde..." : "Confirmar Assinatura (PIX Pago)"}
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setIsRenewing(false)} className="text-muted-foreground w-full">
-                            Cancelar
-                          </Button>
+                      )}
+                    </div>
+                    
+                    {!isRenewing && !renewalSuccess && (
+                      <div 
+                        className="rounded-xl bg-card border border-primary/20 p-3 cursor-pointer active:scale-[0.98] transition-transform flex items-center justify-between shadow-sm"
+                        onClick={() => navigate("/buy-subscription")}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Package className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-foreground">Escolher outro pacote</h4>
+                            <p className="text-[10px] text-muted-foreground">Ver outras opções de assinatura</p>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setIsRenewing(true)}>
-                        <div className="w-14 h-14 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold-glow flex-shrink-0">
-                          <Crown className="w-7 h-7 text-background" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-bold text-foreground mb-1">Renovar Pacote</h4>
-                          <p className="text-xs text-muted-foreground mb-2">Clique aqui para gerar o PIX de renovação e confirmar o pagamento.</p>
-                        </div>
+                        <ChevronLeft className="w-4 h-4 text-primary rotate-180" />
                       </div>
                     )}
                   </div>
