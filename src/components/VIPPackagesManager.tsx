@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Minus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign, Filter, ShoppingCart, FileText } from "lucide-react";
+import { Plus, Minus, Search, Scissors, X, Trash2, Crown, Calendar, RefreshCw, Pencil, RotateCcw, Check, ArrowRight, CreditCard, Clock, CheckCircle, DollarSign, Filter, ShoppingCart, FileText, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -120,6 +123,7 @@ const VIPPackagesManager = () => {
   const [registeringUsage, setRegisteringUsage] = useState(false);
   const [allAppointments, setAllAppointments] = useState<any[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [openCustomerDropdown, setOpenCustomerDropdown] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -1284,18 +1288,58 @@ const VIPPackagesManager = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Cliente</label>
-                      <select
-                        value={selectedUserId}
-                        onChange={(e) => setSelectedUserId(e.target.value)}
-                        className="w-full p-2 rounded-lg bg-muted/30 border border-border text-foreground"
-                      >
-                        <option value="">Selecione um cliente...</option>
-                        {usersWithoutSubscription.map(profile => (
-                          <option key={profile.user_id} value={profile.user_id}>
-                            {profile.full_name || "Sem nome"} - {profile.phone || "Sem telefone"}
-                          </option>
-                        ))}
-                      </select>
+                      <Popover open={openCustomerDropdown} onOpenChange={setOpenCustomerDropdown}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openCustomerDropdown}
+                            className="w-full justify-between bg-muted/30 border-border font-normal px-3"
+                          >
+                            <span className="truncate">
+                              {selectedUserId
+                                ? (() => {
+                                    const selected = usersWithoutSubscription.find((p) => p.user_id === selectedUserId);
+                                    return selected 
+                                      ? `${selected.full_name || "Sem nome"} - ${selected.phone || "Sem telefone"}`
+                                      : "Selecione um cliente...";
+                                  })()
+                                : "Selecione um cliente..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] sm:w-[400px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar cliente..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {usersWithoutSubscription.map((profile) => (
+                                  <CommandItem
+                                    key={profile.user_id}
+                                    value={`${profile.full_name || ""} ${profile.phone || ""} ${profile.user_id}`}
+                                    onSelect={() => {
+                                      setSelectedUserId(profile.user_id);
+                                      setOpenCustomerDropdown(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 shrink-0",
+                                        selectedUserId === profile.user_id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="truncate">
+                                      {profile.full_name || "Sem nome"} - {profile.phone || "Sem telefone"}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Pacote</label>
