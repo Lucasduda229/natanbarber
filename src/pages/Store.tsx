@@ -203,7 +203,7 @@ export default function Store() {
 
                           return (
                             <div key={product.id} className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl overflow-hidden flex flex-col hover:border-[#00D4AA]/30 transition-all duration-300 shadow-lg">
-                              <div className="aspect-video bg-black/40 relative flex items-center justify-center p-2">
+                              <div className="aspect-[16/10] bg-black/40 relative flex items-center justify-center p-4">
                                 {product.image_url ? (
                                   <img 
                                     src={product.image_url} 
