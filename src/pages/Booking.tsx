@@ -476,16 +476,21 @@ const Booking = () => {
       setSubscriptionPackageItems([]);
       
       // Check if user has an inactive/expired subscription (pega a mais recente)
+      // IMPORTANT: Only consider as "expired" if it was previously activated (has last_payment_date).
+      // Subscriptions with is_active=false and no last_payment_date are NEW purchases
+      // pending admin activation — they should NOT show the renewal UI.
       const { data: inactiveSub } = await supabase
         .from("subscription_progress")
         .select(`
           id,
           package_id,
           package_name,
+          last_payment_date,
           packages (price)
         `)
         .eq("user_id", user.id)
         .eq("is_active", false)
+        .not("last_payment_date", "is", null)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
