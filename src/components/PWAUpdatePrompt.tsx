@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { toast } from "sonner";
 
@@ -8,23 +8,39 @@ export function PWAUpdatePrompt() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      // Check for updates every 60 seconds
-      r && setInterval(() => r.update(), 60 * 1000);
+      if (!r) return;
+
+      // Check for updates every 15 seconds
+      setInterval(() => r.update(), 15 * 1000);
+
+      // Check for updates when the app regains focus (user switches back to the app)
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          r.update();
+        }
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+
+      // Check for updates on page navigation
+      const onFocus = () => r.update();
+      window.addEventListener("focus", onFocus);
     },
   });
 
+  const doUpdate = useCallback(() => {
+    updateServiceWorker(true);
+  }, [updateServiceWorker]);
+
   useEffect(() => {
     if (needRefresh) {
-      toast("Nova versao disponivel!", {
+      toast("Nova versão disponível!", {
         description: "Atualizando automaticamente...",
-        duration: 3000,
+        duration: 2000,
       });
-      // Force immediate update without user action
-      setTimeout(() => {
-        updateServiceWorker(true);
-      }, 1500);
+      // Force immediate update
+      setTimeout(doUpdate, 1000);
     }
-  }, [needRefresh, updateServiceWorker]);
+  }, [needRefresh, doUpdate]);
 
   return null;
 }
