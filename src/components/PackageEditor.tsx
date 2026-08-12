@@ -318,11 +318,11 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
         ) : (
           <div className="space-y-2">
             {packageData.items.map((item, index) => (
-              <div key={index} className="flex items-center gap-3 bg-muted/20 p-3 rounded-lg">
+              <div key={index} className="flex items-center gap-2 bg-muted/20 p-3 rounded-lg overflow-hidden">
                 <select
                   value={item.service_id}
                   onChange={(e) => updateItem(index, 'service_id', e.target.value)}
-                  className="flex-1 p-2 rounded-lg bg-background border border-border text-foreground"
+                  className="min-w-0 flex-1 p-2 rounded-lg bg-background border border-border text-foreground text-sm truncate"
                 >
                   {services.map(service => (
                     <option key={service.id} value={service.id}>
@@ -330,21 +330,21 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
                     </option>
                   ))}
                 </select>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 shrink-0">
                   <Label className="text-xs whitespace-nowrap">Qtd:</Label>
                   <Input
                     type="number"
                     min="1"
                     value={item.quantity}
                     onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                    className="w-16 bg-background"
+                    className="w-14 bg-background text-center px-1"
                   />
                 </div>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => removeItem(index)}
-                  className="text-destructive hover:text-destructive"
+                  className="text-destructive hover:text-destructive shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
