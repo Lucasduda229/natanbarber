@@ -417,7 +417,7 @@ export default function ReferralsTab() {
               </p>
             ) : (
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {Object.entries(groupedHistory).map(([referrerId, group]) => (
+                {(Object.entries(groupedHistory) as [string, { referrer: any; items: any[] }][]).map(([referrerId, group]) => (
                   <div key={referrerId} className="border border-border/50 rounded-xl overflow-hidden bg-background/30">
                     <div 
                       className="flex items-center justify-between p-4 cursor-pointer hover:bg-primary/5 transition-colors"

@@ -45,6 +45,7 @@ interface SubscriberWithUsage {
   user_id: string;
   created_at: string;
   subscription_start_date: string;
+  last_payment_date?: string | null;
   usage_reset_date: string | null;
   is_active: boolean;
   package_id: string | null;

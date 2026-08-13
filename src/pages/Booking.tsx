@@ -157,7 +157,9 @@ const Booking = () => {
     weekly_credits_available: number;
     subscription_start_date: Date;
     subscription_end_date: Date;
+    usage_reset_date?: string | null;
     has_started: boolean;
+
   } | null>(null);
   const [hasExpiredSubscription, setHasExpiredSubscription] = useState(false);
   const [expiredSubscriptionDetails, setExpiredSubscriptionDetails] = useState<{ id: string, package_id: string, package_name: string, price: number } | null>(null);

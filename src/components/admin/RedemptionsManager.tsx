@@ -176,7 +176,7 @@ export function RedemptionsManager() {
                         
                         {redemption.profiles?.phone && (
                           <button
-                            onClick={() => openWhatsApp(redemption.profiles!.phone!)}
+                            onClick={() => openWhatsApp(redemption.profiles!.phone!, "")}
                             className="text-xs text-[#25D366] hover:underline flex items-center gap-1"
                           >
                             <ExternalLink className="w-3 h-3" />
