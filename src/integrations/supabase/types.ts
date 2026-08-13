@@ -91,6 +91,8 @@ export type Database = {
           service_id: string
           status: string
           updated_at: string
+          used_referral_redemption_id: string | null
+          used_store_redemption_id: string | null
           user_id: string
         }
         Insert: {
@@ -106,6 +108,8 @@ export type Database = {
           service_id: string
           status?: string
           updated_at?: string
+          used_referral_redemption_id?: string | null
+          used_store_redemption_id?: string | null
           user_id: string
         }
         Update: {
@@ -121,6 +125,8 @@ export type Database = {
           service_id?: string
           status?: string
           updated_at?: string
+          used_referral_redemption_id?: string | null
+          used_store_redemption_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -129,6 +135,20 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_used_referral_redemption_id_fkey"
+            columns: ["used_referral_redemption_id"]
+            isOneToOne: false
+            referencedRelation: "referral_redemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_used_store_redemption_id_fkey"
+            columns: ["used_store_redemption_id"]
+            isOneToOne: false
+            referencedRelation: "store_redemptions"
             referencedColumns: ["id"]
           },
         ]
@@ -561,30 +581,45 @@ export type Database = {
         Row: {
           admin_notes: string | null
           avatar_url: string | null
+          coupons_balance: number
           created_at: string
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
+          referrals_balance: number | null
+          tickets_balance: number | null
+          total_referrals: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           admin_notes?: string | null
           avatar_url?: string | null
+          coupons_balance?: number
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referrals_balance?: number | null
+          tickets_balance?: number | null
+          total_referrals?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           admin_notes?: string | null
           avatar_url?: string | null
+          coupons_balance?: number
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referrals_balance?: number | null
+          tickets_balance?: number | null
+          total_referrals?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -619,6 +654,144 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      referral_history: {
+        Row: {
+          created_at: string
+          id: string
+          is_valid: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_valid?: boolean | null
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_valid?: boolean | null
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_history_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referral_history_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_redemptions: {
+        Row: {
+          created_at: string
+          id: string
+          reward_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reward_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reward_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_redemptions_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "referral_rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_rewards: {
+        Row: {
+          active: boolean | null
+          cost_in_coupons: number
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          cost_in_coupons: number
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          cost_in_coupons?: number
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       reminder_settings: {
         Row: {
@@ -834,6 +1007,75 @@ export type Database = {
           subscribers_only?: boolean | null
         }
         Relationships: []
+      }
+      store_products: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          cost_in_tickets: number
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          cost_in_tickets: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          cost_in_tickets?: number
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      store_redemptions: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_redemptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       subscriber_rewards: {
         Row: {
@@ -1062,7 +1304,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_referral: {
+        Args: { p_referred_id: string; p_referrer_code: string }
+        Returns: boolean
+      }
+      redeem_reward: {
+        Args: { p_reward_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      redeem_store_product: {
+        Args: { p_product_id: string; p_user_id: string }
+        Returns: boolean
+      }
       use_subscription_cut: { Args: { p_user_id: string }; Returns: boolean }
+      validate_referral: { Args: { p_referred_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
