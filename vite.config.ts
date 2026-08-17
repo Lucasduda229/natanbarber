@@ -49,7 +49,12 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Bump this version string on every deploy to force cache invalidation
+        cacheId: "natanbarber-v3",
+        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+        cleanupOutdatedCaches: true,
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
