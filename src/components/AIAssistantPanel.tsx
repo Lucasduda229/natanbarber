@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,7 +35,7 @@ interface Service {
   name: string;
   price: number;
   duration_minutes: number;
-  is_vip?: boolean;
+  subscribers_only?: boolean | null;
 }
 
 interface ClientProfile {
@@ -113,10 +113,10 @@ export const AIAssistantPanel = () => {
       setLoadingServices(true);
       const { data, error } = await supabase
         .from('services')
-        .select('id, name, price, duration_minutes, is_vip')
-        .eq('active', true)
+        .select('id, name, price, duration_minutes, subscribers_only')
         .order('name');
       if (!error && data) setServices(data as Service[]);
+      else if (error) console.error('Error loading services:', error);
       setLoadingServices(false);
     })();
   }, []);
@@ -470,7 +470,7 @@ export const AIAssistantPanel = () => {
                         </div>
 
                         {/* Price or VIP */}
-                        {svc.is_vip ? (
+                        {svc.subscribers_only ? (
                           <span className="flex items-center gap-1 text-xs font-bold text-primary">
                             <Crown className="h-3.5 w-3.5" />
                             VIP
