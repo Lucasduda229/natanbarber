@@ -1,505 +1,584 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Send, Loader2, CheckCircle, AlertCircle, Calendar, Clock, User, Scissors, MessageSquare, Wand2, Zap, CreditCard } from 'lucide-react';
-import pixIcon from '@/assets/pix-icon-new.png';
-import cardIcon from '@/assets/card-icon.png';
-import cashIcon from '@/assets/cash-icon.png';
-import whatsappIcon from '@/assets/whatsapp-icon.svg';
+import { Input } from '@/components/ui/input';
+import {
+  Calendar,
+  Clock,
+  User,
+  Scissors,
+  Search,
+  X,
+  CheckCircle2,
+  Loader2,
+  Crown,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from '@/hooks/useExtraFee';
 import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-interface ServiceItem {
-  service_id: string;
-  service_name: string;
+/* ------------------------------------------------------------------ */
+/* Types                                                               */
+/* ------------------------------------------------------------------ */
+
+interface Service {
+  id: string;
+  name: string;
   price: number;
-  duration_minutes?: number;
+  duration_minutes: number;
+  is_vip?: boolean;
 }
 
-interface ParsedAppointment {
-  client_name: string;
-  client_phone: string | null;
-  service_id: string;
-  service_name: string;
-  service_price?: number;
-  services?: ServiceItem[];
-  total_price?: number;
-  total_duration_minutes?: number;
-  appointment_date: string;
-  appointment_time: string;
-  notes: string | null;
+interface ClientProfile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+const todayStr = () => format(new Date(), 'yyyy-MM-dd');
+
+const formatDateLabel = (dateStr: string) => {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return format(date, "d 'de' MMMM, yyyy", { locale: ptBR });
+  } catch {
+    return dateStr;
+  }
+};
+
+const minutesToLabel = (mins: number) =>
+  mins >= 60
+    ? `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}min` : ''}`
+    : `${mins} min`;
+
+const addMinutesToTime = (time: string, mins: number): string => {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + mins;
+  const hh = Math.floor(total / 60) % 24;
+  const mm = total % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+};
+
+/* ------------------------------------------------------------------ */
+/* Component                                                           */
+/* ------------------------------------------------------------------ */
 
 export const AIAssistantPanel = () => {
   const { config: extraFee } = useExtraFee();
-  const [message, setMessage] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [parsedData, setParsedData] = useState<ParsedAppointment | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('pending');
+
+  /* ---------- form state ---------- */
+  const [appointmentDate, setAppointmentDate] = useState(todayStr());
+  const [appointmentTime, setAppointmentTime] = useState('09:00');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<string>('PIX');
   const [chargeExtraFee, setChargeExtraFee] = useState(false);
 
-  const processMessage = async () => {
-    if (!message.trim()) {
-      toast.error('Digite uma mensagem para processar');
+  /* ---------- client ---------- */
+  const [clientQuery, setClientQuery] = useState('');
+  const [clientResults, setClientResults] = useState<ClientProfile[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
+  const [searchingClients, setSearchingClients] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  /* guest fallback */
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+
+  /* ---------- services ---------- */
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+
+  /* ---------- submit ---------- */
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /* ---------------------------------------------------------------- */
+  /* Load services once                                               */
+  /* ---------------------------------------------------------------- */
+  useEffect(() => {
+    (async () => {
+      setLoadingServices(true);
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, price, duration_minutes, is_vip')
+        .eq('active', true)
+        .order('name');
+      if (!error && data) setServices(data as Service[]);
+      setLoadingServices(false);
+    })();
+  }, []);
+
+  /* ---------------------------------------------------------------- */
+  /* Client search                                                    */
+  /* ---------------------------------------------------------------- */
+  const searchClients = useCallback(async (q: string) => {
+    if (q.trim().length < 2) {
+      setClientResults([]);
+      setShowDropdown(false);
       return;
     }
+    setSearchingClients(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
+      .limit(8);
+    setClientResults((data as ClientProfile[]) || []);
+    setShowDropdown(true);
+    setSearchingClients(false);
+  }, []);
 
-    setIsProcessing(true);
-    setError(null);
-    setParsedData(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!selectedClient) searchClients(clientQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientQuery, selectedClient, searchClients]);
 
-    try {
-      const { data, error: funcError } = await supabase.functions.invoke('ai-appointment-parser', {
-        body: { message: message.trim() }
-      });
+  const selectClient = (c: ClientProfile) => {
+    setSelectedClient(c);
+    setClientQuery(c.full_name || '');
+    setGuestName(c.full_name || '');
+    setGuestPhone(c.phone || '');
+    setClientResults([]);
+    setShowDropdown(false);
+  };
 
-      if (funcError) throw new Error(funcError.message);
-      if (!data.success) {
-        setError(data.error || 'Não foi possível interpretar a mensagem');
-        return;
-      }
+  const clearClient = () => {
+    setSelectedClient(null);
+    setClientQuery('');
+    setGuestName('');
+    setGuestPhone('');
+  };
 
-      setParsedData(data.data);
-      toast.success('Mensagem interpretada com sucesso!');
-    } catch (err: any) {
-      console.error('Error processing message:', err);
-      setError(err.message || 'Erro ao processar mensagem');
-      toast.error('Erro ao processar mensagem');
-    } finally {
-      setIsProcessing(false);
-    }
+  /* ---------------------------------------------------------------- */
+  /* Service toggle                                                   */
+  /* ---------------------------------------------------------------- */
+  const toggleService = (id: string) => {
+    setSelectedServices(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id],
+    );
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* Computed totals                                                  */
+  /* ---------------------------------------------------------------- */
+  const pickedServices = services.filter(s => selectedServices.includes(s.id));
+  const totalDuration = pickedServices.reduce((a, s) => a + (s.duration_minutes || 0), 0);
+  const baseTotal = pickedServices.reduce((a, s) => a + s.price, 0);
+  const feeApplies = isExtraFeeApplicable(extraFee, appointmentDate);
+  const feeAmount = chargeExtraFee && feeApplies ? (extraFee.amount || 0) : 0;
+  const totalPrice = baseTotal + feeAmount;
+  const endTime = totalDuration > 0 ? addMinutesToTime(appointmentTime, totalDuration) : null;
+
+  /* ---------------------------------------------------------------- */
+  /* Payment method map                                               */
+  /* ---------------------------------------------------------------- */
+  const pmMap: Record<string, string | null> = {
+    PIX: 'pix',
+    Cartão: 'cartao',
+    Dinheiro: 'dinheiro',
+    Pendente: null,
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* Submit                                                           */
+  /* ---------------------------------------------------------------- */
+  const handleClear = () => {
+    setAppointmentDate(todayStr());
+    setAppointmentTime('09:00');
+    setSelectedServices([]);
+    setPaymentMethod('PIX');
+    setChargeExtraFee(false);
+    clearClient();
   };
 
   const playSuccessSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-      
-      notes.forEach((freq, index) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = freq;
-        oscillator.type = 'sine';
-        
-        const startTime = audioContext.currentTime + index * 0.1;
-        gainNode.gain.setValueAtTime(0.3, startTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
-        
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.3);
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        const t = ctx.currentTime + i * 0.1;
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start(t);
+        osc.stop(t + 0.3);
       });
-    } catch (e) {
-      console.log('Audio not supported');
+    } catch {
+      /* noop */
     }
   };
 
-  // Map frontend payment method names to database values
-  const getPaymentMethodValue = (method: string): string | null => {
-    const mapping: Record<string, string | null> = {
-      'pix': 'pix',
-      'card': 'cartao',
-      'cash': 'dinheiro',
-      'pending': null
-    };
-    return mapping[method] ?? null;
-  };
+  const handleSubmit = async () => {
+    if (!appointmentDate) return toast.error('Selecione a data');
+    if (!appointmentTime) return toast.error('Selecione o horário');
+    if (selectedServices.length === 0) return toast.error('Selecione pelo menos 1 serviço');
 
-  const confirmAppointment = async () => {
-    if (!parsedData) return;
-    setIsProcessing(true);
+    const name = selectedClient?.full_name || guestName.trim();
+    const phone = selectedClient?.phone || guestPhone.trim();
+    if (!name) return toast.error('Informe o nome do cliente');
 
+    setIsSubmitting(true);
     try {
-      const cleanPhone = parsedData.client_phone?.replace(/\D/g, "") || "";
-      const serviceNames = parsedData.services?.map(s => s.service_name).join(", ") || parsedData.service_name;
-      const feeApplies = isExtraFeeApplicable(extraFee, parsedData.appointment_date);
+      const [primaryId, ...additionalIds] = selectedServices;
+      const serviceNames = pickedServices.map(s => s.name).join(', ');
       const feeNote = chargeExtraFee && feeApplies ? `\n${buildExtraFeeNote(extraFee)}` : '';
-      const notesText = `Via Assistente IA - ${parsedData.client_name}${cleanPhone ? ` - Tel: ${cleanPhone}` : ''}\nServiços: ${serviceNames}${parsedData.notes ? `\n${parsedData.notes}` : ''}${feeNote}`;
-      
-      const additionalServiceIds = parsedData.services && parsedData.services.length > 1 
-        ? parsedData.services.slice(1).map(s => s.service_id) 
-        : [];
+      const notesText = `Agendamento Manual - ${name}${phone ? ` - Tel: ${phone}` : ''}\nServiços: ${serviceNames}${feeNote}`;
 
-      const { data, error: funcError } = await supabase.functions.invoke('create-guest-customer', {
+      const { data, error } = await supabase.functions.invoke('create-guest-customer', {
         body: {
-          name: parsedData.client_name.trim(),
-          phone: cleanPhone || `temp_${Date.now()}`,
+          name,
+          phone: phone || `temp_${Date.now()}`,
           appointment: {
-            service_id: parsedData.service_id,
-            additional_service_ids: additionalServiceIds,
-            appointment_date: parsedData.appointment_date,
-            appointment_time: parsedData.appointment_time,
+            service_id: primaryId,
+            additional_service_ids: additionalIds,
+            appointment_date: appointmentDate,
+            appointment_time: appointmentTime,
             notes: notesText,
-            payment_method: getPaymentMethodValue(selectedPaymentMethod),
+            payment_method: pmMap[paymentMethod] ?? null,
             check_availability: true,
-            total_duration_minutes: parsedData.total_duration_minutes || 30,
-          }
-        }
+            total_duration_minutes: totalDuration || 30,
+          },
+        },
       });
 
-      if (funcError) throw new Error(funcError.message);
-      if (!data.success) throw new Error(data.error || 'Erro ao criar agendamento');
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Erro ao criar agendamento');
 
       playSuccessSound();
       toast.success('Agendamento criado com sucesso!');
-      setMessage('');
-      setParsedData(null);
-      setSelectedPaymentMethod('pending');
-      setChargeExtraFee(false);
+      handleClear();
     } catch (err: any) {
-      console.error('Error creating appointment:', err);
       toast.error(err.message || 'Erro ao criar agendamento');
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  };
-
+  /* ---------------------------------------------------------------- */
+  /* Render                                                           */
+  /* ---------------------------------------------------------------- */
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[#25D366]/30 shadow-2xl">
-      {/* WhatsApp gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0d1f12] via-card to-[#0a0d0a]" />
-      
-      {/* Animated green particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-10 left-10 w-2 h-2 bg-[#25D366]/60 rounded-full animate-pulse" />
-        <div className="absolute top-20 right-20 w-1.5 h-1.5 bg-[#25D366]/40 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-        <div className="absolute bottom-20 left-1/3 w-1 h-1 bg-[#25D366]/50 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/3 right-10 w-1.5 h-1.5 bg-[#25D366]/30 rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
-      </div>
-      
-      {/* Glow effects */}
-      <div className="absolute -top-20 -left-20 w-40 h-40 bg-[#25D366]/20 rounded-full blur-3xl" />
-      <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-[#25D366]/15 rounded-full blur-3xl" />
-      
-      <div className="relative z-10 p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-[#25D366]/50 rounded-2xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#25D366] via-[#128C7E] to-[#075E54] flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
-              <img src={whatsappIcon} alt="WhatsApp" className="h-8 w-8" />
-            </div>
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-br from-[#25D366] to-[#128C7E] rounded-full border-2 border-card flex items-center justify-center">
-              <Zap className="h-3 w-3 text-white" />
-            </span>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold bg-gradient-to-r from-[#25D366] via-[#20c65a] to-[#25D366] bg-clip-text text-transparent">
-              Assistente WhatsApp
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-              Cole a mensagem do WhatsApp e crio o agendamento automaticamente ✨
-            </p>
-          </div>
-        </div>
+    <div className="w-full space-y-0">
+      {/* ── Card container ── */}
+      <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden">
 
-        {/* Chat input area */}
-        <div className="space-y-4">
-          <div className="relative group">
-            {/* Glow border effect */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#25D366]/50 via-[#128C7E]/20 to-[#25D366]/50 rounded-2xl blur opacity-30 group-focus-within:opacity-60 transition-opacity" />
-            
-            <div className="relative bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-xl rounded-2xl border border-[#25D366]/20 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-[#25D366]/10 bg-[#25D366]/5">
-                <MessageSquare className="h-4 w-4 text-[#25D366]" />
-                <span className="text-xs font-medium text-[#25D366]">Mensagem do Cliente</span>
-              </div>
-              <Textarea
-                placeholder={`Cole aqui a mensagem...\n\n"Corte e barba para João amanhã às 14h"\n"Pedro corte + sobrancelha dia 15/01 às 10:30"`}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 rounded-none resize-none placeholder:text-muted-foreground/40 px-4 py-3"
-                disabled={isProcessing}
-              />
-            </div>
-          </div>
-          
-          <Button 
-            onClick={processMessage} 
-            disabled={isProcessing || !message.trim()}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#25D366] via-[#128C7E] to-[#25D366] hover:opacity-90 transition-all duration-300 shadow-xl shadow-[#25D366]/20 hover:shadow-[#25D366]/40 group text-base font-semibold text-white"
-          >
-            {isProcessing ? (
-              <>
-                <div className="relative mr-3">
-                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                </div>
-                <span className="animate-pulse">Processando com IA...</span>
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
-                Interpretar Mensagem
-                <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
-              </>
-            )}
-          </Button>
-        </div>
+        {/* ── Grid: Left | Right ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-border/40">
 
-        {/* Error state */}
-        {error && (
-          <div className="animate-fade-in relative overflow-hidden rounded-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-red-900/20" />
-            <div className="relative flex items-start gap-4 p-4 border border-red-500/30">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/30">
-                <AlertCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="font-semibold text-red-400">Não consegui entender</p>
-                <p className="text-sm text-red-300/80 mt-1">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
+          {/* ════════════════════════════════
+              LEFT COLUMN
+          ════════════════════════════════ */}
+          <div className="p-5 space-y-5">
 
-        {/* Success state */}
-        {parsedData && (
-          <div className="animate-fade-in space-y-4">
-            {/* Success banner */}
-            <div className="relative overflow-hidden rounded-2xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-500/20" />
-              <div className="relative flex items-center gap-4 p-4 border border-green-500/30">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-semibold text-green-400">Dados extraídos com sucesso!</p>
-                  <p className="text-sm text-green-300/80">Confira as informações abaixo</p>
-                </div>
+            {/* Date & Time */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Date */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Data do Agendamento *
+                </label>
+                <input
+                  type="date"
+                  value={appointmentDate}
+                  onChange={e => setAppointmentDate(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-border/60 bg-background/60 px-3 text-sm text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all"
+                />
+                {appointmentDate && (
+                  <p className="text-[11px] text-muted-foreground pl-0.5">
+                    {formatDateLabel(appointmentDate)}
+                  </p>
+                )}
+              </div>
+
+              {/* Time */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
+                  <Clock className="h-3.5 w-3.5" />
+                  Horário de Início *
+                </label>
+                <input
+                  type="time"
+                  value={appointmentTime}
+                  onChange={e => setAppointmentTime(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-border/60 bg-background/60 px-3 text-sm text-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all"
+                />
               </div>
             </div>
-            
-            {/* Data card */}
-            <div className="relative overflow-hidden rounded-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-card/50 to-background/90 backdrop-blur-xl" />
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-              
-              <div className="relative p-5 space-y-5 border border-primary/20">
-                {/* Client */}
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20">
-                    <User className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Cliente</p>
-                    <p className="text-lg font-bold text-foreground">{parsedData.client_name}</p>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">Telefone (opcional - vincula cliente existente)</p>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: 11999999999"
-                      className="px-3 py-1.5 bg-background/50 border border-primary/20 rounded-lg text-sm text-foreground focus:outline-none focus:border-primary/50 w-full max-w-[180px]"
-                      value={parsedData.client_phone || ""}
-                      onChange={(e) => setParsedData({ ...parsedData, client_phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-                
-                {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                
-                {/* Services */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Scissors className="h-4 w-4 text-primary" />
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Serviços</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {parsedData.services && parsedData.services.length > 0 ? (
-                      parsedData.services.map((svc, idx) => (
-                        <div key={idx} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20 hover:border-primary/40 transition-colors">
-                          <span className="font-semibold text-foreground">{svc.service_name}</span>
-                          <span className="text-sm font-bold text-green-400">
-                            R$ {Number(svc.price).toFixed(2)}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/20">
-                        <span className="font-semibold text-foreground">{parsedData.service_name}</span>
-                        {parsedData.service_price !== undefined && (
-                          <span className="text-sm font-bold text-green-400">
-                            R$ {Number(parsedData.service_price).toFixed(2)}
-                          </span>
-                        )}
+
+            {/* Client search */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
+                <User className="h-3.5 w-3.5" />
+                Cliente já cadastrado
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome ou telefone..."
+                  value={clientQuery}
+                  onChange={e => {
+                    setClientQuery(e.target.value);
+                    if (selectedClient) setSelectedClient(null);
+                  }}
+                  onFocus={() => clientResults.length > 0 && setShowDropdown(true)}
+                  className="w-full h-11 rounded-xl border border-border/60 bg-background/60 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all"
+                />
+                {(clientQuery || selectedClient) && (
+                  <button
+                    onClick={clearClient}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+
+                {/* Dropdown */}
+                {showDropdown && (
+                  <div className="absolute z-50 top-full mt-1 w-full rounded-xl border border-border/60 bg-popover shadow-xl overflow-hidden">
+                    {searchingClients ? (
+                      <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Buscando...
                       </div>
+                    ) : clientResults.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground">Nenhum cliente encontrado</p>
+                    ) : (
+                      clientResults.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => selectClient(c)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary font-bold text-sm shrink-0">
+                            {(c.full_name || '?')[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{c.full_name || 'Sem nome'}</p>
+                            {c.phone && (
+                              <p className="text-xs text-muted-foreground">{c.phone}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))
                     )}
                   </div>
-                </div>
-
-                {/* Total */}
-                {parsedData.total_price !== undefined && parsedData.services && parsedData.services.length > 1 && (
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-green-500/10 border border-green-500/20">
-                    <span className="font-semibold text-foreground">Total</span>
-                    <span className="text-2xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                      R$ {Number(parsedData.total_price).toFixed(2)}
-                    </span>
-                  </div>
                 )}
-                
-                {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                
-                {/* Date & Time */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-primary/10">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Data</p>
-                      <p className="font-bold text-foreground">{formatDate(parsedData.appointment_date)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-primary/10">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Horário</p>
-                      <p className="font-bold text-foreground">{parsedData.appointment_time}</p>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
 
-                {/* Notes */}
-                {parsedData.notes && (
-                  <div className="p-4 rounded-xl bg-muted/20 border border-primary/10">
-                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                      <span>📝</span> Observações
+            {/* Guest fallback */}
+            <div className="space-y-3 pt-1">
+              <p className="text-xs text-muted-foreground">Ou preencha (Cliente sem cadastro)</p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Nome do Cliente</label>
+                <Input
+                  placeholder="Nome completo"
+                  value={guestName}
+                  onChange={e => setGuestName(e.target.value)}
+                  className="h-11 rounded-xl border-border/60 bg-background/60 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Telefone (WhatsApp)
+                </label>
+                <Input
+                  placeholder="Ex: 48996915303"
+                  value={guestPhone}
+                  onChange={e => setGuestPhone(e.target.value)}
+                  className="h-11 rounded-xl border-border/60 bg-background/60 text-sm"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ════════════════════════════════
+              RIGHT COLUMN
+          ════════════════════════════════ */}
+          <div className="p-5 space-y-5">
+
+            {/* Services */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase tracking-wider">
+                <Scissors className="h-3.5 w-3.5" />
+                Serviços *
+              </label>
+
+              {loadingServices ? (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando serviços...
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                  {services.map(svc => {
+                    const isSelected = selectedServices.includes(svc.id);
+                    return (
+                      <button
+                        key={svc.id}
+                        type="button"
+                        onClick={() => toggleService(svc.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-200 ${
+                          isSelected
+                            ? 'border-primary bg-primary/15 ring-1 ring-primary/40'
+                            : 'border-border/50 bg-background/40 hover:border-border/80 hover:bg-muted/30'
+                        }`}
+                      >
+                        {/* Checkbox circle */}
+                        <div
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary'
+                              : 'border-border/60 bg-transparent'
+                          }`}
+                        >
+                          {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${isSelected ? 'text-foreground' : 'text-foreground/80'}`}>
+                            {svc.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {minutesToLabel(svc.duration_minutes)}
+                          </p>
+                        </div>
+
+                        {/* Price or VIP */}
+                        {svc.is_vip ? (
+                          <span className="flex items-center gap-1 text-xs font-bold text-primary">
+                            <Crown className="h-3.5 w-3.5" />
+                            VIP
+                          </span>
+                        ) : (
+                          <span className="text-sm font-bold text-foreground">
+                            R$ {Number(svc.price).toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-xl border border-border/50 bg-background/30 p-4 space-y-1">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Duração total</p>
+                  <p className="text-2xl font-black text-foreground leading-none mt-0.5">
+                    {totalDuration > 0 ? minutesToLabel(totalDuration) : '—'}
+                  </p>
+                  {endTime && (
+                    <p className="text-xs text-primary mt-1">
+                      Término previsto: {endTime}
                     </p>
-                    <p className="text-sm text-foreground">{parsedData.notes}</p>
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Valor total</p>
+                  <p className="text-2xl font-black text-primary leading-none mt-0.5">
+                    {totalPrice > 0
+                      ? `R$ ${totalPrice.toFixed(2).replace('.', ',')}`
+                      : '—'}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Payment Method Selector */}
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-primary" />
-                Forma de Pagamento
-              </p>
-              <div className="grid grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('pix')}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
-                    selectedPaymentMethod === 'pix'
-                      ? 'border-[#32BCAD] bg-[#32BCAD]/20 ring-2 ring-[#32BCAD]/50'
-                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
-                  }`}
-                >
-                  <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain" />
-                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'pix' ? 'text-[#32BCAD]' : 'text-muted-foreground'}`}>PIX</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('card')}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
-                    selectedPaymentMethod === 'card'
-                      ? 'border-blue-500 bg-blue-500/20 ring-2 ring-blue-500/50'
-                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
-                  }`}
-                >
-                  <img src={cardIcon} alt="Cartão" className="w-6 h-6 object-contain" />
-                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'card' ? 'text-blue-400' : 'text-muted-foreground'}`}>Cartão</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('cash')}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
-                    selectedPaymentMethod === 'cash'
-                      ? 'border-green-500 bg-green-500/20 ring-2 ring-green-500/50'
-                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
-                  }`}
-                >
-                  <img src={cashIcon} alt="Dinheiro" className="w-6 h-6 object-contain" />
-                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'cash' ? 'text-green-400' : 'text-muted-foreground'}`}>Dinheiro</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('pending')}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
-                    selectedPaymentMethod === 'pending'
-                      ? 'border-yellow-500 bg-yellow-500/20 ring-2 ring-yellow-500/50'
-                      : 'border-primary/20 bg-muted/20 hover:border-primary/40'
-                  }`}
-                >
-                  <Clock className="w-6 h-6 text-yellow-500" />
-                  <span className={`text-xs font-medium ${selectedPaymentMethod === 'pending' ? 'text-yellow-400' : 'text-muted-foreground'}`}>Pendente</span>
-                </button>
-              </div>
+            {/* Payment method */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                Situação do Pagamento
+              </label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-11 rounded-xl border-border/60 bg-background/60 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(pmMap).map(pm => (
+                    <SelectItem key={pm} value={pm}>
+                      {pm}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Extra fee toggle */}
-            {extraFee.enabled && extraFee.amount > 0 && isExtraFeeApplicable(extraFee, parsedData.appointment_date) && (
+            {/* Extra fee */}
+            {extraFee.enabled && extraFee.amount > 0 && feeApplies && (
               <label
-                htmlFor="ai-extra-fee"
-                className={`flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                   chargeExtraFee
-                    ? 'border-amber-500/60 bg-amber-500/15 ring-2 ring-amber-500/40'
-                    : 'border-primary/20 bg-muted/20 hover:border-primary/40'
+                    ? 'border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30'
+                    : 'border-border/40 bg-muted/20 hover:border-border/60'
                 }`}
               >
                 <Checkbox
-                  id="ai-extra-fee"
                   checked={chargeExtraFee}
-                  onCheckedChange={(v) => setChargeExtraFee(v === true)}
+                  onCheckedChange={v => setChargeExtraFee(v === true)}
                 />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">💰 Cobrar {extraFee.name}</p>
+                <div>
+                  <p className="text-sm font-semibold">💰 Cobrar {extraFee.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    Adiciona R$ {extraFee.amount.toFixed(2).replace('.', ',')} ao agendamento (registrado nas observações).
+                    + R$ {extraFee.amount.toFixed(2).replace('.', ',')} nas observações
                   </p>
                 </div>
               </label>
             )}
-
-            {/* Confirm button */}
-            <Button 
-              onClick={confirmAppointment} 
-              disabled={isProcessing}
-              className="w-full h-16 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 hover:from-green-500 hover:via-emerald-400 hover:to-green-500 transition-all duration-300 shadow-xl shadow-green-500/30 hover:shadow-green-500/50 text-lg font-bold group"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="relative mr-3">
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  </div>
-                  <span className="animate-pulse">Criando agendamento...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-6 w-6 group-hover:scale-110 transition-transform" />
-                  Confirmar Agendamento
-                </>
-              )}
-            </Button>
           </div>
-        )}
+        </div>
 
-        {/* Tip */}
-        <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-[#25D366]/5 via-transparent to-[#25D366]/5 border border-[#25D366]/10">
-          <span className="text-xl">💡</span>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            <span className="font-semibold text-[#25D366]">Dica:</span> Use "+" ou "e" para múltiplos serviços.
-            <br />
-            <span className="text-xs opacity-70">Ex: "corte + barba" ou "corte e sobrancelha"</span>
-          </p>
+        {/* ── Footer actions ── */}
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border/40 bg-background/20">
+          <Button
+            variant="outline"
+            onClick={handleClear}
+            disabled={isSubmitting}
+            className="px-6 h-11 rounded-xl border-border/60 hover:bg-muted/40"
+          >
+            Limpar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-7 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25 transition-all"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Criando...
+              </>
+            ) : (
+              'Criar Agendamento'
+            )}
+          </Button>
         </div>
       </div>
     </div>
