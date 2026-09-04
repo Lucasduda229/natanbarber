@@ -125,6 +125,11 @@ const VIPPackagesManager = () => {
   const [allAppointments, setAllAppointments] = useState<any[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [openCustomerDropdown, setOpenCustomerDropdown] = useState(false);
+  // Direct renewal modal state
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [renewingSubscriber, setRenewingSubscriber] = useState<SubscriberWithUsage | null>(null);
+  const [renewalPaymentMethod, setRenewalPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
+  const [renewalLoading, setRenewalLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -518,55 +523,114 @@ const VIPPackagesManager = () => {
     }
   };
 
-  const renewSubscription = async (sub: SubscriberWithUsage) => {
+  // Opens the direct renewal modal (replaces the old pending-order flow)
+  const renewSubscription = (sub: SubscriberWithUsage) => {
     if (!sub.package) {
       toast.error("Pacote não encontrado para esta assinatura");
       return;
     }
+    setRenewingSubscriber(sub);
+    setRenewalPaymentMethod("pix");
+    setShowRenewalModal(true);
+  };
 
-    if (!confirm(`Gerar pedido de renovação pendente para ${sub.profile?.full_name || "Cliente"}?\n\nO pedido vai para a aba "Pedidos" aguardando confirmação de pagamento.`)) return;
+  // Confirms and executes the renewal immediately — no pending order needed
+  const confirmDirectRenewal = async () => {
+    if (!renewingSubscriber || !renewingSubscriber.package) return;
+    setRenewalLoading(true);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const sub = renewingSubscriber;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    // Use full timestamp so fetchSubscriptionBookings can filter out pre-renewal appointments
+    const nowTimestamp = today.toISOString();
+
+    const RENEWAL_TOLERANCE_DAYS = 3;
+    let computedNewMonths = 1;
 
     try {
-      // Check if there is already a pending renewal order for this user
-      const { data: existingPending } = await supabase
-        .from("package_payments")
-        .select("id")
-        .eq("user_id", sub.user_id)
-        .eq("payment_status", "pending")
-        .ilike("notes", "%Renovação%")
-        .limit(1)
-        .maybeSingle();
-
-      if (existingPending) {
-        toast.info("Já existe um pedido de renovação pendente para este cliente. Confirme na aba Pedidos.");
-        return;
+      // Calculate consecutive months with tolerance rule
+      const durationDays = sub.package.duration_days ?? 30;
+      const startDate = sub.subscription_start_date ? new Date(sub.subscription_start_date) : null;
+      if (startDate) {
+        const expirationDate = new Date(startDate);
+        expirationDate.setDate(expirationDate.getDate() + durationDays);
+        const toleranceLimit = new Date(expirationDate);
+        toleranceLimit.setDate(toleranceLimit.getDate() + RENEWAL_TOLERANCE_DAYS);
+        computedNewMonths = today <= toleranceLimit
+          ? (sub.consecutive_months || 0) + 1
+          : 1;
+      } else {
+        computedNewMonths = (sub.consecutive_months || 0) + 1;
       }
 
-      // Create pending payment order — admin will confirm in the Orders tab
-      const { error: paymentError } = await supabase
-        .from("package_payments")
-        .insert({
-          user_id: sub.user_id,
-          package_id: sub.package_id,
-          package_name: sub.package_name || sub.package.name,
-          amount: sub.package.price,
-          payment_date: todayStr,
-          payment_method: "pix",
-          payment_status: "pending",
-          notes: `Renovação mês ${sub.consecutive_months + 1} - ${sub.profile?.full_name || "Cliente"} (gerado pelo admin)`
-        });
+      const pkgItems = packageItems.filter(i => i.package_id === sub.package_id);
+      const newMonthlyLimit = pkgItems.length > 0
+        ? Math.max(...pkgItems.map(i => i.quantity || 0))
+        : sub.monthly_cuts_limit;
+      const weeklyCredits = Math.max(1, Math.ceil(newMonthlyLimit / 4));
 
+      // 1. Register confirmed payment immediately
+      const { error: paymentError } = await supabase.from("package_payments").insert({
+        user_id: sub.user_id,
+        package_id: sub.package_id,
+        package_name: sub.package_name || sub.package.name,
+        amount: sub.package.price,
+        payment_date: todayStr,
+        payment_method: renewalPaymentMethod,
+        payment_status: "confirmed",
+        notes: `Renovação mês ${computedNewMonths} - ${sub.profile?.full_name || "Cliente"} (renovação direta pelo admin)`,
+      });
       if (paymentError) throw paymentError;
 
-      toast.success("Pedido de renovação criado!", {
-        description: "Confirme o pagamento na aba Pedidos para ativar."
+      // 2. Activate and reset subscription
+      // IMPORTANT: usage_reset_date = nowTimestamp (NOT null) so that
+      // fetchSubscriptionBookings filters out any appointments created before this moment.
+      // Setting null would fall back to midnight of subscription_start_date and
+      // could include same-day appointments from the previous period.
+      const { error: subError } = await supabase
+        .from("subscription_progress")
+        .update({
+          is_active: true,
+          package_id: sub.package_id,
+          monthly_cuts_limit: newMonthlyLimit,
+          subscription_start_date: todayStr,
+          usage_reset_date: nowTimestamp,
+          cuts_used_this_month: 0,
+          credits_expired_this_month: 0,
+          expired_weeks_this_period: 0,
+          current_month_start: null,
+          weekly_credits_available: weeklyCredits,
+          current_week_start: null,
+          last_payment_date: todayStr,
+          consecutive_months: computedNewMonths,
+          updated_at: nowTimestamp,
+        } as any)
+        .eq("id", sub.id);
+      if (subError) throw subError;
+
+      // 3. Notify client
+      await supabase.from("notifications").insert({
+        user_id: sub.user_id,
+        title: "Assinatura Renovada! 🔄",
+        message: `Seu ${sub.package_name || sub.package.name} foi renovado com sucesso (Mês ${computedNewMonths}). Você já pode agendar usando seus benefícios!`,
+        type: "subscription_activated",
       });
+
+      await supabase.rpc('validate_referral', { p_referred_id: sub.user_id });
+
+      toast.success(`Assinatura de ${sub.profile?.full_name || "Cliente"} renovada!`, {
+        description: `Mês ${computedNewMonths} • Pago via ${renewalPaymentMethod === 'pix' ? 'PIX' : renewalPaymentMethod === 'dinheiro' ? 'Dinheiro' : 'Cartão'}`,
+      });
+
+      setShowRenewalModal(false);
+      setRenewingSubscriber(null);
       fetchData();
     } catch (error) {
-      console.error("Error creating renewal order:", error);
-      toast.error("Erro ao gerar pedido de renovação");
+      console.error("Error on direct renewal:", error);
+      toast.error("Erro ao renovar assinatura");
+    } finally {
+      setRenewalLoading(false);
     }
   };
 
@@ -662,7 +726,9 @@ const VIPPackagesManager = () => {
             package_id: order.package_id ?? sub.package_id,
             monthly_cuts_limit: newMonthlyLimit,
             subscription_start_date: todayStr,
-            usage_reset_date: null,
+            // For renewals: use exact timestamp so pre-renewal same-day appointments are excluded.
+            // For first activations: null means "not started yet" (awaiting first appointment).
+            usage_reset_date: isRenewal ? nowTimestamp : null,
             cuts_used_this_month: 0,
             credits_expired_this_month: 0,
             expired_weeks_this_period: 0,
@@ -1735,7 +1801,109 @@ const VIPPackagesManager = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Direct Renewal Modal ─────────────────────────────────── */}
+      <Dialog open={showRenewalModal} onOpenChange={(open) => { if (!open && !renewalLoading) { setShowRenewalModal(false); setRenewingSubscriber(null); } }}>
+        <DialogContent className="max-w-sm bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <RefreshCw className="w-5 h-5 text-amber-500" />
+              Renovar Assinatura
+            </DialogTitle>
+          </DialogHeader>
+
+          {renewingSubscriber && (
+            <div className="space-y-4">
+              {/* Client + Package info */}
+              <div className="bg-muted/40 rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Cliente</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {renewingSubscriber.profile?.full_name || "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Pacote</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {renewingSubscriber.package_name || renewingSubscriber.package?.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Valor</span>
+                  <span className="text-base font-bold text-green-500">
+                    R$ {renewingSubscriber.package?.price.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Mês</span>
+                  <span className="text-sm font-semibold text-amber-500">
+                    #{(renewingSubscriber.consecutive_months || 0) + 1}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment method selector */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                  Forma de pagamento
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["pix", "dinheiro", "cartao"] as const).map((method) => {
+                    const labels = { pix: "PIX", dinheiro: "Dinheiro", cartao: "Cartão" };
+                    const icons = { pix: "⚡", dinheiro: "💵", cartao: "💳" };
+                    const isSelected = renewalPaymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        onClick={() => setRenewalPaymentMethod(method)}
+                        className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                          isSelected
+                            ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                            : "border-border bg-muted/20 text-muted-foreground hover:border-amber-500/50"
+                        }`}
+                      >
+                        <span className="text-lg">{icons[method]}</span>
+                        {labels[method]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => { setShowRenewalModal(false); setRenewingSubscriber(null); }}
+                  disabled={renewalLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-2"
+                  onClick={confirmDirectRenewal}
+                  disabled={renewalLoading}
+                >
+                  {renewalLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Renovando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Confirmar Renovação
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 };
 
