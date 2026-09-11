@@ -37,6 +37,7 @@ interface ClientProfile {
   totalSpent: number;
   lastVisit: string | null;
   noShows: number;
+  isSubscriber: boolean;
 }
 
 export function ClientsList() {
@@ -89,6 +90,16 @@ export function ClientsList() {
         console.error("Error fetching appointments:", appointmentsError);
       }
 
+      // Fetch active subscriptions
+      const { data: subscriptionsData, error: subscriptionsError } = await supabase
+        .from("subscription_progress")
+        .select("user_id")
+        .eq("is_active", true);
+
+      if (subscriptionsError) {
+        console.error("Error fetching subscriptions:", subscriptionsError);
+      }
+
       // Calculate stats for each client
       const clientsWithStats: ClientProfile[] = profilesData.map((profile) => {
         const clientAppointments = appointmentsData?.filter(
@@ -116,6 +127,7 @@ export function ClientsList() {
           totalSpent,
           lastVisit,
           noShows: noShowAppointments.length,
+          isSubscriber: subscriptionsData?.some(sub => sub.user_id === profile.user_id) || false,
         };
       });
 
@@ -316,6 +328,11 @@ export function ClientsList() {
                             {client.totalVisits === 0 && (
                               <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-xs">
                                 Novo
+                              </Badge>
+                            )}
+                            {client.isSubscriber && (
+                              <Badge className="bg-purple-500/20 text-purple-500 border-purple-500/30 text-xs">
+                                Assinante
                               </Badge>
                             )}
                           </div>

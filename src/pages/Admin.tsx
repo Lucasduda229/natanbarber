@@ -1074,10 +1074,10 @@ const Admin = () => {
   };
 
   /**
-   * Exclui um agendamento marcado como Falta e DEVOLVE o crédito semanal
+   * Exclui um agendamento finalizado (Falta ou Concluído) e DEVOLVE o crédito semanal
    * ao assinante, permitindo que ele reagende na mesma semana.
    */
-  const deleteNoShowAndRestoreCredit = async (appointment: Appointment) => {
+  const deleteFinalizedAndRestoreCredit = async (appointment: Appointment) => {
     const isSubscription = appointment.payment_method === 'subscription';
 
     // 1. Delete appointment_services first
@@ -1112,9 +1112,9 @@ const Admin = () => {
           .update({ cuts_used_this_month: sub.cuts_used_this_month - 1 })
           .eq("id", sub.id);
 
-        toast.success("Falta excluída e crédito semanal devolvido ao assinante!");
+        toast.success("Agendamento excluído e crédito semanal devolvido ao assinante!");
       } else {
-        toast.success("Falta excluída com sucesso!");
+        toast.success("Agendamento excluído com sucesso!");
       }
     } else {
       toast.success("Agendamento excluído com sucesso!");
@@ -2408,14 +2408,14 @@ const Admin = () => {
                               </AlertDialogContent>
                             </AlertDialog>
                           )}
-                          {appointment.status === "no_show" && (
+                          {(appointment.status === "no_show" || appointment.status === "completed") && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   className="h-5 w-5 p-0 text-destructive hover:bg-destructive/10 z-10 relative"
-                                  title="Excluir falta e devolver crédito"
+                                  title="Excluir agendamento e devolver crédito"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -2423,17 +2423,17 @@ const Admin = () => {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir Falta</AlertDialogTitle>
+                                  <AlertDialogTitle>Excluir Agendamento Finalizado</AlertDialogTitle>
                                   <AlertDialogDescription>
                                     {appointment.payment_method === 'subscription'
-                                      ? `Deseja excluir a falta de ${getClientDisplayInfo(appointment).name}? O crédito semanal da assinatura será devolvido, permitindo que ele reagende na mesma semana.`
+                                      ? `Deseja excluir o agendamento de ${getClientDisplayInfo(appointment).name}? O crédito semanal da assinatura será devolvido, permitindo que ele reagende na mesma semana.`
                                       : `Deseja excluir permanentemente o agendamento de ${getClientDisplayInfo(appointment).name}? Esta ação não pode ser desfeita.`
                                     }
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogAction
-                                    onClick={() => deleteNoShowAndRestoreCredit(appointment)}
+                                    onClick={() => deleteFinalizedAndRestoreCredit(appointment)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
                                     {appointment.payment_method === 'subscription' ? 'Excluir e Devolver Crédito' : 'Excluir'}
