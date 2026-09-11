@@ -1293,6 +1293,9 @@ const Admin = () => {
   const allCompletedAppointments = filteredAppointments.filter(a => {
     if (!completedStatuses.includes(a.status)) return false;
     
+    // Se o usuário usou o filtro global de data, ignoramos o filtro específico de finalizados
+    if (filterDate) return true;
+
     // Apply date filter
     const todayStr = format(new Date(), "yyyy-MM-dd");
     switch (completedDateFilter) {
