@@ -511,12 +511,11 @@ const AppointmentHistory = () => {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p>{appointment.service?.name}</p>
-                              {appointment.additional_services.length > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  +{appointment.additional_services.length} serviço(s)
-                                </p>
-                              )}
+                              <p>
+                                {[appointment.service?.name, ...appointment.additional_services.map(s => s.name)]
+                                  .filter(Boolean)
+                                  .join(" + ")}
+                              </p>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -576,12 +575,9 @@ const AppointmentHistory = () => {
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                             <Scissors className="h-3 w-3" />
-                            {appointment.service?.name}
-                            {appointment.additional_services.length > 0 && (
-                              <span className="text-primary">
-                                +{appointment.additional_services.length}
-                              </span>
-                            )}
+                            {[appointment.service?.name, ...appointment.additional_services.map(s => s.name)]
+                              .filter(Boolean)
+                              .join(" + ")}
                           </p>
                         </div>
                         <p className="font-semibold text-primary">

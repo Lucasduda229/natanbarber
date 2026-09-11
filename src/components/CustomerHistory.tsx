@@ -29,6 +29,9 @@ interface CustomerAppointment {
     name: string;
     price: number;
   } | null;
+  extra_services?: { name: string; price: number }[];
+  combined_name?: string;
+  total_price?: number;
 }
 
 interface CustomerReview {
@@ -102,6 +105,12 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
           services (
             name,
             price
+          ),
+          appointment_services (
+            services (
+              name,
+              price
+            )
           )
         `)
         .eq("user_id", userId)
@@ -111,7 +120,22 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
       if (appointmentsError) {
         console.error("Error fetching appointments:", appointmentsError);
       } else {
-        setAppointments(appointmentsData as CustomerAppointment[]);
+        // Combine main service + extras into a single display entry
+        const enriched = (appointmentsData as any[]).map((apt) => {
+          const extras = (apt.appointment_services || [])
+            .map((as: any) => as.services)
+            .filter(Boolean) as { name: string; price: number }[];
+          const allNames = [apt.services?.name, ...extras.map((e: any) => e.name)].filter(Boolean);
+          const mainPrice = apt.services?.price || 0;
+          const extrasPrice = extras.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+          return {
+            ...apt,
+            extra_services: extras,
+            combined_name: allNames.join(" + "),
+            total_price: mainPrice + extrasPrice,
+          } as CustomerAppointment;
+        });
+        setAppointments(enriched);
       }
 
       // Fetch reviews
@@ -157,7 +181,7 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
   // Calculate stats - include confirmed and completed appointments
   const confirmedOrCompleted = appointments.filter(a => a.status === "completed" || a.status === "confirmed");
   const noShowCount = appointments.filter(a => a.status === "no_show").length;
-  const totalSpent = confirmedOrCompleted.reduce((sum, a) => sum + (a.services?.price || 0), 0);
+  const totalSpent = confirmedOrCompleted.reduce((sum, a) => sum + (a.total_price ?? a.services?.price ?? 0), 0);
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) 
     : "N/A";
@@ -289,18 +313,18 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
                 <div className="space-y-2">
                   {appointments.map((appointment) => (
                     <Card key={appointment.id} className="bg-background/30 border-primary/10">
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-sm">
-                            {appointment.services?.name || "Serviço"}
+                      <CardContent className="p-3 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm break-words">
+                            {appointment.combined_name || appointment.services?.name || "Serviço"}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {format(parseISO(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR })} às {appointment.appointment_time.slice(0, 5)}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-primary">
-                            R$ {appointment.services?.price?.toFixed(2) || "0.00"}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm font-medium text-primary whitespace-nowrap">
+                            R$ {(appointment.total_price ?? appointment.services?.price ?? 0).toFixed(2)}
                           </span>
                           <Badge className={statusColors[appointment.status] || ""}>
                             {statusLabels[appointment.status] || appointment.status}
