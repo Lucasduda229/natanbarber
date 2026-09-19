@@ -1,4 +1,7 @@
 import { defineConfig } from "vite";
+
+// Versão única gerada a cada build — força invalidação de cache em todos os dispositivos
+const BUILD_VERSION = `v${Date.now()}`;
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
@@ -49,9 +52,9 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
-        // Bump this version string on every deploy to force cache invalidation
-        cacheId: "natanbarber-v3",
-        globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+        // ID dinâmico gerado a cada build — invalida caches antigos automaticamente
+        cacheId: `natanbarber-${BUILD_VERSION}`,
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         cleanupOutdatedCaches: true,
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api\//],
