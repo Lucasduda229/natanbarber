@@ -43,16 +43,21 @@ Deno.serve(async (req) => {
       if (startDate) {
         // Get package duration (default 30 days)
         let durationDays = 30
+        let packageWeeklyCredits: number | null = null
         if (sub.package_id) {
           const { data: pkg } = await supabase
             .from('packages')
-            .select('duration_days')
+            .select('duration_days, weekly_credits')
             .eq('id', sub.package_id)
             .maybeSingle()
           if (pkg?.duration_days) {
             durationDays = pkg.duration_days
           }
+          if (pkg?.weekly_credits !== undefined) {
+            packageWeeklyCredits = pkg.weekly_credits
+          }
         }
+        (sub as any).packageWeeklyCredits = packageWeeklyCredits
 
         const expirationDate = new Date(startDate)
         expirationDate.setDate(expirationDate.getDate() + durationDays)
@@ -93,8 +98,9 @@ Deno.serve(async (req) => {
         // Calculate unused weekly credits that will expire
         const expiredCredits = sub.weekly_credits_available || 0
         
-        // Calculate new weekly credits (1/4 of monthly, rounded up)
-        const weeklyCreditsPerWeek = Math.ceil(sub.monthly_cuts_limit / 4)
+        // Calculate new weekly credits (package weekly credits or 1/4 of monthly, rounded up)
+        const packageWeeklyCredits = (sub as any).packageWeeklyCredits
+        const weeklyCreditsPerWeek = packageWeeklyCredits || Math.ceil(sub.monthly_cuts_limit / 4)
         
         // Only count as an "expired week" (which consumes 1 of each benefit)
         // when the client made ZERO bookings during the week (full credits remained).

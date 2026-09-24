@@ -21,6 +21,7 @@ interface Package {
   price: number;
   description: string | null;
   duration_days: number | null;
+  weekly_credits: number | null;
   active: boolean;
 }
 
@@ -63,6 +64,7 @@ interface SubscriberWithUsage {
     name: string;
     price: number;
     duration_days: number | null;
+    weekly_credits: number | null;
   } | null;
   benefits: BenefitUsage[];
 }
@@ -212,7 +214,7 @@ const VIPPackagesManager = () => {
           sub.monthly_cuts_limit = correctLimit;
           supabase.from('subscription_progress').update({ 
             monthly_cuts_limit: correctLimit,
-            weekly_credits_available: Math.max(1, Math.ceil(correctLimit / 4))
+            weekly_credits_available: pkg?.weekly_credits || Math.max(1, Math.ceil(correctLimit / 4))
           }).eq('id', sub.id).then();
         }
         
@@ -288,7 +290,7 @@ const VIPPackagesManager = () => {
         return {
           ...sub,
           profile: profile || null,
-          package: pkg ? { name: pkg.name, price: pkg.price, duration_days: pkg.duration_days } : null,
+          package: pkg ? { name: pkg.name, price: pkg.price, duration_days: pkg.duration_days, weekly_credits: pkg.weekly_credits } : null,
           benefits
         };
       });
@@ -316,7 +318,7 @@ const VIPPackagesManager = () => {
     const totalCuts = pkgItems.length > 0 ? Math.max(...pkgItems.map(i => i.quantity || 0)) : 4;
 
     const monthlyCutsLimit = totalCuts;
-    const weeklyCredits = Math.max(1, Math.ceil(monthlyCutsLimit / 4));
+    const weeklyCredits = pkg.weekly_credits || Math.max(1, Math.ceil(monthlyCutsLimit / 4));
 
     const durationDays = pkg.duration_days || 30;
     const startDate = new Date();
@@ -366,7 +368,7 @@ const VIPPackagesManager = () => {
       
       if (!currentActive) {
         // Reactivating: update subscription_start_date to today (new 30-day window)
-        const weeklyCredits = sub ? Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4)) : 1;
+        const weeklyCredits = sub?.package?.weekly_credits || (sub ? Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4)) : 1);
         updateData.subscription_start_date = todayStr;
         updateData.usage_reset_date = null;
         updateData.cuts_used_this_month = 0;
@@ -424,8 +426,8 @@ const VIPPackagesManager = () => {
     }
   };
 
-  const resetWeeklyCredits = async (subId: string, monthlyLimit: number) => {
-    const weeklyCredits = Math.ceil(monthlyLimit / 4);
+  const resetWeeklyCredits = async (subId: string, monthlyLimit: number, subPackage?: { weekly_credits?: number | null }) => {
+    const weeklyCredits = subPackage?.weekly_credits || Math.ceil(monthlyLimit / 4);
     const today = new Date().toISOString().split('T')[0];
     
     try {
@@ -568,7 +570,7 @@ const VIPPackagesManager = () => {
       const newMonthlyLimit = pkgItems.length > 0
         ? Math.max(...pkgItems.map(i => i.quantity || 0))
         : sub.monthly_cuts_limit;
-      const weeklyCredits = Math.max(1, Math.ceil(newMonthlyLimit / 4));
+      const weeklyCredits = sub.package.weekly_credits || Math.max(1, Math.ceil(newMonthlyLimit / 4));
 
       // 1. Register confirmed payment immediately
       const { error: paymentError } = await supabase.from("package_payments").insert({
@@ -1268,7 +1270,7 @@ const VIPPackagesManager = () => {
                   }
                   return sum;
                 }, 0);
-                const weeklyCredits = Math.max(1, Math.ceil(totalCuts / 4));
+                const weeklyCredits = pkg.weekly_credits || Math.max(1, Math.ceil(totalCuts / 4));
                 
                 return (
                   <div key={pkg.id} className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">

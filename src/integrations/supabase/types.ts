@@ -554,6 +554,7 @@ export type Database = {
           id: string
           name: string
           price: number
+          weekly_credits: number | null
         }
         Insert: {
           active?: boolean
@@ -564,6 +565,7 @@ export type Database = {
           id?: string
           name: string
           price: number
+          weekly_credits?: number | null
         }
         Update: {
           active?: boolean
@@ -574,6 +576,7 @@ export type Database = {
           id?: string
           name?: string
           price?: number
+          weekly_credits?: number | null
         }
         Relationships: []
       }

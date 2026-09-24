@@ -24,6 +24,7 @@ interface PackageData {
   price: number;
   description: string;
   duration_days: number;
+  weekly_credits: number | null;
   items: PackageItem[];
 }
 
@@ -34,6 +35,7 @@ interface PackageEditorProps {
     price: number;
     description: string | null;
     duration_days: number | null;
+    weekly_credits?: number | null;
   } | null;
   existingItems?: { package_id: string; service_id: string | null; service_name: string; quantity: number }[];
   onClose: () => void;
@@ -50,6 +52,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
     price: 0,
     description: "",
     duration_days: 30,
+    weekly_credits: null,
     items: []
   });
 
@@ -70,6 +73,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
         price: packageToEdit.price,
         description: packageToEdit.description || "",
         duration_days: packageToEdit.duration_days || 30,
+        weekly_credits: packageToEdit.weekly_credits || null,
         items
       });
     } else {
@@ -79,6 +83,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
         price: 0,
         description: "",
         duration_days: 30,
+        weekly_credits: null,
         items: []
       });
     }
@@ -167,7 +172,8 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
             name: packageData.name,
             price: packageData.price,
             description: packageData.description || null,
-            duration_days: packageData.duration_days
+            duration_days: packageData.duration_days,
+            weekly_credits: packageData.weekly_credits
           })
           .eq("id", packageData.id);
 
@@ -203,6 +209,7 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
             price: packageData.price,
             description: packageData.description || null,
             duration_days: packageData.duration_days,
+            weekly_credits: packageData.weekly_credits,
             active: true
           })
           .select()
@@ -246,7 +253,8 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
     return sum;
   }, 0);
 
-  const weeklyCredits = Math.max(1, Math.ceil(totalCuts / 4));
+  const defaultWeeklyCredits = Math.max(1, Math.ceil(totalCuts / 4));
+  const weeklyCredits = packageData.weekly_credits || defaultWeeklyCredits;
 
   return (
     <div className="bg-card border border-primary/30 rounded-lg p-5 space-y-5">
@@ -296,6 +304,16 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
             value={packageData.duration_days}
             onChange={(e) => setPackageData(prev => ({ ...prev, duration_days: parseInt(e.target.value) || 30 }))}
             placeholder="30"
+            className="bg-muted/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Créditos por semana (opcional)</Label>
+          <Input
+            type="number"
+            value={packageData.weekly_credits || ""}
+            onChange={(e) => setPackageData(prev => ({ ...prev, weekly_credits: e.target.value ? parseInt(e.target.value) : null }))}
+            placeholder={`Automático (${defaultWeeklyCredits})`}
             className="bg-muted/30"
           />
         </div>
