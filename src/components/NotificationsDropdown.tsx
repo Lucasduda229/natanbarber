@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -93,6 +95,7 @@ const playNotificationSound = () => {
 
 export const NotificationsDropdown = () => {
   const { user } = useAuth();
+  const { showNotification } = usePushNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const previousCountRef = useRef<number>(0);
@@ -129,9 +132,27 @@ export const NotificationsDropdown = () => {
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          () => {
+          (payload) => {
             playNotificationSound();
             fetchNotifications();
+            
+            const newNotif = payload.new as Notification;
+            
+            if (newNotif && (newNotif.type === 'subscription_purchase' || newNotif.type === 'new_subscription' || newNotif.type === 'subscription_activated')) {
+              toast.success(`🎉 ${newNotif.title}`, {
+                description: newNotif.message,
+                duration: 5000
+              });
+              
+              if (showNotification) {
+                showNotification({
+                  title: `🎉 ${newNotif.title}`,
+                  body: newNotif.message,
+                  tag: 'subscription',
+                  requireInteraction: true
+                });
+              }
+            }
           }
         )
         .on(
