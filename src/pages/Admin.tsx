@@ -508,6 +508,35 @@ const Admin = () => {
       )
       .subscribe();
 
+    // Set up realtime subscription for package_payments (client renewal/purchase requests)
+    const packagePaymentsChannel = supabase
+      .channel('admin-package-payments-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'package_payments'
+        },
+        (payload) => {
+          const record = payload.new as any;
+          // Only alert for pending payments (client-initiated)
+          if (record?.payment_status === 'pending') {
+            playNotificationSound();
+            const isRenewal = record?.notes?.toLowerCase().includes('renova');
+            toast.info(
+              isRenewal ? '🔄 Solicitação de Renovação!' : '🆕 Nova Compra de Assinatura!',
+              {
+                description: `${record?.package_name || 'Pacote'} - R$ ${Number(record?.amount || 0).toFixed(2)}. Confirme na aba Pedidos.`,
+                duration: 8000,
+              }
+            );
+            fetchPackagePayments();
+          }
+        }
+      )
+      .subscribe();
+
     // Auto-complete check every 5 minutes
     const autoCompleteInterval = setInterval(async () => {
       try {
@@ -526,6 +555,7 @@ const Admin = () => {
       supabase.removeChannel(appointmentsChannel);
       supabase.removeChannel(blockedDatesChannel);
       supabase.removeChannel(statusChannel);
+      supabase.removeChannel(packagePaymentsChannel);
       clearInterval(autoCompleteInterval);
     };
   }, [isAdmin, authLoading, notifyNewAppointment]);
