@@ -222,7 +222,7 @@ const Pedido = () => {
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
-    const surchargeNote = isNightSurcharge ? "\n⚠️ Adicional noturno (19h+): +R$5,00" : "";
+    const surchargeNote = isNightSurcharge ? "\n⚠️ Adicional noturno (18h+): +R$5,00" : "";
     const extraFeeNote = extraFeeApplies ? `\n${buildExtraFeeNote(extraFee)}` : "";
     const notesText = customerNotes.trim()
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
@@ -328,11 +328,11 @@ const Pedido = () => {
     );
   }
 
-  // Verificar adicional noturno (19h+) — aplica em qualquer dia da semana
+  // Verificar adicional noturno (18h+) — aplica em qualquer dia da semana
   const isNightSurcharge = (() => {
     if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return hour >= 19;
+    return hour >= 18;
   })();
   const thursdaySurcharge = isNightSurcharge ? 5 : 0;
   const extraFeeApplies = isExtraFeeApplicable(extraFee, selectedDate ?? null);
@@ -497,7 +497,7 @@ const Pedido = () => {
                       </div>
                     )}
 
-                    {/* Night surcharge warning (19h+) */}
+                    {/* Night surcharge warning (18h+) */}
                     {isNightSurcharge && (
                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2 mt-3">
                         <span className="text-base">⚠️</span>
@@ -636,7 +636,7 @@ const Pedido = () => {
                     </ul>
                     {isNightSurcharge && (
                       <div className="flex justify-between text-amber-500 font-medium">
-                        <span>⚠️ Adicional noturno (19h+)</span>
+                        <span>⚠️ Adicional noturno (18h+)</span>
                         <span>+ R$ 5,00</span>
                       </div>
                     )}

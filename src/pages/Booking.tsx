@@ -818,11 +818,11 @@ const Booking = () => {
     setTimeout(() => setStep(2), 200);
   };
 
-  // Verificar adicional noturno (19h+) — aplica em qualquer dia da semana
+  // Verificar adicional noturno (18h+) — aplica em qualquer dia da semana
   const isNightSurcharge = (() => {
     if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return hour >= 19;
+    return hour >= 18;
   })();
   const thursdaySurcharge = isNightSurcharge ? 5 : 0;
 
@@ -1055,7 +1055,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`);
             }
           }
-          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
+          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (18h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -1317,7 +1317,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`); 
             }
           }
-          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (19h+): +R$5,00");
+          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (18h+): +R$5,00");
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -2176,7 +2176,7 @@ const Booking = () => {
               </Card>
             </div>
 
-            {/* Night surcharge warning (19h+) */}
+            {/* Night surcharge warning (18h+) */}
             {isNightSurcharge && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-start gap-2">
                 <span className="text-lg">⚠️</span>
@@ -2208,7 +2208,7 @@ const Booking = () => {
                   ))}
                   {isNightSurcharge && (
                     <div className="flex items-center justify-between text-sm text-amber-500">
-                      <span className="flex items-center gap-2">⚠️ Adicional noturno (19h+)</span>
+                      <span className="flex items-center gap-2">⚠️ Adicional noturno (18h+)</span>
                       <span>+ R$ 5,00</span>
                     </div>
                   )}
@@ -2318,7 +2318,7 @@ const Booking = () => {
                 ))}
                 {isNightSurcharge && (
                   <div className="flex items-center justify-between text-sm text-amber-500">
-                    <span>⚠️ Adicional noturno (19h+)</span>
+                    <span>⚠️ Adicional noturno (18h+)</span>
                     <span>+ R$ 5,00</span>
                   </div>
                 )}
@@ -2439,7 +2439,7 @@ const Booking = () => {
                 </div>
                 {isNightSurcharge && (
                   <div className="flex items-center justify-between text-amber-500">
-                    <span>⚠️ Adicional noturno (19h+)</span>
+                    <span>⚠️ Adicional noturno (18h+)</span>
                     <span className="font-semibold">+ R$ 5,00</span>
                   </div>
                 )}
