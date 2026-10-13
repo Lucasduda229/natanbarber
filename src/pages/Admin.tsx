@@ -45,6 +45,7 @@ import { SubscribersHistory } from "@/components/SubscribersHistory";
 import ReferralsTab from "@/components/admin/ReferralsTab";
 import ReferralRedemptionsManager from "@/components/admin/ReferralRedemptionsManager";
 import { StoreManager } from "@/components/admin/StoreManager";
+import { useExtraFee, isExtraFeeApplicable, ExtraFeeConfig } from "@/hooks/useExtraFee";
 
 interface AppointmentService {
   name: string;
@@ -154,31 +155,85 @@ const getServicesNames = (services: AppointmentService[]): string => {
   return services.map(s => s.name).join(", ");
 };
 
-// Helper function to detect night surcharge from appointment notes and parse its real value
-const getNightSurcharge = (notes: string | null): number => {
-  if (!notes) return 0;
-  // Try to parse the real value saved in the note: "Adicional noturno (18h+): +R$X,XX"
-  const m = notes.match(/Adicional noturno[^:]*:\s*\+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
-  if (m) return parseFloat(m[1].replace(",", ".")) || 0;
-  // Fallback: if the note mentions nocturnal but has no value (legacy), return 5
-  return notes.includes("Adicional noturno") ? 5 : 0;
+let cachedExtraFeeConfig: ExtraFeeConfig = {
+  enabled: false,
+  name: "Taxa adicional",
+  amount: 5,
+  days: [0, 1, 2, 3, 4, 5, 6],
 };
 
-// Helper to detect configurable extra fee saved in notes (e.g. "Taxa adicional (Nome): +R$5,00")
-const getExtraFeeFromNotes = (notes: string | null): number => {
-  if (!notes) return 0;
-  const m = notes.match(/Taxa adicional \([^)]+\): \+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
-  if (!m) return 0;
-  return parseFloat(m[1].replace(",", ".")) || 0;
+// Helper function to detect night surcharge from appointment notes OR time (18h+)
+const getNightSurcharge = (
+  notes: string | null,
+  time?: string | null,
+  defaultAmount: number = 5
+): number => {
+  if (notes) {
+    // 1. Tenta extrair o valor real salvo na nota: "Adicional noturno (18h+): +R$X,XX"
+    const m = notes.match(/Adicional noturno[^:]*:\s*\+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+    if (m) return parseFloat(m[1].replace(",", ".")) || 0;
+    if (notes.includes("Adicional noturno")) return defaultAmount;
+  }
+
+  // 2. Fallback por horário: se o agendamento foi marcado para 18h ou depois
+  if (time) {
+    const hour = parseInt(time.split(":")[0], 10);
+    if (!isNaN(hour) && hour >= 18) {
+      return defaultAmount;
+    }
+  }
+
+  return 0;
 };
 
-const getExtrasTotal = (notes: string | null): number =>
-  getNightSurcharge(notes) + getExtraFeeFromNotes(notes);
+// Helper to detect configurable extra fee saved in notes or based on day of week
+const getExtraFeeFromNotes = (
+  notes: string | null,
+  date?: string | null,
+  isNight: boolean = false,
+  extraFeeConfig?: ExtraFeeConfig | null
+): number => {
+  if (notes) {
+    const m = notes.match(/Taxa adicional \([^)]+\): \+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+    if (m) return parseFloat(m[1].replace(",", ".")) || 0;
+  }
 
-const getServicesTotal = (services: AppointmentService[], notes?: string | null, isReward?: boolean): number => {
+  const cfg = extraFeeConfig || cachedExtraFeeConfig;
+  // Se não for horário noturno (evita taxa dupla) e a taxa adicional estiver ativa para a data
+  if (!isNight && date && cfg?.enabled && cfg.amount > 0) {
+    if (isExtraFeeApplicable(cfg, date)) {
+      return cfg.amount;
+    }
+  }
+
+  return 0;
+};
+
+const getExtrasTotal = (
+  notes: string | null,
+  time?: string | null,
+  date?: string | null,
+  extraFeeConfig?: ExtraFeeConfig | null
+): number => {
+  const cfg = extraFeeConfig || cachedExtraFeeConfig;
+  const defaultNightAmount = (cfg?.enabled && cfg.amount > 0) ? cfg.amount : 5;
+  const night = getNightSurcharge(notes, time, defaultNightAmount);
+  const extra = getExtraFeeFromNotes(notes, date, night > 0, cfg);
+  return night + extra;
+};
+
+const getServicesTotal = (
+  services: AppointmentService[],
+  notes?: string | null,
+  isReward?: boolean,
+  time?: string | null,
+  date?: string | null,
+  extraFeeConfig?: ExtraFeeConfig | null
+): number => {
+  const extras = getExtrasTotal(notes ?? null, time ?? null, date ?? null, extraFeeConfig);
   const baseTotal = (!services || services.length === 0)
-    ? getExtrasTotal(notes ?? null)
-    : services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
+    ? extras
+    : services.reduce((sum, s) => sum + (s.price || 0), 0) + extras;
 
   if (isReward && notes) {
     // If it's a coupon discount (not a free service), apply the discount from notes
@@ -197,10 +252,18 @@ const getServicesTotal = (services: AppointmentService[], notes?: string | null,
 };
 
 // Helper function to get services total considering subscription (R$ 0 for subscriptions)
-const getServicesTotalForRevenue = (services: AppointmentService[], paymentMethod: string | null, notes?: string | null): number => {
+const getServicesTotalForRevenue = (
+  services: AppointmentService[],
+  paymentMethod: string | null,
+  notes?: string | null,
+  time?: string | null,
+  date?: string | null,
+  extraFeeConfig?: ExtraFeeConfig | null
+): number => {
   if (paymentMethod === 'subscription') return 0;
-  if (!services || services.length === 0) return getExtrasTotal(notes ?? null);
-  return services.reduce((sum, s) => sum + (s.price || 0), 0) + getExtrasTotal(notes ?? null);
+  const extras = getExtrasTotal(notes ?? null, time ?? null, date ?? null, extraFeeConfig);
+  if (!services || services.length === 0) return extras;
+  return services.reduce((sum, s) => sum + (s.price || 0), 0) + extras;
 };
 
 // Helper function to get payment method display info
@@ -282,6 +345,12 @@ const Admin = () => {
   const { isAdmin, loading: authLoading } = useAuth();
   const { isEnabled: pushEnabled, isSupported: pushSupported, requestPermission, notifyNewAppointment } = usePushNotifications();
   const { isSupported: webPushSupported, isSubscribed: webPushSubscribed, isLoading: webPushLoading, toggleSubscription: toggleWebPush } = useWebPush();
+  const { config: extraFeeConfig } = useExtraFee();
+  useEffect(() => {
+    if (extraFeeConfig) {
+      cachedExtraFeeConfig = extraFeeConfig;
+    }
+  }, [extraFeeConfig]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveSubscription[]>([]);
@@ -812,7 +881,7 @@ const Admin = () => {
     const confirmedCount = appointments.filter(a => a.status === "confirmed").length;
     const revenue = appointments
       .filter(a => a.status === "completed" || a.status === "confirmed")
-      .reduce((sum, a) => sum + getServicesTotalForRevenue(a.services, a.payment_method, a.notes), 0);
+      .reduce((sum, a) => sum + getServicesTotalForRevenue(a.services, a.payment_method, a.notes, a.appointment_time, a.appointment_date, extraFeeConfig), 0);
     setStats({ today: todayCount, pending: pendingCount, confirmed: confirmedCount, revenue });
   }, [appointments, loading]);
 
@@ -1734,7 +1803,7 @@ const Admin = () => {
                 <p className="text-base sm:text-xl font-bold text-primary">
                   R$ {filteredStatsAppointments
                     .filter(a => (a.status === 'confirmed' || a.status === 'completed') && a.payment_method !== 'subscription')
-                    .reduce((sum, a) => sum + getServicesTotal(a.services, a.notes, !!(a.used_referral_redemption_id || a.used_store_redemption_id)), 0)
+                    .reduce((sum, a) => sum + getServicesTotal(a.services, a.notes, !!(a.used_referral_redemption_id || a.used_store_redemption_id), a.appointment_time, a.appointment_date, extraFeeConfig), 0)
                     .toFixed(0)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Receita</p>
@@ -1856,8 +1925,6 @@ const Admin = () => {
                             {(() => {
                               const subscription = getUserSubscription(appointment.user_id);
                               const hasCredits = hasRemainingCuts(subscription);
-                              const nightAmt = getNightSurcharge(appointment.notes);
-                              const extraAmt = getExtraFeeFromNotes(appointment.notes);
                               if (subscription && hasCredits) {
                                 return (
                                   <span className="font-bold text-green-500 flex items-center gap-1">
@@ -1865,21 +1932,9 @@ const Admin = () => {
                                   </span>
                                 );
                               }
-                              const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
+                              const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id), appointment.appointment_time, appointment.appointment_date, extraFeeConfig);
                               return (
-                                <span className="flex items-center gap-1.5 flex-wrap">
-                                  {nightAmt > 0 && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                      ⚠️ +R${nightAmt.toFixed(2).replace('.', ',')}
-                                    </Badge>
-                                  )}
-                                  {extraAmt > 0 && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                      💰 +R${extraAmt.toFixed(2).replace('.', ',')}
-                                    </Badge>
-                                  )}
-                                  <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
-                                </span>
+                                <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
                               );
                             })()}
                           </div>
@@ -2261,62 +2316,34 @@ const Admin = () => {
                                     </span>
                                   );
                                 }
-                                const nightAmt = getNightSurcharge(appointment.notes);
-                                const extraAmt = getExtraFeeFromNotes(appointment.notes);
-                                const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
-                                return (
-                                  <span className="flex items-center gap-1.5 flex-wrap">
-                                    {nightAmt > 0 && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                        ⚠️ +R${nightAmt.toFixed(2).replace('.', ',')}
-                                      </Badge>
-                                    )}
-                                    {extraAmt > 0 && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                        💰 +R${extraAmt.toFixed(2).replace('.', ',')}
-                                      </Badge>
-                                    )}
-                                    <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
-                                  </span>
-                                );
-                              })()}
-                            </div>
+                              const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id), appointment.appointment_time, appointment.appointment_date, extraFeeConfig);
+                              return (
+                                <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                              );
+                            })()}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-border">
-                          <Badge variant="outline" className={`${statusColors[appointment.status]} text-xs`}>
-                            {statusLabels[appointment.status]}
-                          </Badge>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-border">
+                        <Badge variant="outline" className={`${statusColors[appointment.status]} text-xs`}>
+                          {statusLabels[appointment.status]}
+                        </Badge>
 
-                          {(() => {
-                            if (appointment.payment_method === 'subscription') {
-                              return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
-                            }
-                            const sub = getUserSubscription(appointment.user_id);
-                            const credits = hasRemainingCuts(sub);
-                            if (sub && credits) {
-                              return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
-                            }
-                            const nightAmt2 = getNightSurcharge(appointment.notes);
-                            const extraAmt2 = getExtraFeeFromNotes(appointment.notes);
-                            const total2 = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
-                            return (
-                              <span className="flex items-center gap-1.5 flex-wrap">
-                                {nightAmt2 > 0 && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                    ⚠️ +R${nightAmt2.toFixed(2).replace('.', ',')}
-                                  </Badge>
-                                )}
-                                {extraAmt2 > 0 && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
-                                    💰 +R${extraAmt2.toFixed(2).replace('.', ',')}
-                                  </Badge>
-                                )}
-                                <span className="font-bold text-primary text-sm sm:text-base">R$ {total2.toFixed(2)}</span>
-                              </span>
-                            );
-                          })()}
+                        {(() => {
+                          if (appointment.payment_method === 'subscription') {
+                            return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
+                          }
+                          const sub = getUserSubscription(appointment.user_id);
+                          const credits = hasRemainingCuts(sub);
+                          if (sub && credits) {
+                            return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
+                          }
+                          const total2 = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id), appointment.appointment_time, appointment.appointment_date, extraFeeConfig);
+                          return (
+                            <span className="font-bold text-primary text-sm sm:text-base">R$ {total2.toFixed(2)}</span>
+                          );
+                        })()}
 
                           <Select
                             value={appointment.status}
@@ -2856,10 +2883,10 @@ const Admin = () => {
                 <span className="text-muted-foreground font-medium">Valor Total:</span>
                 <span className="space-y-1">
                   {(() => {
-                    const nightAmt = getNightSurcharge(selectedCompletedAppointment.notes);
-                    const extraAmt = getExtraFeeFromNotes(selectedCompletedAppointment.notes);
+                    const nightAmt = getNightSurcharge(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_time);
+                    const extraAmt = getExtraFeeFromNotes(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_date, nightAmt > 0, extraFeeConfig);
                     const baseAmt = selectedCompletedAppointment.services.reduce((s, sv) => s + (sv.price || 0), 0);
-                    const total = getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id));
+                    const total = getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id), selectedCompletedAppointment.appointment_time, selectedCompletedAppointment.appointment_date, extraFeeConfig);
                     return (
                       <>
                         {(nightAmt > 0 || extraAmt > 0) && (
