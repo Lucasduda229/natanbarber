@@ -162,7 +162,7 @@ let cachedExtraFeeConfig: ExtraFeeConfig = {
   days: [0, 1, 2, 3, 4, 5, 6],
 };
 
-// Helper function to detect night surcharge from appointment notes OR time (18h+)
+// Helper function to detect night surcharge from appointment notes OR time (19h+)
 const getNightSurcharge = (
   notes: string | null,
   time?: string | null,
@@ -175,10 +175,10 @@ const getNightSurcharge = (
     if (notes.includes("Adicional noturno")) return defaultAmount;
   }
 
-  // 2. Fallback por horário: se o agendamento foi marcado para 18h ou depois
+  // 2. Fallback por horário: se o agendamento foi marcado para 19h ou depois
   if (time) {
     const hour = parseInt(time.split(":")[0], 10);
-    if (!isNaN(hour) && hour >= 18) {
+    if (!isNaN(hour) && hour >= 19) {
       return defaultAmount;
     }
   }

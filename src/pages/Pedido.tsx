@@ -222,7 +222,7 @@ const Pedido = () => {
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
-    const surchargeNote = isNightSurcharge ? `\n⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}` : "";
+    const surchargeNote = isNightSurcharge ? `\n⚠️ Adicional noturno (19h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}` : "";
     const extraFeeNote = extraFeeApplies ? `\n${buildExtraFeeNote(extraFee)}` : "";
     const notesText = customerNotes.trim()
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
@@ -332,7 +332,7 @@ const Pedido = () => {
   const isNightSurcharge = (() => {
     if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return hour >= 18;
+    return hour >= 19;
   })();
   // Usa o valor configurado do extraFee se ativo, senão R$ 5,00 padrão
   const nightSurchargeAmount = isNightSurcharge

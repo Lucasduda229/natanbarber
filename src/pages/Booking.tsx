@@ -822,7 +822,7 @@ const Booking = () => {
   const isNightSurcharge = (() => {
     if (!selectedTime) return false;
     const hour = parseInt(selectedTime.split(':')[0], 10);
-    return hour >= 18;
+    return hour >= 19;
   })();
   // Valor do adicional noturno usa o extraFee configurado (se ativo), senão R$ 5,00 padrão
   const nightSurchargeAmount = isNightSurcharge
@@ -1060,7 +1060,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`);
             }
           }
-          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
+          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (19h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -1322,7 +1322,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`); 
             }
           }
-          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
+          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (19h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
