@@ -824,10 +824,15 @@ const Booking = () => {
     const hour = parseInt(selectedTime.split(':')[0], 10);
     return hour >= 18;
   })();
-  const thursdaySurcharge = isNightSurcharge ? 5 : 0;
+  // Valor do adicional noturno usa o extraFee configurado (se ativo), senão R$ 5,00 padrão
+  const nightSurchargeAmount = isNightSurcharge
+    ? (extraFee.enabled && extraFee.amount > 0 ? extraFee.amount : 5)
+    : 0;
+  const thursdaySurcharge = nightSurchargeAmount;
 
   // Taxa adicional configurável (não aplica para assinantes; respeita dias da semana selecionados)
-  const extraFeeApplies = !usingSubscription && isExtraFeeApplicable(extraFee, selectedDate ?? null);
+  // Quando o adicional noturno já usa o extraFee, não somamos novamente
+  const extraFeeApplies = !usingSubscription && !isNightSurcharge && isExtraFeeApplicable(extraFee, selectedDate ?? null);
   const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Cálculos de totais
@@ -1055,7 +1060,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`);
             }
           }
-          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (18h+): +R$5,00");
+          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -1317,7 +1322,7 @@ const Booking = () => {
               parts.push(`🎟️ Cupom: ${activeReward.name} (-R$${actualDiscountAmount.toFixed(2)})`); 
             }
           }
-          if (isNightSurcharge) parts.push("⚠️ Adicional noturno (18h+): +R$5,00");
+          if (isNightSurcharge) parts.push(`⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}`);
           const feeNote = extraFeeApplies ? buildExtraFeeNote(extraFee) : "";
           if (feeNote) parts.push(feeNote);
           return parts.length ? parts.join("\n") : null;
@@ -2209,7 +2214,7 @@ const Booking = () => {
                   {isNightSurcharge && (
                     <div className="flex items-center justify-between text-sm text-amber-500">
                       <span className="flex items-center gap-2">⚠️ Adicional noturno (18h+)</span>
-                      <span>+ R$ 5,00</span>
+                      <span>+ R$ {nightSurchargeAmount.toFixed(2).replace('.', ',')}</span>
                     </div>
                   )}
                   {extraFeeAmount > 0 && (
@@ -2319,7 +2324,7 @@ const Booking = () => {
                 {isNightSurcharge && (
                   <div className="flex items-center justify-between text-sm text-amber-500">
                     <span>⚠️ Adicional noturno (18h+)</span>
-                    <span>+ R$ 5,00</span>
+                    <span>+ R$ {nightSurchargeAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
                 {extraFeeAmount > 0 && (
@@ -2440,7 +2445,7 @@ const Booking = () => {
                 {isNightSurcharge && (
                   <div className="flex items-center justify-between text-amber-500">
                     <span>⚠️ Adicional noturno (18h+)</span>
-                    <span className="font-semibold">+ R$ 5,00</span>
+                    <span className="font-semibold">+ R$ {nightSurchargeAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
                 {extraFeeAmount > 0 && (

@@ -153,9 +153,13 @@ const getServicesNames = (services: AppointmentService[]): string => {
   return services.map(s => s.name).join(", ");
 };
 
-// Helper function to detect Thursday night surcharge from appointment notes
+// Helper function to detect night surcharge from appointment notes and parse its real value
 const getNightSurcharge = (notes: string | null): number => {
   if (!notes) return 0;
+  // Try to parse the real value saved in the note: "Adicional noturno (18h+): +R$X,XX"
+  const m = notes.match(/Adicional noturno[^:]*:\s*\+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+  if (m) return parseFloat(m[1].replace(",", ".")) || 0;
+  // Fallback: if the note mentions nocturnal but has no value (legacy), return 5
   return notes.includes("Adicional noturno") ? 5 : 0;
 };
 
@@ -1810,6 +1814,8 @@ const Admin = () => {
                             {(() => {
                               const subscription = getUserSubscription(appointment.user_id);
                               const hasCredits = hasRemainingCuts(subscription);
+                              const nightAmt = getNightSurcharge(appointment.notes);
+                              const extraAmt = getExtraFeeFromNotes(appointment.notes);
                               if (subscription && hasCredits) {
                                 return (
                                   <span className="font-bold text-green-500 flex items-center gap-1">
@@ -1817,8 +1823,21 @@ const Admin = () => {
                                   </span>
                                 );
                               }
+                              const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
                               return (
-                                <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>
+                                <span className="flex items-center gap-1.5 flex-wrap">
+                                  {nightAmt > 0 && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                      ⚠️ +R${nightAmt.toFixed(2).replace('.', ',')}
+                                    </Badge>
+                                  )}
+                                  {extraAmt > 0 && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                      💰 +R${extraAmt.toFixed(2).replace('.', ',')}
+                                    </Badge>
+                                  )}
+                                  <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                </span>
                               );
                             })()}
                           </div>
@@ -2200,8 +2219,23 @@ const Admin = () => {
                                     </span>
                                   );
                                 }
+                                const nightAmt = getNightSurcharge(appointment.notes);
+                                const extraAmt = getExtraFeeFromNotes(appointment.notes);
+                                const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
                                 return (
-                                  <span className="font-bold text-primary">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>
+                                  <span className="flex items-center gap-1.5 flex-wrap">
+                                    {nightAmt > 0 && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                        ⚠️ +R${nightAmt.toFixed(2).replace('.', ',')}
+                                      </Badge>
+                                    )}
+                                    {extraAmt > 0 && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                        💰 +R${extraAmt.toFixed(2).replace('.', ',')}
+                                      </Badge>
+                                    )}
+                                    <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                  </span>
                                 );
                               })()}
                             </div>
@@ -2222,7 +2256,24 @@ const Admin = () => {
                             if (sub && credits) {
                               return <span className="font-bold text-green-500 text-sm sm:text-base">Incluso</span>;
                             }
-                            return <span className="font-bold text-primary text-sm sm:text-base">R$ {getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id)).toFixed(2)}</span>;
+                            const nightAmt2 = getNightSurcharge(appointment.notes);
+                            const extraAmt2 = getExtraFeeFromNotes(appointment.notes);
+                            const total2 = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id));
+                            return (
+                              <span className="flex items-center gap-1.5 flex-wrap">
+                                {nightAmt2 > 0 && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                    ⚠️ +R${nightAmt2.toFixed(2).replace('.', ',')}
+                                  </Badge>
+                                )}
+                                {extraAmt2 > 0 && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-amber-500 bg-amber-500/10 border-amber-500/30">
+                                    💰 +R${extraAmt2.toFixed(2).replace('.', ',')}
+                                  </Badge>
+                                )}
+                                <span className="font-bold text-primary text-sm sm:text-base">R$ {total2.toFixed(2)}</span>
+                              </span>
+                            );
                           })()}
 
                           <Select
@@ -2761,8 +2812,27 @@ const Admin = () => {
                 <span>{getServicesNames(selectedCompletedAppointment.services)}</span>
 
                 <span className="text-muted-foreground font-medium">Valor Total:</span>
-                <span className="font-semibold text-green-500">
-                  R$ {getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id)).toFixed(2).replace('.', ',')}
+                <span className="space-y-1">
+                  {(() => {
+                    const nightAmt = getNightSurcharge(selectedCompletedAppointment.notes);
+                    const extraAmt = getExtraFeeFromNotes(selectedCompletedAppointment.notes);
+                    const baseAmt = selectedCompletedAppointment.services.reduce((s, sv) => s + (sv.price || 0), 0);
+                    const total = getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id));
+                    return (
+                      <>
+                        {(nightAmt > 0 || extraAmt > 0) && (
+                          <span className="block text-muted-foreground text-xs">Serviços: R$ {baseAmt.toFixed(2).replace('.', ',')}</span>
+                        )}
+                        {nightAmt > 0 && (
+                          <span className="block text-amber-500 text-xs">⚠️ Adicional noturno: +R$ {nightAmt.toFixed(2).replace('.', ',')}</span>
+                        )}
+                        {extraAmt > 0 && (
+                          <span className="block text-amber-500 text-xs">💰 Taxa adicional: +R$ {extraAmt.toFixed(2).replace('.', ',')}</span>
+                        )}
+                        <span className="font-semibold text-green-500 block">R$ {total.toFixed(2).replace('.', ',')}</span>
+                      </>
+                    );
+                  })()}
                 </span>
 
                 <span className="text-muted-foreground font-medium">Data/Hora:</span>

@@ -222,7 +222,7 @@ const Pedido = () => {
     const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const serviceNames = selectedServices.map(s => s.name).join(", ");
     const paymentLabel = paymentMethod === "pix" ? "PIX" : paymentMethod === "cartao" ? "Cartão" : "Recepção";
-    const surchargeNote = isNightSurcharge ? "\n⚠️ Adicional noturno (18h+): +R$5,00" : "";
+    const surchargeNote = isNightSurcharge ? `\n⚠️ Adicional noturno (18h+): +R$${nightSurchargeAmount.toFixed(2).replace('.', ',')}` : "";
     const extraFeeNote = extraFeeApplies ? `\n${buildExtraFeeNote(extraFee)}` : "";
     const notesText = customerNotes.trim()
       ? `Pedido via Site - ${customerName.trim()} - Tel: ${cleanPhone}\nServiços: ${serviceNames}\nPagamento: ${paymentLabel}\n${customerNotes.trim()}${surchargeNote}${extraFeeNote}`
@@ -334,8 +334,13 @@ const Pedido = () => {
     const hour = parseInt(selectedTime.split(':')[0], 10);
     return hour >= 18;
   })();
-  const thursdaySurcharge = isNightSurcharge ? 5 : 0;
-  const extraFeeApplies = isExtraFeeApplicable(extraFee, selectedDate ?? null);
+  // Usa o valor configurado do extraFee se ativo, senão R$ 5,00 padrão
+  const nightSurchargeAmount = isNightSurcharge
+    ? (extraFee.enabled && extraFee.amount > 0 ? extraFee.amount : 5)
+    : 0;
+  const thursdaySurcharge = nightSurchargeAmount;
+  // Extra fee só aplica se não for horário noturno (evita dupla contagem)
+  const extraFeeApplies = !isNightSurcharge && isExtraFeeApplicable(extraFee, selectedDate ?? null);
   const extraFeeAmount = extraFeeApplies ? extraFee.amount : 0;
 
   // Calculate total price
@@ -637,7 +642,7 @@ const Pedido = () => {
                     {isNightSurcharge && (
                       <div className="flex justify-between text-amber-500 font-medium">
                         <span>⚠️ Adicional noturno (18h+)</span>
-                        <span>+ R$ 5,00</span>
+                        <span>+ R$ {nightSurchargeAmount.toFixed(2).replace(".", ",")}</span>
                       </div>
                     )}
                     {extraFeeAmount > 0 && (
