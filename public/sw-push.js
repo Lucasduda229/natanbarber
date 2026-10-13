@@ -1,6 +1,14 @@
 // Custom Service Worker for Push Notifications
 // This file handles push events when the app is closed
 
+self.addEventListener('install', function() {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', function(event) {
   console.log('[SW] Push received:', event);
 

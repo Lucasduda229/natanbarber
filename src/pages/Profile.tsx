@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Calendar, Shield, ArrowLeft, User, Mail, Phone, LogOut } from "lucide-react";
+import { Camera, Calendar, Shield, ArrowLeft, User, Mail, Phone, LogOut, Sparkles } from "lucide-react";
+import { checkServerVersion, forceAppUpdate } from "@/utils/pwaUpdate";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +25,32 @@ const Profile = () => {
   const { user, signOut, isAdmin } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [updatingApp, setUpdatingApp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpdateApp = async () => {
+    setUpdatingApp(true);
+    toast.loading("Verificando se há atualizações do aplicativo...", { id: "profile-update" });
+    try {
+      const { hasUpdate } = await checkServerVersion();
+      if (hasUpdate) {
+        toast.success("Nova versão encontrada! Atualizando aplicativo...", { id: "profile-update" });
+        await forceAppUpdate();
+      } else {
+        toast.success("Você já está na versão mais recente!", {
+          id: "profile-update",
+          description: "Deseja forçar recarregamento do app mesmo assim?",
+          action: {
+            label: "Recarregar",
+            onClick: () => forceAppUpdate(),
+          },
+        });
+        setUpdatingApp(false);
+      }
+    } catch {
+      await forceAppUpdate();
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -219,6 +245,24 @@ const Profile = () => {
                 </button>
               </>
             )}
+
+            <Separator className="bg-border" />
+            <button
+              onClick={handleUpdateApp}
+              disabled={updatingApp}
+              className="flex items-center justify-between w-full py-3 px-1 text-foreground hover:text-primary transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className={`w-5 h-5 text-amber-500 ${updatingApp ? "animate-spin" : ""}`} />
+                <div>
+                  <span className="text-sm font-medium">Atualizar Aplicativo</span>
+                  <p className="text-xs text-muted-foreground">Sincronizar a versão mais recente e novidades</p>
+                </div>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded-full border border-amber-500/40 text-amber-500 font-medium hover:bg-amber-500/10 transition-colors">
+                {updatingApp ? "Atualizando..." : "Atualizar"}
+              </span>
+            </button>
           </CardContent>
         </Card>
 

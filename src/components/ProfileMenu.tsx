@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Sparkles } from "lucide-react";
+import { forceAppUpdate } from "@/utils/pwaUpdate";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -86,6 +87,14 @@ export const ProfileMenu = () => {
         >
           <User className="w-4 h-4 mr-2" />
           Perfil
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={() => forceAppUpdate()}
+          className="cursor-pointer text-amber-500 focus:text-amber-500"
+        >
+          <Sparkles className="w-4 h-4 mr-2 text-amber-500" />
+          Atualizar App
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, subDays, subMonths, subYears, startOfWeek, startOfMonth, startOfYear, isAfter, addMonths, setDate, isBefore, isEqual, getDaysInMonth } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ptBR } from "date-fns/locale";
-import { Menu, Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift, ShoppingBag } from "lucide-react";
+import { Menu, Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift, ShoppingBag, Sparkles } from "lucide-react";
+import { checkServerVersion, forceAppUpdate } from "@/utils/pwaUpdate";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -323,6 +324,33 @@ const Admin = () => {
   useEffect(() => {
     localStorage.setItem("adminActiveTab", activeTab);
   }, [activeTab]);
+
+  const [checkingPWA, setCheckingPWA] = useState(false);
+
+  const handleUpdatePWA = async () => {
+    setCheckingPWA(true);
+    toast.loading("Verificando se há nova versão do aplicativo...", { id: "check-pwa" });
+    try {
+      const { hasUpdate } = await checkServerVersion();
+      if (hasUpdate) {
+        toast.success("Nova versão encontrada! Atualizando aplicativo...", { id: "check-pwa" });
+        await forceAppUpdate();
+      } else {
+        toast.success("Você já está na versão mais recente!", {
+          id: "check-pwa",
+          description: "Deseja forçar recarregamento e limpeza de cache mesmo assim?",
+          action: {
+            label: "Recarregar",
+            onClick: () => forceAppUpdate(),
+          },
+        });
+        setCheckingPWA(false);
+      }
+    } catch {
+      toast.error("Erro ao verificar atualizações. Forçando reload...", { id: "check-pwa" });
+      await forceAppUpdate();
+    }
+  };
 
   const appointmentsRef = useRef<Appointment[]>([]);
   useEffect(() => {
@@ -1496,6 +1524,20 @@ const Admin = () => {
             >
               <RefreshCw className={`w-4 h-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
               Atualizar
+            </Button>
+
+            {/* Botão de atualização do PWA instalado */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUpdatePWA}
+              disabled={checkingPWA}
+              className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10 h-9 text-xs sm:text-sm touch-target"
+              title="Sincronizar versão mais recente do aplicativo e limpar cache do PWA"
+            >
+              <Sparkles className={`w-4 h-4 mr-1.5 text-amber-500 ${checkingPWA ? 'animate-spin' : ''}`} />
+              <span className="hidden xs:inline">Atualizar PWA</span>
+              <span className="xs:hidden">PWA</span>
             </Button>
 
             {/* Web Push Notifications Button (works when PWA is closed) */}

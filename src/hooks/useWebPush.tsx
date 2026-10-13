@@ -40,11 +40,9 @@ export const useWebPush = () => {
       setIsSupported(true);
 
       try {
-        // Register the push service worker
-        const reg = await navigator.serviceWorker.register('/sw-push.js', {
-          scope: '/'
-        });
-        console.log('Push SW registered:', reg);
+        // Usa o Service Worker principal do PWA (que importa /sw-push.js no Workbox)
+        const reg = await navigator.serviceWorker.ready;
+        console.log('Push SW registration ready:', reg);
         setRegistration(reg);
 
         // Check existing subscription
@@ -54,7 +52,7 @@ export const useWebPush = () => {
           setIsSubscribed(true);
         }
       } catch (error) {
-        console.error('Error registering push SW:', error);
+        console.error('Error getting push SW registration:', error);
       }
     };
 
