@@ -30,14 +30,93 @@
   
   
   
-  <meta property="og:title" content="Natan Barber">
-  <meta name="twitter:title" content="Natan Barber">
-  <meta property="og:description" content="Barbearia Natan">
-  <meta name="twitter:description" content="Barbearia Natan">
-</head>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta property="og:title" content="Natan Barber">
+    <meta name="twitter:title" content="Natan Barber">
+    <meta property="og:description" content="Barbearia Natan">
+    <meta name="twitter:description" content="Barbearia Natan">
 
-  <body>
-    <div id="root"></div>
+    <!-- Auto-recuperação contra tela preta (falha de chunk / cache legado de SW) -->
+    <script>
+      (function() {
+        window.addEventListener('error', function(event) {
+          var target = event.target;
+          if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+            var src = target.src || target.href || '';
+            var key = 'pwa_chunk_retry_' + src;
+            var retries = parseInt(sessionStorage.getItem(key) || '0', 10);
+            if (retries < 2) {
+              sessionStorage.setItem(key, String(retries + 1));
+              console.warn('[PWA AutoRecovery] Falha ao carregar recurso:', src, '- limpando cache e recarregando...');
+              if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                  return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+                }).catch(function() {});
+              }
+              if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(r) { r.unregister(); });
+                }).catch(function() {});
+              }
+              setTimeout(function() {
+                var url = new URL(window.location.href);
+                url.searchParams.set('_v_reload', Date.now().toString());
+                window.location.href = url.toString();
+              }, 300);
+            }
+          }
+        }, true);
+      })();
+    </script>
+  </head>
+
+  <body style="background-color: #0E0E0E; color: #F5F5F5; margin: 0; font-family: system-ui, -apple-system, sans-serif;">
+    <div id="root">
+      <!-- Fallback visual enquanto o React inicializa (evita tela 100% preta) -->
+      <div id="initial-loader" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #0E0E0E; color: #D4AF37; padding: 20px; box-sizing: border-box; text-align: center;">
+        <div style="width: 52px; height: 52px; border: 3px solid rgba(212, 175, 55, 0.2); border-top-color: #D4AF37; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        <p style="margin-top: 16px; font-size: 14px; color: #A88624; font-weight: 500;">Carregando Natan Barber...</p>
+
+        <div id="stuck-help" style="display: none; margin-top: 24px; max-width: 280px;">
+          <p style="font-size: 12px; color: #888; margin-bottom: 12px;">Se a tela não abrir automaticamente:</p>
+          <button onclick="window.clearAppCacheAndReload()" style="background: linear-gradient(135deg, #D4AF37, #A88624); border: none; color: #0E0E0E; font-weight: 600; padding: 10px 18px; border-radius: 9999px; font-size: 13px; cursor: pointer;">
+            Atualizar Aplicativo
+          </button>
+        </div>
+      </div>
+
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+
+      <script>
+        window.clearAppCacheAndReload = function() {
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+            }).finally(function() {
+              if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(r) { r.unregister(); });
+                }).finally(function() {
+                  window.location.href = window.location.origin + window.location.pathname + '?_t=' + Date.now();
+                });
+              } else {
+                window.location.reload();
+              }
+            });
+          } else {
+            window.location.reload();
+          }
+        };
+
+        // Se após 5 segundos o React ainda não substituiu o root, mostra o botão de socorro
+        setTimeout(function() {
+          var help = document.getElementById('stuck-help');
+          if (help) help.style.display = 'block';
+        }, 5000);
+      </script>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

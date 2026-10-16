@@ -25,6 +25,8 @@ import Referrals from "./pages/Referrals";
 import Store from "./pages/Store";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -34,16 +36,17 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <OfflineIndicator />
-        <BrowserRouter>
-          <AuthRecoveryRedirect />
-          <PWAUpdatePrompt />
-          <Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <OfflineIndicator />
+          <BrowserRouter>
+            <AuthRecoveryRedirect />
+            <PWAUpdatePrompt />
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
@@ -67,6 +70,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+</ErrorBoundary>
 );
 
 export default App;
