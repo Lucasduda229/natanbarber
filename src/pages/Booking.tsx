@@ -310,6 +310,41 @@ const Booking = () => {
     if (user) {
       checkActiveSubscription();
       fetchSubscriptionBookings();
+
+      // Listen for subscription_progress changes in realtime.
+      // When the admin activates/renews the subscription, update automatically
+      // without requiring the client to refresh the page.
+      const subChannel = supabase
+        .channel(`booking-sub-progress-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'subscription_progress',
+          },
+          (payload) => {
+            const updated = payload.new as any;
+            if (!updated || updated.user_id !== user.id) return;
+
+            // Re-check subscription status whenever our record changes
+            checkActiveSubscription();
+            fetchSubscriptionBookings();
+
+            // If subscription was just activated, celebrate 🎉
+            if (updated.is_active === true) {
+              toast.success('🎉 Assinatura ativada!', {
+                description: 'Seu pacote está ativo. Pode agendar agora!',
+                duration: 6000,
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subChannel);
+      };
     }
   }, [user]);
 
