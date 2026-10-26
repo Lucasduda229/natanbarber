@@ -61,24 +61,43 @@ export const useWebPush = () => {
 
   // Subscribe to push notifications
   const subscribe = useCallback(async () => {
-    if (!registration || !user) {
-      toast.error('Não foi possível ativar notificações');
+    if (!user) {
+      toast.error('Faça login para ativar notificações');
       return false;
     }
 
     setIsLoading(true);
 
     try {
+      // If registration is not ready yet, wait for it
+      let reg = registration;
+      if (!reg) {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          toast.error('Seu navegador não suporta notificações push');
+          setIsLoading(false);
+          return false;
+        }
+        try {
+          reg = await navigator.serviceWorker.ready;
+          setRegistration(reg);
+        } catch (swError) {
+          console.error('Service Worker not ready:', swError);
+          toast.error('Serviço de notificações indisponível. Tente recarregar a página.');
+          setIsLoading(false);
+          return false;
+        }
+      }
+
       // Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        toast.error('Permissão de notificação negada');
+        toast.error('Permissão de notificação negada. Ative nas configurações do navegador.');
         setIsLoading(false);
         return false;
       }
 
       // Subscribe to push manager
-      const subscription = await (registration as any).pushManager.subscribe({
+      const subscription = await (reg as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
