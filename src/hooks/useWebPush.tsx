@@ -22,6 +22,41 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return outputArray as Uint8Array<ArrayBuffer>;
 }
 
+/** Aguarda o SW ficar pronto com timeout máximo de ms milissegundos */
+async function waitForSW(ms = 5000): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+
+  try {
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+/** Tenta registrar um SW mínimo se ainda não houver nenhum */
+async function ensureSW(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+
+  // Já existe um SW ativo?
+  const existing = await waitForSW(3000);
+  if (existing) return existing;
+
+  // Tenta registrar o sw-push.js diretamente como fallback
+  try {
+    const reg = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+    console.log('[WebPush] SW registrado manualmente:', reg);
+    // Aguarda ativação
+    const ready = await waitForSW(5000);
+    return ready;
+  } catch (err) {
+    console.error('[WebPush] Falha ao registrar SW manualmente:', err);
+    return null;
+  }
+}
+
 export const useWebPush = () => {
   const { user } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
@@ -29,34 +64,37 @@ export const useWebPush = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
-  // Check if push is supported and register service worker
+  // Check if push is supported and get SW registration
   useEffect(() => {
-    const checkSupport = async () => {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push notifications not supported');
-        return;
-      }
+    const init = async () => {
+      const hasSW = 'serviceWorker' in navigator;
+      const hasPush = 'PushManager' in window;
+      const hasNotif = 'Notification' in window;
+
+      // Suporte mínimo: precisamos de Notification para qualquer coisa
+      if (!hasNotif) return;
 
       setIsSupported(true);
 
-      try {
-        // Usa o Service Worker principal do PWA (que importa /sw-push.js no Workbox)
-        const reg = await navigator.serviceWorker.ready;
-        console.log('Push SW registration ready:', reg);
-        setRegistration(reg);
+      if (!hasSW || !hasPush) {
+        // Navegador sem SW/Push — apenas notificações básicas via Notification API
+        console.log('[WebPush] Modo básico (sem SW/Push)');
+        return;
+      }
 
-        // Check existing subscription
-        const subscription = await (reg as any).pushManager.getSubscription();
-        if (subscription) {
-          console.log('Existing push subscription found');
-          setIsSubscribed(true);
+      try {
+        const reg = await waitForSW(3000);
+        if (reg) {
+          setRegistration(reg);
+          const sub = await (reg as any).pushManager.getSubscription();
+          if (sub) setIsSubscribed(true);
         }
-      } catch (error) {
-        console.error('Error getting push SW registration:', error);
+      } catch (err) {
+        console.debug('[WebPush] SW check failed:', err);
       }
     };
 
-    checkSupport();
+    init();
   }, []);
 
   // Subscribe to push notifications
@@ -69,79 +107,81 @@ export const useWebPush = () => {
     setIsLoading(true);
 
     try {
-      // If registration is not ready yet, wait for it (with timeout)
-      let reg = registration;
-      if (!reg) {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          toast.error('Seu navegador não suporta notificações push');
-          return false;
-        }
-        try {
-          // Wait max 5 seconds for SW to be ready
-          reg = await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('SW timeout')), 5000)
-            )
-          ]) as ServiceWorkerRegistration;
-          setRegistration(reg);
-        } catch (swError) {
-          console.error('Service Worker not ready:', swError);
-          toast.error('Serviço indisponível. Tente recarregar a página.');
-          return false;
-        }
+      // 1. Pede permissão primeiro (funciona em qualquer contexto)
+      if (!('Notification' in window)) {
+        toast.error('Seu navegador não suporta notificações');
+        return false;
       }
 
-      // Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         toast.error('Permissão negada. Ative nas configurações do navegador.');
         return false;
       }
 
-      // Subscribe to push manager
-      const subscription = await (reg as any).pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
+      // 2. Tenta obter/registrar SW para Push real
+      const hasPush = 'PushManager' in window && 'serviceWorker' in navigator;
 
-      console.log('Push subscription:', subscription);
+      if (hasPush) {
+        // Usa SW já registrado ou tenta registrar um
+        let reg = registration;
+        if (!reg) {
+          reg = await ensureSW();
+          if (reg) setRegistration(reg);
+        }
 
-      // Extract keys from subscription
-      const subscriptionJson = subscription.toJSON();
-      const endpoint = subscriptionJson.endpoint!;
-      const p256dh = subscriptionJson.keys?.p256dh || '';
-      const auth = subscriptionJson.keys?.auth || '';
+        if (reg && (reg as any).pushManager) {
+          try {
+            const subscription = await (reg as any).pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
 
-      // Save subscription to database
-      const { error } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-          user_id: user.id,
-          endpoint,
-          p256dh,
-          auth,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'endpoint'
-        });
+            const subscriptionJson = subscription.toJSON();
+            const endpoint = subscriptionJson.endpoint!;
+            const p256dh = subscriptionJson.keys?.p256dh || '';
+            const auth = subscriptionJson.keys?.auth || '';
 
-      if (error) {
-        console.error('Error saving subscription:', error);
-        toast.error('Erro ao salvar inscrição');
-        return false;
+            const { error } = await supabase
+              .from('push_subscriptions')
+              .upsert(
+                { user_id: user.id, endpoint, p256dh, auth, updated_at: new Date().toISOString() },
+                { onConflict: 'endpoint' }
+              );
+
+            if (error) {
+              console.error('[WebPush] Erro ao salvar subscription:', error);
+              // Continua mesmo com erro no DB — notificações locais ainda funcionam
+            }
+
+            setIsSubscribed(true);
+            toast.success('🔔 Notificações Push ativadas!', {
+              description: 'Você receberá alertas mesmo com o app fechado.',
+            });
+            return true;
+          } catch (pushErr) {
+            console.warn('[WebPush] Push API falhou, usando modo básico:', pushErr);
+            // Cai no modo básico abaixo
+          }
+        }
       }
 
-      setIsSubscribed(true);
-      toast.success('🔔 Notificações Push ativadas!', {
-        description: 'Você receberá alertas mesmo com o app fechado.'
+      // 3. Modo básico: apenas Notification API (sem SW/Push background)
+      // Mostra notificação de teste e considera ativado
+      new Notification('🔔 Notificações ativadas!', {
+        body: 'Você receberá alertas enquanto o app estiver aberto.',
+        icon: '/pwa-192x192.png',
       });
 
+      setIsSubscribed(true);
+      toast.success('🔔 Notificações ativadas!', {
+        description: 'Alertas ativos enquanto o app estiver aberto.',
+      });
       return true;
 
     } catch (error) {
-      console.error('Error subscribing to push:', error);
-      toast.error('Erro ao ativar notificações push');
+      console.error('[WebPush] Erro ao ativar notificações:', error);
+      toast.error('Erro ao ativar notificações. Verifique as permissões do navegador.');
       return false;
     } finally {
       setIsLoading(false);
@@ -150,42 +190,35 @@ export const useWebPush = () => {
 
   // Unsubscribe from push notifications
   const unsubscribe = useCallback(async () => {
-    if (!registration || !user) return false;
+    if (!user) return false;
 
     setIsLoading(true);
 
     try {
-      const subscription = await (registration as any).pushManager.getSubscription();
-      if (subscription) {
-        await subscription.unsubscribe();
-
-        // Remove from database
-        await supabase
-          .from('push_subscriptions')
-          .delete()
-          .eq('user_id', user.id);
+      const reg = registration || (await waitForSW(3000));
+      if (reg) {
+        const subscription = await (reg as any).pushManager?.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+          await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+        }
       }
 
       setIsSubscribed(false);
-      toast.success('Notificações push desativadas');
-      setIsLoading(false);
+      toast.success('Notificações desativadas');
       return true;
-
     } catch (error) {
-      console.error('Error unsubscribing:', error);
+      console.error('[WebPush] Erro ao desativar:', error);
       toast.error('Erro ao desativar notificações');
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [registration, user]);
 
   // Toggle subscription
   const toggleSubscription = useCallback(async () => {
-    if (isSubscribed) {
-      return unsubscribe();
-    } else {
-      return subscribe();
-    }
+    return isSubscribed ? unsubscribe() : subscribe();
   }, [isSubscribed, subscribe, unsubscribe]);
 
   return {
@@ -194,6 +227,6 @@ export const useWebPush = () => {
     isLoading,
     subscribe,
     unsubscribe,
-    toggleSubscription
+    toggleSubscription,
   };
 };
