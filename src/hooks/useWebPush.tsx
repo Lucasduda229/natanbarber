@@ -69,21 +69,25 @@ export const useWebPush = () => {
     setIsLoading(true);
 
     try {
-      // If registration is not ready yet, wait for it
+      // If registration is not ready yet, wait for it (with timeout)
       let reg = registration;
       if (!reg) {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
           toast.error('Seu navegador não suporta notificações push');
-          setIsLoading(false);
           return false;
         }
         try {
-          reg = await navigator.serviceWorker.ready;
+          // Wait max 5 seconds for SW to be ready
+          reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('SW timeout')), 5000)
+            )
+          ]) as ServiceWorkerRegistration;
           setRegistration(reg);
         } catch (swError) {
           console.error('Service Worker not ready:', swError);
-          toast.error('Serviço de notificações indisponível. Tente recarregar a página.');
-          setIsLoading(false);
+          toast.error('Serviço indisponível. Tente recarregar a página.');
           return false;
         }
       }
@@ -91,8 +95,7 @@ export const useWebPush = () => {
       // Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        toast.error('Permissão de notificação negada. Ative nas configurações do navegador.');
-        setIsLoading(false);
+        toast.error('Permissão negada. Ative nas configurações do navegador.');
         return false;
       }
 
@@ -126,7 +129,6 @@ export const useWebPush = () => {
       if (error) {
         console.error('Error saving subscription:', error);
         toast.error('Erro ao salvar inscrição');
-        setIsLoading(false);
         return false;
       }
 
@@ -135,14 +137,14 @@ export const useWebPush = () => {
         description: 'Você receberá alertas mesmo com o app fechado.'
       });
 
-      setIsLoading(false);
       return true;
 
     } catch (error) {
       console.error('Error subscribing to push:', error);
       toast.error('Erro ao ativar notificações push');
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   }, [registration, user]);
 
