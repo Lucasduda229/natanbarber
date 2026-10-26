@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ptBR } from "date-fns/locale";
 import { Menu, Calendar as CalendarIcon, Clock, Scissors, ChevronLeft, Check, X, Lock, Unlock, Users, Settings, BarChart3, RotateCcw, RefreshCw, MessageCircle, Image, History, UserCheck, Trophy, Download, CreditCard, Banknote, Filter, Crown, Trash2, Pencil, Save, XCircle, Bell, BellOff, CheckCircle, Search, Store, Gift, ShoppingBag, Sparkles } from "lucide-react";
 import { checkServerVersion, forceAppUpdate } from "@/utils/pwaUpdate";
+import { playNotificationSound } from "@/utils/notificationSound";
 import { gsap } from "gsap";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AdminStatusToggle from "@/components/AdminStatusToggle";
@@ -284,61 +285,8 @@ const getPaymentMethodInfo = (method: string | null): { label: string; icon: "pi
   }
 };
 
-const playNotificationSound = () => {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+// playNotificationSound imported from @/utils/notificationSound (shared, mobile-compatible)
 
-    if (audioContext.state === "suspended") {
-      audioContext.resume().catch(() => undefined);
-    }
-
-    const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(0.9, audioContext.currentTime);
-    masterGain.connect(audioContext.destination);
-
-    // Melodia estilo "toque de telefone" - mais musical e chamativo
-    const playNote = (freq: number, startTime: number, duration: number, volume = 0.8) => {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = "sine"; // Som mais suave e musical
-      osc.frequency.setValueAtTime(freq, startTime);
-      
-      // Envelope suave
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
-      gain.gain.setValueAtTime(volume, startTime + duration - 0.03);
-      gain.gain.linearRampToValueAtTime(0, startTime + duration);
-      
-      osc.connect(gain);
-      gain.connect(masterGain);
-      
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-
-    const t = audioContext.currentTime;
-    
-    // Melodia: Dó-Mi-Sol-Dó (acorde maior ascendente) - som alegre e chamativo
-    // Primeira sequência
-    playNote(523.25, t + 0.0, 0.15, 0.9);   // C5
-    playNote(659.25, t + 0.15, 0.15, 0.9);  // E5
-    playNote(783.99, t + 0.30, 0.15, 0.9);  // G5
-    playNote(1046.50, t + 0.45, 0.25, 1.0); // C6 (mais longo)
-    
-    // Pausa e repetição
-    playNote(523.25, t + 0.85, 0.12, 0.8);  // C5
-    playNote(659.25, t + 0.97, 0.12, 0.8);  // E5
-    playNote(783.99, t + 1.09, 0.12, 0.8);  // G5
-    playNote(1046.50, t + 1.21, 0.30, 1.0); // C6 (mais longo)
-
-    setTimeout(() => {
-      audioContext.close().catch(() => undefined);
-    }, 2000);
-  } catch (error) {
-    console.log("Could not play notification sound:", error);
-  }
-};
 
 const Admin = () => {
   const navigate = useNavigate();

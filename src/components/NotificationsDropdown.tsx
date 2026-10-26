@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
+import { playNotificationSound } from "@/utils/notificationSound";
 
 interface Notification {
   id: string;
@@ -47,52 +48,8 @@ const typeIcons: Record<string, React.ReactNode> = {
   subscription_activated: <Check className="w-4 h-4 text-emerald-500" />,
 };
 
-// Create notification sound using Web Audio API - Melodia musical
-const playNotificationSound = () => {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    if (audioContext.state === "suspended") {
-      audioContext.resume().catch(() => undefined);
-    }
-
-    const masterGain = audioContext.createGain();
-    masterGain.gain.setValueAtTime(0.9, audioContext.currentTime);
-    masterGain.connect(audioContext.destination);
-
-    const playNote = (freq: number, startTime: number, duration: number, volume = 0.8) => {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, startTime);
-      
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
-      gain.gain.setValueAtTime(volume, startTime + duration - 0.03);
-      gain.gain.linearRampToValueAtTime(0, startTime + duration);
-      
-      osc.connect(gain);
-      gain.connect(masterGain);
-      
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-
-    const t = audioContext.currentTime;
-    
-    // Melodia curta: Dó-Mi-Sol
-    playNote(523.25, t + 0.0, 0.12, 0.9);   // C5
-    playNote(659.25, t + 0.12, 0.12, 0.9);  // E5
-    playNote(783.99, t + 0.24, 0.18, 1.0);  // G5
-
-    setTimeout(() => {
-      audioContext.close().catch(() => undefined);
-    }, 600);
-  } catch (error) {
-    console.log("Audio not supported");
-  }
-};
+// playNotificationSound is imported from @/utils/notificationSound
+// (shared, mobile-compatible implementation with iOS fallback)
 
 export const NotificationsDropdown = () => {
   const { user } = useAuth();
