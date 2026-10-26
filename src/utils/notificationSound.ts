@@ -1,208 +1,158 @@
 /**
- * Shared notification sound utility — mobile + desktop compatible.
- *
- * Strategy (in order):
- *   1. Web Audio API with a pre-unlocked AudioContext (works on PC + Android)
- *   2. HTMLAudioElement with an inline WAV data-URL (iOS PWA fallback)
- *   3. Vibration API as last resort on mobile
- *
- * iOS rule: AudioContext MUST be created/resumed inside a synchronous
- * user-gesture handler. This module captures the first touch/click to
- * unlock the context so subsequent calls (from realtime events) work.
+ * Notification sound utility — works on mobile PWA (iOS/Android) and desktop.
+ * 
+ * Uses HTMLAudioElement with an inline base64 WAV as primary method (most reliable on mobile),
+ * with Web Audio API as fallback, plus device vibration as supplement.
  */
 
-// ---------------------------------------------------------------------------
-// Shared AudioContext — created once, kept warm
-// ---------------------------------------------------------------------------
-let _ctx: AudioContext | null = null;
-let _unlocked = false;
+// Short Dó-Mi-Sol beep pre-encoded as base64 WAV (22050Hz, mono, 16-bit, ~0.45s)
+// Generated offline so no network request is needed
+const WAV_BASE64 = (() => {
+  const sampleRate = 22050;
+  const notes = [
+    { freq: 523.25, dur: 0.12 }, // C5
+    { freq: 659.25, dur: 0.12 }, // E5
+    { freq: 783.99, dur: 0.18 }, // G5
+  ];
+  const totalSamples = Math.floor(sampleRate * notes.reduce((a, n) => a + n.dur, 0));
 
-function getCtx(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    if (!_ctx) {
-      const Ctor = window.AudioContext ?? (window as any).webkitAudioContext;
-      if (!Ctor) return null;
-      _ctx = new Ctor() as AudioContext;
+  const buf = new ArrayBuffer(44 + totalSamples * 2);
+  const view = new DataView(buf);
+  const w = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+
+  w(0, 'RIFF'); view.setUint32(4, 36 + totalSamples * 2, true);
+  w(8, 'WAVE'); w(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  w(36, 'data'); view.setUint32(40, totalSamples * 2, true);
+
+  let offset = 44;
+  let time = 0;
+  for (const note of notes) {
+    const n = Math.floor(sampleRate * note.dur);
+    for (let i = 0; i < n; i++) {
+      const t = i / sampleRate;
+      const env = Math.min(t * 60, 1) * Math.min((note.dur - t) * 60, 1);
+      const s = Math.round(env * 0.75 * 32767 * Math.sin(2 * Math.PI * note.freq * t));
+      view.setInt16(offset, s, true);
+      offset += 2;
     }
-    return _ctx;
-  } catch {
-    return null;
+    time += note.dur;
   }
+
+  // Convert ArrayBuffer to base64
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return 'data:audio/wav;base64,' + btoa(binary);
+})();
+
+/** Cached Audio element (reused across calls for performance) */
+let _audio: HTMLAudioElement | null = null;
+
+function getAudio(): HTMLAudioElement | null {
+  if (typeof Audio === 'undefined') return null;
+  if (!_audio) {
+    _audio = new Audio(WAV_BASE64);
+    _audio.volume = 0.85;
+  }
+  return _audio;
 }
 
-/**
- * Unlock the AudioContext via a silent buffer.
- * Must be called synchronously inside a user-gesture event handler.
- */
-function unlockCtx() {
-  const ctx = getCtx();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') ctx.resume().catch(() => undefined);
-
-  // Play a completely silent 1-sample buffer — required by iOS to "warm up"
+/** Vibrate the device (supplement to audio on mobile) */
+function vibrate() {
   try {
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-    src.stop(0.001);
-  } catch {
-    // ignore
-  }
-  _unlocked = true;
+    if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
+  } catch { /* ignore */ }
 }
 
 /**
- * Call this once at app startup.
- * Registers touch/click listeners to unlock the AudioContext on first interaction.
+ * Plays the Dó-Mi-Sol notification blip.
+ * Primary: HTMLAudioElement (works on iOS PWA, Android, desktop)
+ * Fallback: Web Audio API
+ */
+export function playNotificationSound() {
+  // Supplement with vibration on mobile
+  vibrate();
+
+  // Primary: HTMLAudioElement — most reliable on iOS/Android PWA
+  const audio = getAudio();
+  if (audio) {
+    audio.currentTime = 0;
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // If autoplay blocked, try Web Audio API fallback
+        playWebAudio();
+      });
+    }
+    return;
+  }
+
+  // Fallback: Web Audio API
+  playWebAudio();
+}
+
+function playWebAudio() {
+  try {
+    const Ctor = window.AudioContext ?? (window as any).webkitAudioContext;
+    if (!Ctor) return;
+    const ctx = new Ctor() as AudioContext;
+
+    const resume = ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+    resume.then(() => {
+      const master = ctx.createGain();
+      master.gain.value = 0.9;
+      master.connect(ctx.destination);
+
+      const note = (freq: number, start: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(0.9, start + 0.02);
+        g.gain.setValueAtTime(0.9, start + dur - 0.03);
+        g.gain.linearRampToValueAtTime(0, start + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(start); osc.stop(start + dur);
+      };
+
+      const t = ctx.currentTime;
+      note(523.25, t,        0.12);
+      note(659.25, t + 0.12, 0.12);
+      note(783.99, t + 0.24, 0.18);
+
+      setTimeout(() => ctx.close().catch(() => undefined), 700);
+    }).catch(() => undefined);
+  } catch { /* ignore */ }
+}
+
+/**
+ * Call once at app startup to pre-load the audio element.
+ * On iOS, the Audio element must be "touched" during a user gesture
+ * to be allowed to play later without one.
  */
 export function registerAudioUnlock() {
   if (typeof window === 'undefined') return;
 
-  const handler = () => {
-    unlockCtx();
-    // Keep re-unlocking on each gesture — important for iOS after backgrounding
+  const unlock = () => {
+    const audio = getAudio();
+    if (!audio) return;
+
+    // Play at volume 0 to unlock the element for future autoplay
+    const prev = audio.volume;
+    audio.volume = 0;
+    audio.play()
+      .then(() => { audio.pause(); audio.currentTime = 0; audio.volume = prev; })
+      .catch(() => { audio.volume = prev; });
   };
 
-  // Use both capture and bubble to catch the earliest possible event
-  ['touchstart', 'touchend', 'click', 'pointerdown', 'keydown'].forEach((ev) => {
-    window.addEventListener(ev, handler, { passive: true, capture: true });
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Inline minimal WAV beep (440 Hz, ~0.2s) as base64 data URL
-// Used as HTMLAudioElement fallback for iOS/mobile when Web Audio is blocked
-// ---------------------------------------------------------------------------
-const BEEP_WAV_B64 =
-  'UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-// ↑ This is a near-silent WAV header; replaced below with a proper generated one
-
-let _audioEl: HTMLAudioElement | null = null;
-
-function getAudioEl(): HTMLAudioElement | null {
-  if (typeof window === 'undefined' || typeof Audio === 'undefined') return null;
-  if (!_audioEl) {
-    // Generate a short beep using raw PCM data embedded in a WAV
-    // 22050 Hz, 16-bit mono, ~0.25s (5512 samples)
-    const sampleRate = 22050;
-    const numSamples = Math.floor(sampleRate * 0.25);
-    const buf = new ArrayBuffer(44 + numSamples * 2);
-    const view = new DataView(buf);
-
-    const writeStr = (offset: number, str: string) => {
-      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-    };
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + numSamples * 2, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);          // PCM
-    view.setUint16(22, 1, true);          // mono
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, 'data');
-    view.setUint32(40, numSamples * 2, true);
-
-    // Write Dó-Mi-Sol melody samples
-    const notes = [523.25, 659.25, 783.99];
-    const noteDur = Math.floor(numSamples / notes.length);
-    for (let n = 0; n < notes.length; n++) {
-      const freq = notes[n];
-      for (let i = 0; i < noteDur; i++) {
-        const t = i / sampleRate;
-        // Simple sine with quick fade-in/out
-        const env = Math.min(t * 40, 1) * Math.min((noteDur / sampleRate - t) * 40, 1);
-        const sample = Math.round(env * 0.7 * 32767 * Math.sin(2 * Math.PI * freq * t));
-        view.setInt16(44 + (n * noteDur + i) * 2, sample, true);
-      }
-    }
-
-    const blob = new Blob([buf], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-    _audioEl = new Audio(url);
-    _audioEl.volume = 0.8;
-  }
-  return _audioEl;
-}
-
-// ---------------------------------------------------------------------------
-// Main export
-// ---------------------------------------------------------------------------
-
-/**
- * Plays the "Dó-Mi-Sol" notification blip.
- * Works on desktop (Web Audio), Android PWA, and iOS PWA.
- */
-export function playNotificationSound() {
-  // --- Attempt 1: Web Audio API ---
-  const ctx = getCtx();
-  if (ctx) {
-    // Try to resume if suspended (works if we have prior user gesture)
-    const doPlay = () => {
-      try {
-        const masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(0.9, ctx.currentTime);
-        masterGain.connect(ctx.destination);
-
-        const playNote = (freq: number, start: number, dur: number, vol = 0.8) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, start);
-          gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(vol, start + 0.02);
-          gain.gain.setValueAtTime(vol, start + dur - 0.03);
-          gain.gain.linearRampToValueAtTime(0, start + dur);
-          osc.connect(gain);
-          gain.connect(masterGain);
-          osc.start(start);
-          osc.stop(start + dur);
-        };
-
-        const t = ctx.currentTime;
-        playNote(523.25, t + 0.00, 0.12, 0.9); // C5
-        playNote(659.25, t + 0.12, 0.12, 0.9); // E5
-        playNote(783.99, t + 0.24, 0.18, 1.0); // G5
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    if (ctx.state === 'running') {
-      if (doPlay()) return;
-    } else if (ctx.state === 'suspended') {
-      ctx.resume().then(() => {
-        if (!doPlay()) playFallback();
-      }).catch(() => playFallback());
-      return;
-    }
-  }
-
-  // --- Attempt 2: HTMLAudioElement fallback (iOS / old browsers) ---
-  playFallback();
-}
-
-function playFallback() {
-  try {
-    // Vibrate on mobile as audio supplement
-    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-
-    const el = getAudioEl();
-    if (!el) return;
-    el.currentTime = 0;
-    el.play().catch(() => {
-      // Last resort: clone the element (needed on some iOS versions)
-      const clone = el.cloneNode() as HTMLAudioElement;
-      clone.play().catch(() => undefined);
-    });
-  } catch {
-    // silent fail
-  }
+  const events = ['touchstart', 'touchend', 'click', 'pointerdown', 'keydown'];
+  const handler = () => {
+    unlock();
+    // Keep the listener so re-unlock happens after backgrounding on iOS
+  };
+  events.forEach(e => window.addEventListener(e, handler, { passive: true, capture: true }));
 }
