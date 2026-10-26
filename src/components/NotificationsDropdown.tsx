@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 interface Notification {
   id: string;
+  user_id: string;
   title: string;
   message: string;
   type: string;
@@ -122,23 +123,26 @@ export const NotificationsDropdown = () => {
       fetchNotifications();
       
       // Subscribe to realtime notifications
+      // NOTE: we do NOT use filter: `user_id=eq.X` here because Supabase Realtime
+      // filters only work when RLS is enabled on the table. Filtering in JS is safer.
       const channel = supabase
-        .channel('user-notifications')
+        .channel(`user-notifications-${user.id}`)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${user.id}`
           },
           (payload) => {
+            const newNotif = payload.new as Notification;
+            // Only handle notifications meant for this user
+            if (!newNotif || newNotif.user_id !== user.id) return;
+
             playNotificationSound();
             fetchNotifications();
             
-            const newNotif = payload.new as Notification;
-            
-            if (newNotif && (newNotif.type === 'subscription_purchase' || newNotif.type === 'new_subscription' || newNotif.type === 'subscription_activated')) {
+            if (newNotif.type === 'subscription_purchase' || newNotif.type === 'new_subscription' || newNotif.type === 'subscription_activated') {
               toast.success(`🎉 ${newNotif.title}`, {
                 description: newNotif.message,
                 duration: 5000
@@ -152,6 +156,11 @@ export const NotificationsDropdown = () => {
                   requireInteraction: true
                 });
               }
+            } else if (newNotif.type === 'new_booking' || newNotif.type === 'confirmed' || newNotif.type === 'cancelled' || newNotif.type === 'info') {
+              toast.info(newNotif.title, {
+                description: newNotif.message,
+                duration: 4000,
+              });
             }
           }
         )
@@ -161,13 +170,16 @@ export const NotificationsDropdown = () => {
             event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${user.id}`
           },
-          () => {
+          (payload) => {
+            const updatedNotif = payload.new as Notification;
+            if (!updatedNotif || updatedNotif.user_id !== user.id) return;
             fetchNotifications();
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('[NotificationsDropdown] Realtime status:', status);
+        });
 
       return () => {
         supabase.removeChannel(channel);
