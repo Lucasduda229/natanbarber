@@ -308,6 +308,17 @@ const Booking = () => {
 
   useEffect(() => {
     if (user) {
+      // Preenche imediatamente a partir dos dados do cadastro (metadata)
+      const metaName = (user.user_metadata?.full_name as string)?.trim() || (user.user_metadata?.name as string)?.trim();
+      if (metaName) {
+        setCustomerName((prev) => prev || metaName);
+      }
+      const metaPhone = (user.user_metadata?.phone as string)?.trim();
+      if (metaPhone) {
+        setCustomerWhatsApp((prev) => prev || metaPhone);
+      }
+
+      loadUserProfile();
       checkActiveSubscription();
       fetchSubscriptionBookings();
 
@@ -368,15 +379,43 @@ const Booking = () => {
   const loadUserProfile = async () => {
     if (!user) return;
     
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, phone")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    
-    if (profile) {
-      if (profile.full_name) setCustomerName(profile.full_name);
-      if (profile.phone) setCustomerWhatsApp(profile.phone);
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      const registeredName = (profile?.full_name?.trim())
+        || (user.user_metadata?.full_name as string)?.trim()
+        || (user.user_metadata?.name as string)?.trim()
+        || "";
+
+      const registeredPhone = (profile?.phone?.trim())
+        || (user.user_metadata?.phone as string)?.trim()
+        || "";
+
+      if (registeredName) {
+        setCustomerName(registeredName);
+      }
+      if (registeredPhone) {
+        setCustomerWhatsApp((prev) => prev || registeredPhone);
+      }
+
+      // Se o perfil no banco não tem o nome completo mas temos pelo cadastro, sincroniza
+      if (registeredName && (!profile || !profile.full_name)) {
+        await supabase
+          .from("profiles")
+          .upsert({
+            user_id: user.id,
+            full_name: registeredName,
+            phone: registeredPhone || null,
+          }, { onConflict: "user_id" });
+      }
+    } catch (err) {
+      console.error("Erro ao carregar perfil:", err);
+      const fallback = (user.user_metadata?.full_name as string)?.trim() || (user.user_metadata?.name as string)?.trim();
+      if (fallback) setCustomerName(fallback);
     }
   };
 
@@ -917,12 +956,20 @@ const Booking = () => {
   const validateCustomerInfo = (): boolean => {
     const errors: { name?: string; whatsapp?: string } = {};
     
-    const trimmedName = customerName.trim();
-    if (!trimmedName) {
-      errors.name = "Nome é obrigatório";
-    } else if (trimmedName.length < 2) {
+    const effectiveName = customerName.trim()
+      || (user?.user_metadata?.full_name as string)?.trim()
+      || (user?.user_metadata?.name as string)?.trim()
+      || "";
+
+    if (!customerName && effectiveName) {
+      setCustomerName(effectiveName);
+    }
+
+    if (!effectiveName) {
+      errors.name = "Nome não encontrado. Faça login novamente.";
+    } else if (effectiveName.length < 2) {
       errors.name = "Nome deve ter pelo menos 2 caracteres";
-    } else if (trimmedName.length > 100) {
+    } else if (effectiveName.length > 100) {
       errors.name = "Nome deve ter no máximo 100 caracteres";
     }
     
@@ -959,23 +1006,27 @@ const Booking = () => {
       return;
     }
 
-    if (!customerName.trim() || !customerWhatsApp.replace(/\D/g, "")) {
-      toast.error("Dados incompletos", { description: "Preencha seu nome e WhatsApp corretamente." });
+    const effectiveName = customerName.trim()
+      || (user.user_metadata?.full_name as string)?.trim()
+      || (user.user_metadata?.name as string)?.trim()
+      || "";
+
+    if (!effectiveName || !customerWhatsApp.replace(/\D/g, "")) {
+      toast.error("Dados incompletos", { description: "Preencha seu WhatsApp corretamente." });
       return;
     }
 
     setLoading(true);
 
+    // Atualiza apenas o telefone no perfil, preservando estritamente o nome original do cadastro
+    const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ 
-        full_name: customerName.trim(), 
-        phone: customerWhatsApp.replace(/\D/g, "") 
-      })
+      .update({ phone: cleanPhone })
       .eq("user_id", user.id);
 
     if (profileError) {
-      console.error("Error updating profile:", profileError);
+      console.error("Error updating phone in profile:", profileError);
     }
 
     const appointmentDate = format(selectedDate, "yyyy-MM-dd");
@@ -1213,26 +1264,27 @@ const Booking = () => {
       return;
     }
 
-    // Validate customer info
-    if (!customerName.trim() || !customerWhatsApp.replace(/\D/g, "")) {
-      toast.error("Dados incompletos", { description: "Preencha seu nome e WhatsApp corretamente." });
+    const effectiveName = customerName.trim()
+      || (user.user_metadata?.full_name as string)?.trim()
+      || (user.user_metadata?.name as string)?.trim()
+      || "";
+
+    if (!effectiveName || !customerWhatsApp.replace(/\D/g, "")) {
+      toast.error("Dados incompletos", { description: "Preencha seu WhatsApp corretamente." });
       return;
     }
 
     setLoading(true);
 
-    // Always update profile with customer info before creating appointment
+    // Atualiza apenas o telefone no perfil, preservando estritamente o nome do cadastro
+    const cleanPhone = customerWhatsApp.replace(/\D/g, "");
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ 
-        full_name: customerName.trim(), 
-        phone: customerWhatsApp.replace(/\D/g, "") 
-      })
+      .update({ phone: cleanPhone })
       .eq("user_id", user.id);
 
     if (profileError) {
-      console.error("Error updating profile:", profileError);
-      // Continue anyway, but log the error
+      console.error("Error updating phone in profile:", profileError);
     }
 
     // CRITICAL: Check if all required slots are still available before proceeding
@@ -2293,22 +2345,19 @@ const Booking = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customerName" className="text-foreground">
-                    Nome Completo <span className="text-destructive">*</span>
+                  <Label className="text-foreground">
+                    Nome Completo
                   </Label>
-                  <Input
-                    id="customerName"
-                    placeholder="Digite seu nome completo"
-                    value={customerName}
-                    onChange={(e) => {
-                      setCustomerName(e.target.value);
-                      if (formErrors.name) setFormErrors(prev => ({ ...prev, name: undefined }));
-                    }}
-                    className={`bg-card/60 border-primary/20 ${formErrors.name ? 'border-destructive' : ''}`}
-                  />
-                  {formErrors.name && (
-                    <p className="text-sm text-destructive">{formErrors.name}</p>
-                  )}
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border/50 text-foreground">
+                    <User className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium">
+                      {customerName || (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || 'Carregando...'}
+                    </span>
+                    <span className="ml-auto text-[10px] text-primary/80 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">
+                      Fixo (Cadastro)
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Nome registrado na sua conta. Não editável.</p>
                 </div>
                 
                 <div className="space-y-2">
@@ -2577,8 +2626,7 @@ const Booking = () => {
                   setSelectedServices([]); 
                   setSelectedDate(undefined); 
                   setSelectedTime(null); 
-                  setCustomerName(""); 
-                  setCustomerWhatsApp(""); 
+                  // Mantém o nome e telefone do cliente logado
                 }}
                 className="border-primary/30 hover:bg-primary/10"
               >

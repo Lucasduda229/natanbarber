@@ -54,6 +54,14 @@ const BuySubscription = () => {
   useEffect(() => {
     fetchPackages();
     if (user) {
+      const metaName = (user.user_metadata?.full_name as string)?.trim() || (user.user_metadata?.name as string)?.trim();
+      if (metaName) {
+        setCustomerName((prev) => prev || metaName);
+      }
+      const metaPhone = (user.user_metadata?.phone as string)?.trim();
+      if (metaPhone) {
+        setCustomerWhatsApp((prev) => prev || metaPhone);
+      }
       fetchUserProfile();
     }
   }, [user]);
@@ -101,15 +109,43 @@ const BuySubscription = () => {
 
   const fetchUserProfile = async () => {
     if (!user) return;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, phone")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (profile) {
-      setCustomerName(profile.full_name || "");
-      setCustomerWhatsApp(profile.phone || "");
+      const registeredName = (profile?.full_name?.trim())
+        || (user.user_metadata?.full_name as string)?.trim()
+        || (user.user_metadata?.name as string)?.trim()
+        || "";
+
+      const registeredPhone = (profile?.phone?.trim())
+        || (user.user_metadata?.phone as string)?.trim()
+        || "";
+
+      if (registeredName) {
+        setCustomerName(registeredName);
+      }
+      if (registeredPhone) {
+        setCustomerWhatsApp((prev) => prev || registeredPhone);
+      }
+
+      // Se o perfil no banco não tem o nome completo mas temos pelo cadastro, sincroniza
+      if (registeredName && (!profile || !profile.full_name)) {
+        await supabase
+          .from("profiles")
+          .upsert({
+            user_id: user.id,
+            full_name: registeredName,
+            phone: registeredPhone || null,
+          }, { onConflict: "user_id" });
+      }
+    } catch (err) {
+      console.error("Erro ao carregar perfil:", err);
+      const fallback = (user.user_metadata?.full_name as string)?.trim() || (user.user_metadata?.name as string)?.trim();
+      if (fallback) setCustomerName(fallback);
     }
   };
 
@@ -120,10 +156,18 @@ const BuySubscription = () => {
   const validateCustomerInfo = (): boolean => {
     const errors: { name?: string; whatsapp?: string } = {};
     
-    const trimmedName = customerName.trim();
-    if (!trimmedName) {
-      errors.name = "Nome é obrigatório";
-    } else if (trimmedName.length < 2) {
+    const effectiveName = customerName.trim()
+      || (user?.user_metadata?.full_name as string)?.trim()
+      || (user?.user_metadata?.name as string)?.trim()
+      || "";
+
+    if (!customerName && effectiveName) {
+      setCustomerName(effectiveName);
+    }
+
+    if (!effectiveName) {
+      errors.name = "Nome não encontrado. Faça login novamente.";
+    } else if (effectiveName.length < 2) {
       errors.name = "Nome deve ter pelo menos 2 caracteres";
     }
     
@@ -155,14 +199,14 @@ const BuySubscription = () => {
       return;
     }
 
-    // Update user profile
-    await supabase
-      .from("profiles")
-      .update({ 
-        full_name: customerName.trim(), 
-        phone: customerWhatsApp.replace(/\D/g, "") 
-      })
-      .eq("user_id", user.id);
+    // Atualiza apenas o WhatsApp no perfil, mantendo o nome do cadastro inalterado
+    const cleanPhone = customerWhatsApp.replace(/\D/g, "");
+    if (cleanPhone) {
+      await supabase
+        .from("profiles")
+        .update({ phone: cleanPhone })
+        .eq("user_id", user.id);
+    }
 
     setStep(3);
   };
@@ -463,18 +507,17 @@ const BuySubscription = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customerName">Nome Completo *</Label>
-                  <Input
-                    id="customerName"
-                    placeholder="Digite seu nome"
-                    value={customerName}
-                    onChange={(e) => {
-                      setCustomerName(e.target.value);
-                      if (formErrors.name) setFormErrors(prev => ({ ...prev, name: undefined }));
-                    }}
-                    className={formErrors.name ? 'border-destructive' : ''}
-                  />
-                  {formErrors.name && <p className="text-sm text-destructive">{formErrors.name}</p>}
+                  <Label>Nome Completo</Label>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border/50 text-foreground">
+                    <User className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium">
+                      {customerName || (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || 'Carregando...'}
+                    </span>
+                    <span className="ml-auto text-[10px] text-primary/80 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">
+                      Fixo (Cadastro)
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Nome registrado na sua conta. Não editável.</p>
                 </div>
                 
                 <div className="space-y-2">

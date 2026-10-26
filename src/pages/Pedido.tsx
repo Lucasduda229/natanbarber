@@ -17,6 +17,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
 import logoImage from "@/assets/logo-barbershop.png";
 import { useExtraFee, buildExtraFeeNote, isExtraFeeApplicable } from "@/hooks/useExtraFee";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Service {
   id: string;
@@ -47,6 +48,7 @@ const Pedido = () => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   const [success, setSuccess] = useState(false);
 
   // Form fields
@@ -55,6 +57,25 @@ const Pedido = () => {
   const [customerNotes, setCustomerNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("pix");
   const [formErrors, setFormErrors] = useState<{ name?: string; whatsapp?: string }>({});
+
+  useEffect(() => {
+    if (user) {
+      const metaName = (user.user_metadata?.full_name as string)?.trim() || (user.user_metadata?.name as string)?.trim();
+      if (metaName) setCustomerName(metaName);
+      const metaPhone = (user.user_metadata?.phone as string)?.trim();
+      if (metaPhone) setCustomerWhatsApp(metaPhone);
+
+      supabase
+        .from("profiles")
+        .select("full_name, phone")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          if (profile?.full_name) setCustomerName(profile.full_name);
+          if (profile?.phone && !customerWhatsApp) setCustomerWhatsApp(profile.phone);
+        });
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchServices();
@@ -161,12 +182,20 @@ const Pedido = () => {
   const validateForm = (): boolean => {
     const errors: { name?: string; whatsapp?: string } = {};
 
-    const trimmedName = customerName.trim();
-    if (!trimmedName) {
+    const effectiveName = customerName.trim()
+      || (user?.user_metadata?.full_name as string)?.trim()
+      || (user?.user_metadata?.name as string)?.trim()
+      || "";
+
+    if (!customerName && effectiveName) {
+      setCustomerName(effectiveName);
+    }
+
+    if (!effectiveName) {
       errors.name = "Nome é obrigatório";
-    } else if (trimmedName.length < 2) {
+    } else if (effectiveName.length < 2) {
       errors.name = "Nome deve ter pelo menos 2 caracteres";
-    } else if (trimmedName.length > 100) {
+    } else if (effectiveName.length > 100) {
       errors.name = "Nome deve ter no máximo 100 caracteres";
     }
 
@@ -536,14 +565,23 @@ const Pedido = () => {
                     <User className="w-3.5 h-3.5 text-primary" />
                     Seu Nome
                   </Label>
-                  <Input
-                    id="name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Digite seu nome"
-                    className={`h-11 text-base ${formErrors.name ? "border-destructive" : ""}`}
-                    maxLength={100}
-                  />
+                  {user ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border/50 text-foreground h-11">
+                      <span className="text-sm font-medium">{customerName || (user.user_metadata?.full_name as string) || 'Carregando...'}</span>
+                      <span className="ml-auto text-[10px] text-primary/80 bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-medium">
+                        Fixo (Cadastro)
+                      </span>
+                    </div>
+                  ) : (
+                    <Input
+                      id="name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Digite seu nome"
+                      className={`h-11 text-base ${formErrors.name ? "border-destructive" : ""}`}
+                      maxLength={100}
+                    />
+                  )}
                   {formErrors.name && (
                     <p className="text-destructive text-xs mt-1">{formErrors.name}</p>
                   )}
