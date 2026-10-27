@@ -155,6 +155,8 @@ const Booking = () => {
     monthly_cuts_limit: number;
     cuts_used_this_month: number;
     weekly_credits_available: number;
+    // Máximo de agendamentos permitidos na mesma semana (packages.weekly_credits, padrão 1)
+    weekly_booking_limit: number;
     subscription_start_date: Date;
     subscription_end_date: Date;
     usage_reset_date?: string | null;
@@ -484,6 +486,20 @@ const Booking = () => {
         cutsUsed = 0;
       }
 
+      // Limite de agendamentos por semana vem do pacote (créditos por semana).
+      // Se não configurado, mantém a regra padrão de 1 agendamento por semana.
+      let weeklyBookingLimit = 1;
+      if (subscription.package_id) {
+        const { data: pkgWeekly } = await supabase
+          .from("packages")
+          .select("weekly_credits")
+          .eq("id", subscription.package_id)
+          .maybeSingle();
+        if (pkgWeekly?.weekly_credits && pkgWeekly.weekly_credits > 0) {
+          weeklyBookingLimit = pkgWeekly.weekly_credits;
+        }
+      }
+
       setActiveSubscription({
         id: subscription.id,
         package_id: subscription.package_id,
@@ -492,6 +508,7 @@ const Booking = () => {
         cuts_used_this_month: cutsUsed,
         // IMPORTANT: 0 é um valor válido (sem créditos). Use ?? para não mascarar 0.
         weekly_credits_available: subscription.weekly_credits_available ?? Math.ceil(subscription.monthly_cuts_limit / 4),
+        weekly_booking_limit: weeklyBookingLimit,
         subscription_start_date: startDate,
         subscription_end_date: endDate,
         has_started: hasStarted,
@@ -688,18 +705,19 @@ const Booking = () => {
         return createdAt >= usageResetDate;
       });
 
-      // All booked dates for weekly tracking (prevents double-booking same week)
-      // IMPORTANT: Deduplicate by week so multiple services in the same booking
-      // don't count as multiple weeks used
+      // All booked dates for weekly tracking (one entry per booking DAY).
+      // IMPORTANT: Deduplicate by day so multiple services in the same booking
+      // don't count as multiple bookings. The weekly limit (packages.weekly_credits)
+      // is checked by counting how many booking days fall in the same week.
       const allBookedDates = validAppointments.map(apt => parseISO(apt.appointment_date));
-      const uniqueWeekDates: Date[] = [];
+      const uniqueBookingDates: Date[] = [];
       for (const date of allBookedDates) {
-        const alreadyHasWeek = uniqueWeekDates.some(d => isSameWeek(d, date, { weekStartsOn: 0 }));
-        if (!alreadyHasWeek) {
-          uniqueWeekDates.push(date);
+        const key = format(date, "yyyy-MM-dd");
+        if (!uniqueBookingDates.some(d => format(d, "yyyy-MM-dd") === key)) {
+          uniqueBookingDates.push(date);
         }
       }
-      setSubscriptionBookedWeeks(uniqueWeekDates);
+      setSubscriptionBookedWeeks(uniqueBookingDates);
       
       // Count ACTUAL per-service usage from appointments
       // Each service is tracked individually, so packages with different quantities
@@ -1082,14 +1100,14 @@ const Booking = () => {
         return;
       }
       
-      const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
-        isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
-      );
+      const isWeekAlreadyBooked = isWeekBooked(selectedDate);
       
       if (isWeekAlreadyBooked) {
         setLoading(false);
         toast.error("Limite semanal atingido", { 
-          description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
+          description: activeSubscription.weekly_booking_limit > 1
+            ? `Seu pacote permite ${activeSubscription.weekly_booking_limit} agendamentos por semana e você já usou todos nesta semana.`
+            : "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
         });
         return;
       }
@@ -1347,14 +1365,14 @@ const Booking = () => {
       
       // Rule 3: Check if user already has an appointment in this week
       // Always check database for existing bookings in the selected week to prevent duplicates
-      const isWeekAlreadyBooked = subscriptionBookedWeeks.some(bookedDate => 
-        isSameWeek(selectedDate, bookedDate, { weekStartsOn: 0 })
-      );
+      const isWeekAlreadyBooked = isWeekBooked(selectedDate);
       
       if (isWeekAlreadyBooked) {
         setLoading(false);
         toast.error("Limite semanal atingido", { 
-          description: "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
+          description: activeSubscription.weekly_booking_limit > 1
+            ? `Seu pacote permite ${activeSubscription.weekly_booking_limit} agendamentos por semana e você já usou todos nesta semana.`
+            : "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
         });
         return;
       }
@@ -1528,10 +1546,13 @@ const Booking = () => {
   };
 
   // Check if a date is in a week that already has a subscription booking
+  // (week is "full" when bookings in that week reached the package's weekly limit)
   const isWeekBooked = (date: Date): boolean => {
-    return subscriptionBookedWeeks.some(bookedDate => 
+    const limit = activeSubscription?.weekly_booking_limit ?? 1;
+    const bookingsInWeek = subscriptionBookedWeeks.filter(bookedDate => 
       isSameWeek(date, bookedDate, { weekStartsOn: 0 })
-    );
+    ).length;
+    return bookingsInWeek >= limit;
   };
 
   // Modifiers for calendar to highlight booked weeks
@@ -2222,7 +2243,9 @@ const Booking = () => {
                   {usingSubscription && selectedDate && isWeekBooked(selectedDate) && (
                     <div className="mt-3 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
                       <p className="text-xs text-amber-500 font-medium">
-                        ⚠️ Você já tem um agendamento nesta semana!
+                        ⚠️ {(activeSubscription?.weekly_booking_limit ?? 1) > 1
+                          ? `Você já usou os ${activeSubscription?.weekly_booking_limit} agendamentos desta semana!`
+                          : "Você já tem um agendamento nesta semana!"}
                       </p>
                       <p className="text-[10px] text-amber-400/80">
                         Escolha uma data em outra semana ou cancele o agendamento existente.
