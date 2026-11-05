@@ -46,18 +46,21 @@ export type Database = {
           appointment_id: string
           created_at: string
           id: string
+          price: number | null
           service_id: string
         }
         Insert: {
           appointment_id: string
           created_at?: string
           id?: string
+          price?: number | null
           service_id: string
         }
         Update: {
           appointment_id?: string
           created_at?: string
           id?: string
+          price?: number | null
           service_id?: string
         }
         Relationships: [
@@ -86,6 +89,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           payment_status: string
+          price: number | null
           reminder_1h_sent: boolean
           reminder_24h_sent: boolean
           service_id: string
@@ -103,6 +107,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string
+          price?: number | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
           service_id: string
@@ -120,6 +125,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           payment_status?: string
+          price?: number | null
           reminder_1h_sent?: boolean
           reminder_24h_sent?: boolean
           service_id?: string

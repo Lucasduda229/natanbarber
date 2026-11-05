@@ -102,11 +102,13 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
           appointment_date,
           appointment_time,
           status,
+          price,
           services (
             name,
             price
           ),
           appointment_services (
+            price,
             services (
               name,
               price
@@ -122,11 +124,13 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
       } else {
         // Combine main service + extras into a single display entry
         const enriched = (appointmentsData as any[]).map((apt) => {
+          // Preço congelado no momento do agendamento (fallback: preço atual)
           const extras = (apt.appointment_services || [])
-            .map((as: any) => as.services)
-            .filter(Boolean) as { name: string; price: number }[];
+            .filter((as: any) => as.services)
+            .map((as: any) => ({ name: as.services.name, price: as.price ?? as.services.price })) as { name: string; price: number }[];
           const allNames = [apt.services?.name, ...extras.map((e: any) => e.name)].filter(Boolean);
-          const mainPrice = apt.services?.price || 0;
+          const mainPrice = apt.price ?? apt.services?.price ?? 0;
+          if (apt.services) apt.services = { ...apt.services, price: mainPrice };
           const extrasPrice = extras.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
           return {
             ...apt,

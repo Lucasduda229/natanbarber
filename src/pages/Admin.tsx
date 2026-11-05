@@ -681,6 +681,7 @@ const Admin = () => {
         used_referral_redemption_id,
         used_store_redemption_id,
         service_id,
+        price,
         services:service_id (
           name,
           price
@@ -732,6 +733,7 @@ const Admin = () => {
             .from("appointment_services")
             .select(`
               appointment_id,
+              price,
               services (
                 name,
                 price
@@ -751,7 +753,8 @@ const Admin = () => {
       if (as.services) {
         existing.push({
           name: (as.services as any).name,
-          price: (as.services as any).price
+          // Preço congelado no momento do agendamento (fallback: preço atual)
+          price: (as as any).price ?? (as.services as any).price
         });
       }
       additionalServicesMap.set(as.appointment_id, existing);
@@ -772,7 +775,8 @@ const Admin = () => {
       if (primaryService && primaryService.name) {
         allServices.push({
           name: primaryService.name,
-          price: primaryService.price || 0
+          // Preço congelado no momento do agendamento (fallback: preço atual)
+          price: (appointment as any).price ?? primaryService.price ?? 0
         });
       }
       allServices.push(...additionalServices);

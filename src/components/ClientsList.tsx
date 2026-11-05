@@ -80,6 +80,7 @@ export function ClientsList() {
           user_id,
           appointment_date,
           status,
+          price,
           services (
             price
           )
@@ -110,7 +111,7 @@ export function ClientsList() {
         const noShowAppointments = clientAppointments.filter(a => a.status === "no_show");
         const totalVisits = visitAppointments.length;
         const totalSpent = visitAppointments.reduce(
-          (sum, a) => sum + (a.services?.price || 0),
+          (sum, a) => sum + ((a as any).price ?? a.services?.price ?? 0),
           0
         );
         const sortedAppointments = [...visitAppointments].sort(

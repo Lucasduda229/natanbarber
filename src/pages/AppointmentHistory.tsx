@@ -154,6 +154,7 @@ const AppointmentHistory = () => {
         .from("appointment_services")
         .select(`
           appointment_id,
+          price,
           service:services(name, price)
         `)
         .in("appointment_id", appointmentIds);
@@ -168,7 +169,8 @@ const AppointmentHistory = () => {
         if (as.service) {
           additionalServicesMap.get(as.appointment_id)?.push({
             name: as.service.name,
-            price: as.service.price
+            // Preço congelado no momento do agendamento (fallback: preço atual)
+            price: (as as any).price ?? as.service.price
           });
         }
       });
@@ -231,7 +233,8 @@ const AppointmentHistory = () => {
   };
 
   const calculateTotal = (appointment: AppointmentWithDetails) => {
-    const mainPrice = appointment.service?.price || 0;
+    // Preço congelado no momento do agendamento (fallback: preço atual)
+    const mainPrice = (appointment as any).price ?? appointment.service?.price ?? 0;
     const additionalTotal = appointment.additional_services.reduce((sum, s) => sum + s.price, 0);
     return mainPrice + additionalTotal;
   };
