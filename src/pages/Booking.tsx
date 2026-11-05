@@ -175,6 +175,7 @@ const Booking = () => {
   // Track usage per service for the current month
   const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
   const [openDays, setOpenDays] = useState<number[]>([1, 2, 3, 4, 5]); // dias com horários cadastrados
+  const [fullBlockedDates, setFullBlockedDates] = useState<string[]>([]);
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
@@ -368,13 +369,24 @@ const Booking = () => {
   }, [selectedDate, selectedServices]);
 
   const fetchOpenDays = async () => {
-    const { data } = await supabase
-      .from("time_slots")
-      .select("day_of_week")
-      .eq("is_blocked", false);
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const [{ data }, { data: fullBlocks }] = await Promise.all([
+      supabase
+        .from("time_slots")
+        .select("day_of_week")
+        .eq("is_blocked", false),
+      supabase
+        .from("blocked_dates")
+        .select("blocked_date")
+        .is("blocked_time", null)
+        .gte("blocked_date", todayStr),
+    ]);
     if (data) {
       const days = Array.from(new Set(data.map((r: any) => r.day_of_week as number)));
       if (days.length) setOpenDays(days);
+    }
+    if (fullBlocks) {
+      setFullBlockedDates(fullBlocks.map((b: any) => b.blocked_date));
     }
   };
 
@@ -828,6 +840,13 @@ const Booking = () => {
       .from("blocked_dates")
       .select("blocked_time")
       .eq("blocked_date", dateStr);
+
+    // Se houver bloqueio de dia inteiro (blocked_time === null), nenhum horário fica disponível
+    if (allBlocks?.some((b) => !b.blocked_time)) {
+      setBookedTimes([]);
+      setAvailableSlots([]);
+      return;
+    }
 
     const occupiedTimes = new Set<string>(
       allBlocks?.map((b) => b.blocked_time).filter(Boolean) as string[] || []
@@ -1538,6 +1557,9 @@ const Booking = () => {
 
     // Bloquear dias que não estão configurados como abertos
     if (!openDays.includes(dayOfWeek)) return true;
+
+    // Bloquear datas com dia inteiro bloqueado pelo admin
+    if (fullBlockedDates.includes(format(date, "yyyy-MM-dd"))) return true;
 
     // Assinantes não podem agendar no sábado
     if (usingSubscription && dayOfWeek === 6) return true;

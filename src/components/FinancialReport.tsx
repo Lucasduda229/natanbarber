@@ -71,6 +71,7 @@ interface FinancialReportProps {
   reportEndDate: Date | undefined;
   setReportStartDate: (date: Date | undefined) => void;
   setReportEndDate: (date: Date | undefined) => void;
+  getAdjustedValue: (appointmentId: string, originalValue: number) => number;
   getServicesTotal: (services: AppointmentService[], notes?: string | null, isReward?: boolean, time?: string | null, date?: string | null) => number;
   getServicesTotalForRevenue: (services: AppointmentService[], paymentMethod: string | null, notes?: string | null, time?: string | null, date?: string | null) => number;
   getServicesNames: (services: AppointmentService[]) => string;
@@ -360,7 +361,7 @@ const FinancialReport = ({
   };
 
   const paidAppointments = filteredReportAppointments
-    .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid')
+    .filter(a => a.payment_status === 'paid_pix' || a.payment_status === 'paid_cash' || a.payment_status === 'paid_card' || a.payment_status === 'paid_reception' || a.payment_status === 'paid')
     .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime());
 
   const visibleTransactions = showAllTransactions ? paidAppointments : paidAppointments.slice(0, 10);

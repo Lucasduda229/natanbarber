@@ -102,6 +102,8 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
           appointment_date,
           appointment_time,
           status,
+          notes,
+          updated_at,
           price,
           services (
             name,
@@ -132,11 +134,22 @@ export function CustomerHistory({ userId, isOpen, onClose }: CustomerHistoryProp
           const mainPrice = apt.price ?? apt.services?.price ?? 0;
           if (apt.services) apt.services = { ...apt.services, price: mainPrice };
           const extrasPrice = extras.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+          let feeAmt = 0;
+          if (apt.notes) {
+            const m1 = apt.notes.match(/Adicional noturno[^:]*:\s*\+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+            if (m1) feeAmt += parseFloat(m1[1].replace(",", ".")) || 0;
+            else if (apt.notes.includes("Adicional noturno")) feeAmt += 5;
+            const m2 = apt.notes.match(/Taxa adicional \([^)]+\): \+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+            if (m2) feeAmt += parseFloat(m2[1].replace(",", ".")) || 0;
+          } else if (apt.appointment_time) {
+            const h = parseInt(apt.appointment_time.split(":")[0], 10);
+            if (!isNaN(h) && h >= 19) feeAmt += 5;
+          }
           return {
             ...apt,
             extra_services: extras,
             combined_name: allNames.join(" + "),
-            total_price: mainPrice + extrasPrice,
+            total_price: mainPrice + extrasPrice + feeAmt,
           } as CustomerAppointment;
         });
         setAppointments(enriched);

@@ -1212,19 +1212,44 @@ const Admin = () => {
       return;
     }
 
-    // Verificar se já existe bloqueio para esta data/horário
-    const existingBlock = blockedDates.find(
-      b => b.blocked_date === date && b.blocked_time === (time ? `${time}:00` : null)
-    );
+    const isFullDay = !time;
+    const normalizedTime = time ? (time.length === 5 ? `${time}:00` : time) : null;
 
-    if (existingBlock) {
-      toast.error("Este horário já está bloqueado");
+    // Verificar se o dia inteiro já está bloqueado
+    const existingFullDay = blockedDates.find(
+      b => b.blocked_date === date && !b.blocked_time
+    );
+    if (existingFullDay) {
+      toast.error(isFullDay ? "Este dia inteiro já está bloqueado" : "Este dia já está com o dia inteiro bloqueado");
       return;
+    }
+
+    if (!isFullDay) {
+      const existingBlock = blockedDates.find(
+        b => b.blocked_date === date && b.blocked_time === normalizedTime
+      );
+      if (existingBlock) {
+        toast.error("Este horário já está bloqueado");
+        return;
+      }
+    } else {
+      // Ao bloquear o dia inteiro, remove bloqueios manuais avulsos do mesmo dia
+      // para não exibir horários soltos duplicados
+      await supabase
+        .from("blocked_dates")
+        .delete()
+        .eq("blocked_date", date)
+        .not("blocked_time", "is", null)
+        .or("reason.is.null,reason.neq.Horário reservado");
     }
 
     const { error } = await supabase
       .from("blocked_dates")
-      .insert({ blocked_date: date, blocked_time: time || null });
+      .insert({
+        blocked_date: date,
+        blocked_time: normalizedTime,
+        reason: isFullDay ? "Dia inteiro bloqueado" : "Bloqueado manualmente",
+      });
 
     if (error) {
       console.error("Erro ao bloquear:", error);
@@ -1232,13 +1257,30 @@ const Admin = () => {
       return;
     }
 
-    toast.success(time ? "Horário bloqueado" : "Data bloqueada");
+    toast.success(isFullDay ? "Dia inteiro bloqueado com sucesso!" : "Horário bloqueado");
     setBlockDateInput("");
     setBlockTimeInput("");
     fetchBlockedDates();
   };
 
-  const unblockDate = async (id: string) => {
+  const unblockDate = async (id: string, fullDayDate?: string) => {
+    if (fullDayDate) {
+      // Desbloqueia o registro de dia inteiro e eventuais bloqueios manuais daquela data
+      const { error } = await supabase
+        .from("blocked_dates")
+        .delete()
+        .eq("blocked_date", fullDayDate)
+        .or("blocked_time.is.null,reason.is.null,reason.neq.Horário reservado");
+
+      if (error) {
+        toast.error("Erro ao desbloquear dia");
+        return;
+      }
+      toast.success("Dia inteiro desbloqueado com sucesso!");
+      fetchBlockedDates();
+      return;
+    }
+
     const { error } = await supabase
       .from("blocked_dates")
       .delete()
@@ -1379,22 +1421,29 @@ const Admin = () => {
     // Se o usuário usou o filtro global de data, ignoramos o filtro específico de finalizados
     if (filterDate) return true;
 
-    // Apply date filter
+    // Apply date filter (considera tanto a data do agendamento quanto a data em que foi finalizado/cancelado)
     const todayStr = format(new Date(), "yyyy-MM-dd");
+    const updatedDateStr = a.updated_at ? format(parseISO(a.updated_at), "yyyy-MM-dd") : "";
     switch (completedDateFilter) {
       case "today":
-        if (a.appointment_date !== todayStr) return false;
+        if (a.appointment_date !== todayStr && updatedDateStr !== todayStr) return false;
         break;
       case "7days": {
         const start7 = subDays(new Date(), 7);
         const aptDate = parseISO(a.appointment_date);
-        if (!(isAfter(aptDate, start7) || isEqual(aptDate, start7))) return false;
+        const updDate = a.updated_at ? parseISO(a.updated_at) : null;
+        const aptIn7 = isAfter(aptDate, start7) || isEqual(aptDate, start7);
+        const updIn7 = updDate ? (isAfter(updDate, start7) || isEqual(updDate, start7)) : false;
+        if (!aptIn7 && !updIn7) return false;
         break;
       }
       case "30days": {
         const start30 = subDays(new Date(), 30);
         const aptDate = parseISO(a.appointment_date);
-        if (!(isAfter(aptDate, start30) || isEqual(aptDate, start30))) return false;
+        const updDate = a.updated_at ? parseISO(a.updated_at) : null;
+        const aptIn30 = isAfter(aptDate, start30) || isEqual(aptDate, start30);
+        const updIn30 = updDate ? (isAfter(updDate, start30) || isEqual(updDate, start30)) : false;
+        if (!aptIn30 && !updIn30) return false;
         break;
       }
       case "month": {
@@ -2405,6 +2454,7 @@ const Admin = () => {
                         { value: "today", label: "Hoje" },
                         { value: "7days", label: "7d" },
                         { value: "30days", label: "30d" },
+                        { value: "all", label: "Todos" },
                       ].map(opt => (
                         <Button
                           key={opt.value}
@@ -2468,7 +2518,28 @@ const Admin = () => {
                           <span className="truncate max-w-[80px] text-muted-foreground hidden sm:inline">
                             {getServicesNames(appointment.services)}
                           </span>
-                          <div className="flex flex-col items-end sm:flex-row sm:items-center sm:gap-2">
+                          <div className="flex flex-col items-end sm:flex-row sm:items-center sm:gap-1.5">
+                            {(() => {
+                              const nightAmt = getNightSurcharge(appointment.notes, appointment.appointment_time);
+                              const extraAmt = getExtraFeeFromNotes(appointment.notes, appointment.appointment_date, nightAmt > 0, extraFeeConfig);
+                              const feeTotal = nightAmt + extraAmt;
+                              const isPaid = appointment.payment_status?.startsWith("paid_");
+                              const adj = revenueAdjustments.find(r => r.appointment_id === appointment.id);
+                              return (
+                                <>
+                                  {feeTotal > 0 && (
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-500/40 text-amber-500 bg-amber-500/10">
+                                      {nightAmt > 0 ? `🌙 +R${nightAmt.toFixed(0)}` : `💰 +R${extraAmt.toFixed(0)}`}
+                                    </Badge>
+                                  )}
+                                  {(appointment.status === "cancelled" || appointment.status === "no_show") && isPaid && (
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-green-500/40 text-green-500 bg-green-500/10">
+                                      ✓ Pago R${(adj ? adj.adjusted_value : feeTotal || 5).toFixed(0)}
+                                    </Badge>
+                                  )}
+                                </>
+                              );
+                            })()}
                             <Badge className={cn("text-[9px] px-1.5 py-0 h-4", statusColors[appointment.status as keyof typeof statusColors])}>
                               {statusLabels[appointment.status as keyof typeof statusLabels]}
                             </Badge>
@@ -2510,7 +2581,7 @@ const Admin = () => {
                               </AlertDialogContent>
                             </AlertDialog>
                           )}
-                          {(appointment.status === "no_show" || appointment.status === "completed") && (
+                          {(appointment.status === "no_show" || appointment.status === "completed" || appointment.status === "cancelled") && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -2657,40 +2728,79 @@ const Admin = () => {
                 {(() => {
                   const today = format(new Date(), "yyyy-MM-dd");
                   const futureBlockedDates = blockedDates.filter(blocked => blocked.blocked_date >= today);
+
+                  // Datas que estão com o DIA INTEIRO bloqueado (blocked_time === null)
+                  const fullDayBlockedSet = new Set(
+                    futureBlockedDates.filter(b => !b.blocked_time).map(b => b.blocked_date)
+                  );
+
+                  // Quando o dia inteiro está bloqueado, NÃO exibe horários avulsos daquele mesmo dia
+                  const visibleBlockedDates = futureBlockedDates
+                    .filter(b => !b.blocked_time || !fullDayBlockedSet.has(b.blocked_date))
+                    .sort((a, b) => {
+                      // Coloca bloqueios de Dia Inteiro e bloqueios manuais no topo
+                      const aIsFull = !a.blocked_time ? 0 : (a.reason === "Horário reservado" ? 2 : 1);
+                      const bIsFull = !b.blocked_time ? 0 : (b.reason === "Horário reservado" ? 2 : 1);
+                      if (aIsFull !== bIsFull) return aIsFull - bIsFull;
+                      if (a.blocked_date !== b.blocked_date) return a.blocked_date.localeCompare(b.blocked_date);
+                      return (a.blocked_time || "").localeCompare(b.blocked_time || "");
+                    });
                   
-                  if (futureBlockedDates.length === 0) {
+                  if (visibleBlockedDates.length === 0) {
                     return <p className="text-muted-foreground text-center py-6 text-sm">Nenhum bloqueio ativo</p>;
                   }
                   
                   return (
                     <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                      {futureBlockedDates.map((blocked) => (
-                        <div
-                          key={blocked.id}
-                          className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-destructive/10 border border-destructive/20 gap-2"
-                        >
-                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                            <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
-                            <div className="min-w-0">
-                              <span className="text-foreground text-sm block truncate">
-                                {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
-                                {blocked.blocked_time && ` às ${blocked.blocked_time.slice(0, 5)}`}
-                              </span>
-                              {blocked.reason && (
-                                <span className="text-muted-foreground text-xs truncate block">{blocked.reason}</span>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => unblockDate(blocked.id)}
-                            className="text-destructive hover:bg-destructive/20 h-8 w-8 p-0 flex-shrink-0"
+                      {visibleBlockedDates.map((blocked) => {
+                        const isFullDay = !blocked.blocked_time;
+                        return (
+                          <div
+                            key={blocked.id}
+                            className={cn(
+                              "flex items-center justify-between p-2.5 sm:p-3 rounded-lg gap-2",
+                              isFullDay
+                                ? "bg-destructive/20 border-2 border-destructive/50"
+                                : "bg-destructive/10 border border-destructive/20"
+                            )}
                           >
-                            <Unlock className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive flex-shrink-0" />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-foreground text-sm font-medium truncate">
+                                    {format(parseISO(blocked.blocked_date), "dd/MM/yyyy")}
+                                    {blocked.blocked_time ? ` às ${blocked.blocked_time.slice(0, 5)}` : " — Dia inteiro bloqueado"}
+                                  </span>
+                                  {isFullDay && (
+                                    <Badge className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0 h-4">
+                                      DIA INTEIRO
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="text-muted-foreground text-xs truncate block">
+                                  {isFullDay
+                                    ? "Todos os horários deste dia estão bloqueados"
+                                    : (blocked.reason || "Horário bloqueado manualmente")}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant={isFullDay ? "outline" : "ghost"}
+                              size="sm"
+                              onClick={() => unblockDate(blocked.id, isFullDay ? blocked.blocked_date : undefined)}
+                              className={cn(
+                                "text-destructive hover:bg-destructive/20 flex-shrink-0",
+                                isFullDay ? "border-destructive/40 h-8 px-2.5 text-xs gap-1" : "h-8 w-8 p-0"
+                              )}
+                              title={isFullDay ? "Desbloquear dia inteiro" : "Desbloquear horário"}
+                            >
+                              <Unlock className="w-4 h-4" />
+                              {isFullDay && <span className="hidden xs:inline">Desbloquear</span>}
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -2816,69 +2926,169 @@ const Admin = () => {
 
       {/* Completed/Cancelled Details Dialog */}
       <Dialog open={!!selectedCompletedAppointment} onOpenChange={(open) => !open && setSelectedCompletedAppointment(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Agendamento</DialogTitle>
           </DialogHeader>
-          {selectedCompletedAppointment && (
-            <div className="space-y-4 text-sm mt-4">
-              <div className="grid grid-cols-[100px_1fr] gap-3">
-                <span className="text-muted-foreground font-medium">Cliente:</span>
-                <span className="font-semibold">{getClientDisplayInfo(selectedCompletedAppointment).name}</span>
-                
-                <span className="text-muted-foreground font-medium">Telefone:</span>
-                <span>{getClientDisplayInfo(selectedCompletedAppointment).phone || "Não informado"}</span>
+          {selectedCompletedAppointment && (() => {
+            const clientInfo = getClientDisplayInfo(selectedCompletedAppointment);
+            const nightAmt = getNightSurcharge(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_time);
+            const extraAmt = getExtraFeeFromNotes(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_date, nightAmt > 0, extraFeeConfig);
+            const baseAmt = selectedCompletedAppointment.services.reduce((s, sv) => s + (sv.price || 0), 0);
+            const total = getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id), selectedCompletedAppointment.appointment_time, selectedCompletedAppointment.appointment_date, extraFeeConfig);
+            const currentAdjusted = getAdjustedValue(selectedCompletedAppointment.id, total);
+            const hasAdjustment = revenueAdjustments.some(a => a.appointment_id === selectedCompletedAppointment.id);
+            const suggestedFee = (nightAmt + extraAmt) > 0 ? (nightAmt + extraAmt) : 5;
 
-                <span className="text-muted-foreground font-medium">Serviço(s):</span>
-                <span>{getServicesNames(selectedCompletedAppointment.services)}</span>
+            const handleChargeFee = async (method: "paid_pix" | "paid_cash" | "paid_card", feeValue: number) => {
+              await saveRevenueAdjustment(selectedCompletedAppointment.id, total, feeValue);
+              await updatePaymentStatus(selectedCompletedAppointment.id, method);
+              setSelectedCompletedAppointment(prev => prev ? { ...prev, payment_status: method } : null);
+            };
 
-                <span className="text-muted-foreground font-medium">Valor Total:</span>
-                <span className="space-y-1">
-                  {(() => {
-                    const nightAmt = getNightSurcharge(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_time);
-                    const extraAmt = getExtraFeeFromNotes(selectedCompletedAppointment.notes, selectedCompletedAppointment.appointment_date, nightAmt > 0, extraFeeConfig);
-                    const baseAmt = selectedCompletedAppointment.services.reduce((s, sv) => s + (sv.price || 0), 0);
-                    const total = getServicesTotal(selectedCompletedAppointment.services, selectedCompletedAppointment.notes, !!(selectedCompletedAppointment.used_referral_redemption_id || selectedCompletedAppointment.used_store_redemption_id), selectedCompletedAppointment.appointment_time, selectedCompletedAppointment.appointment_date, extraFeeConfig);
-                    return (
-                      <>
-                        {(nightAmt > 0 || extraAmt > 0) && (
-                          <span className="block text-muted-foreground text-xs">Serviços: R$ {baseAmt.toFixed(2).replace('.', ',')}</span>
-                        )}
-                        {nightAmt > 0 && (
-                          <span className="block text-amber-500 text-xs">⚠️ Adicional noturno: +R$ {nightAmt.toFixed(2).replace('.', ',')}</span>
-                        )}
-                        {extraAmt > 0 && (
-                          <span className="block text-amber-500 text-xs">💰 Taxa adicional: +R$ {extraAmt.toFixed(2).replace('.', ',')}</span>
-                        )}
-                        <span className="font-semibold text-green-500 block">R$ {total.toFixed(2).replace('.', ',')}</span>
-                      </>
-                    );
-                  })()}
-                </span>
+            return (
+              <div className="space-y-4 text-sm mt-2">
+                <div className="grid grid-cols-[105px_1fr] gap-2.5 items-center">
+                  <span className="text-muted-foreground font-medium">Cliente:</span>
+                  <span className="font-semibold">{clientInfo.name}</span>
+                  
+                  <span className="text-muted-foreground font-medium">Telefone:</span>
+                  <div className="flex items-center gap-2">
+                    <span>{clientInfo.phone || "Não informado"}</span>
+                    {clientInfo.phone && clientInfo.phone !== "Sem telefone" && (
+                      <WhatsAppButton
+                        phone={clientInfo.phone}
+                        message={`Olá ${clientInfo.name}! Sobre seu agendamento de ${getServicesNames(selectedCompletedAppointment.services)} em ${format(parseISO(selectedCompletedAppointment.appointment_date), "dd/MM/yyyy")} às ${selectedCompletedAppointment.appointment_time.slice(0, 5)}:`}
+                      />
+                    )}
+                  </div>
 
-                <span className="text-muted-foreground font-medium">Data/Hora:</span>
-                <span>
-                  {format(parseISO(selectedCompletedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedCompletedAppointment.appointment_time.slice(0,5)}
-                </span>
+                  <span className="text-muted-foreground font-medium">Serviço(s):</span>
+                  <span>{getServicesNames(selectedCompletedAppointment.services)}</span>
 
-                <span className="text-muted-foreground font-medium">Status:</span>
-                <span>
-                  <Badge className={cn("text-[10px]", statusColors[selectedCompletedAppointment.status as keyof typeof statusColors])}>
-                    {statusLabels[selectedCompletedAppointment.status as keyof typeof statusLabels]}
-                  </Badge>
-                </span>
-                
-                {selectedCompletedAppointment.status === "cancelled" && selectedCompletedAppointment.updated_at && (
-                  <>
-                    <span className="text-muted-foreground font-medium">Cancelado em:</span>
-                    <span className="font-semibold text-red-500">
-                      {format(parseISO(selectedCompletedAppointment.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  <span className="text-muted-foreground font-medium">Data/Hora:</span>
+                  <span>
+                    {format(parseISO(selectedCompletedAppointment.appointment_date), "dd/MM/yyyy")} às {selectedCompletedAppointment.appointment_time.slice(0,5)}
+                  </span>
+
+                  <span className="text-muted-foreground font-medium self-start">Valores:</span>
+                  <div className="space-y-1">
+                    <span className="block text-muted-foreground text-xs">Serviços: R$ {baseAmt.toFixed(2).replace('.', ',')}</span>
+                    {nightAmt > 0 && (
+                      <span className="block text-amber-500 text-xs font-medium">⚠️ Adicional noturno: +R$ {nightAmt.toFixed(2).replace('.', ',')}</span>
+                    )}
+                    {extraAmt > 0 && (
+                      <span className="block text-amber-500 text-xs font-medium">💰 Taxa adicional: +R$ {extraAmt.toFixed(2).replace('.', ',')}</span>
+                    )}
+                    <span className="font-semibold text-green-500 block">
+                      Total: R$ {currentAdjusted.toFixed(2).replace('.', ',')}
+                      {hasAdjustment && <span className="text-[10px] text-amber-400 ml-1">(ajustado de R$ {total.toFixed(2).replace('.', ',')})</span>}
                     </span>
-                  </>
-                )}
+                  </div>
+
+                  {selectedCompletedAppointment.notes && (
+                    <>
+                      <span className="text-muted-foreground font-medium self-start">Observações:</span>
+                      <span className="text-xs text-muted-foreground whitespace-pre-line bg-muted/30 p-2 rounded-md border border-border/40">
+                        {selectedCompletedAppointment.notes}
+                      </span>
+                    </>
+                  )}
+
+                  {selectedCompletedAppointment.status === "cancelled" && selectedCompletedAppointment.updated_at && (
+                    <>
+                      <span className="text-muted-foreground font-medium">Cancelado em:</span>
+                      <span className="font-semibold text-red-500">
+                        {format(parseISO(selectedCompletedAppointment.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                    </>
+                  )}
+
+                  <span className="text-muted-foreground font-medium">Status:</span>
+                  <Select
+                    value={selectedCompletedAppointment.status}
+                    onValueChange={async (value) => {
+                      await updateAppointmentStatus(selectedCompletedAppointment.id, value);
+                      setSelectedCompletedAppointment(prev => prev ? { ...prev, status: value } : null);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendente (voltar p/ Agenda)</SelectItem>
+                      <SelectItem value="confirmed">Confirmado (voltar p/ Agenda)</SelectItem>
+                      <SelectItem value="completed">Concluído</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                      <SelectItem value="no_show">Falta</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <span className="text-muted-foreground font-medium">Pagamento:</span>
+                  <Select
+                    value={selectedCompletedAppointment.payment_status}
+                    onValueChange={async (value) => {
+                      await updatePaymentStatus(selectedCompletedAppointment.id, value);
+                      setSelectedCompletedAppointment(prev => prev ? { ...prev, payment_status: value } : null);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Aguardando</SelectItem>
+                      <SelectItem value="paid_pix">Pago PIX</SelectItem>
+                      <SelectItem value="paid_cash">Pago Dinheiro</SelectItem>
+                      <SelectItem value="paid_card">Pago Cartão</SelectItem>
+                      <SelectItem value="paid_reception">Pago Recepção</SelectItem>
+                      <SelectItem value="refunded">Reembolsado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Cobrança rápida de taxa (Cancelamento / Falta / Taxa Noturna) */}
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-amber-400">
+                      💰 Cobrar Taxa (Cancelamento / Falta / Noite)
+                    </span>
+                    <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-400">
+                      R$ {suggestedFee.toFixed(2).replace('.', ',')}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Registra no financeiro apenas o valor da taxa (R$ {suggestedFee.toFixed(2).replace('.', ',')}) como pago:
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-[#00D4AA]/40 text-[#00D4AA] hover:bg-[#00D4AA]/10"
+                      onClick={() => handleChargeFee("paid_pix", suggestedFee)}
+                    >
+                      Taxa no PIX
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-green-500/40 text-green-500 hover:bg-green-500/10"
+                      onClick={() => handleChargeFee("paid_cash", suggestedFee)}
+                    >
+                      Taxa Dinheiro
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-blue-500/40 text-blue-500 hover:bg-blue-500/10"
+                      onClick={() => handleChargeFee("paid_card", suggestedFee)}
+                    >
+                      Taxa Cartão
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

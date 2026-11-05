@@ -57,6 +57,7 @@ interface AppointmentWithDetails {
   payment_method: string | null;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
   user_id: string;
   service: {
     name: string;
@@ -77,6 +78,7 @@ const statusLabels: Record<string, string> = {
   confirmed: "Confirmado",
   completed: "Concluído",
   cancelled: "Cancelado",
+  no_show: "Falta",
 };
 
 const statusColors: Record<string, string> = {
@@ -84,12 +86,37 @@ const statusColors: Record<string, string> = {
   confirmed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   completed: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
+  no_show: "bg-orange-500/20 text-orange-400 border-orange-500/30",
 };
 
 const paymentStatusLabels: Record<string, string> = {
   pending: "Pendente",
   paid: "Pago",
+  paid_pix: "Pago PIX",
+  paid_cash: "Pago Dinheiro",
+  paid_card: "Pago Cartão",
+  paid_reception: "Pago Recepção",
+  paid_subscription: "Assinatura",
   refunded: "Reembolsado",
+};
+
+const getAppointmentExtras = (notes: string | null, time?: string | null): number => {
+  let night = 0;
+  if (notes) {
+    const m = notes.match(/Adicional noturno[^:]*:\s*\+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+    if (m) night = parseFloat(m[1].replace(",", ".")) || 0;
+    else if (notes.includes("Adicional noturno")) night = 5;
+  }
+  if (!night && time) {
+    const hour = parseInt(time.split(":")[0], 10);
+    if (!isNaN(hour) && hour >= 19) night = 5;
+  }
+  let extra = 0;
+  if (notes) {
+    const m2 = notes.match(/Taxa adicional \([^)]+\): \+R\$\s?(\d+(?:[.,]\d{1,2})?)/i);
+    if (m2) extra = parseFloat(m2[1].replace(",", ".")) || 0;
+  }
+  return night + extra;
 };
 
 const ITEMS_PER_PAGE = 15;
@@ -236,7 +263,8 @@ const AppointmentHistory = () => {
     // Preço congelado no momento do agendamento (fallback: preço atual)
     const mainPrice = (appointment as any).price ?? appointment.service?.price ?? 0;
     const additionalTotal = appointment.additional_services.reduce((sum, s) => sum + s.price, 0);
-    return mainPrice + additionalTotal;
+    const extras = getAppointmentExtras(appointment.notes, appointment.appointment_time);
+    return mainPrice + additionalTotal + extras;
   };
 
   const exportToCSV = () => {
@@ -522,9 +550,21 @@ const AppointmentHistory = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={`${statusColors[appointment.status]} border`}>
-                              {statusLabels[appointment.status]}
-                            </Badge>
+                            <div className="flex flex-col items-start gap-1">
+                              <Badge className={`${statusColors[appointment.status]} border`}>
+                                {statusLabels[appointment.status] || appointment.status}
+                              </Badge>
+                              {appointment.status === "cancelled" && appointment.updated_at && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  em {format(parseISO(appointment.updated_at), "dd/MM 'às' HH:mm")}
+                                </span>
+                              )}
+                              {getAppointmentExtras(appointment.notes, appointment.appointment_time) > 0 && (
+                                <span className="text-[10px] text-amber-400">
+                                  ⚠️ +R$ {getAppointmentExtras(appointment.notes, appointment.appointment_time).toFixed(2)} taxa/noite
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <span className="text-sm">

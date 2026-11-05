@@ -129,6 +129,11 @@ const Pedido = () => {
       .select("blocked_time")
       .eq("blocked_date", dateStr);
 
+    if (blockedDates?.some((b) => !b.blocked_time)) {
+      setAvailableSlots([]);
+      return;
+    }
+
     const blockedTimes = blockedDates?.map((b) => b.blocked_time) || [];
 
     const { data: appointments } = await supabase
