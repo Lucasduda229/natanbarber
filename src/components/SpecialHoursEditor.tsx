@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, Plus, Trash2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,24 @@ export const SpecialHoursEditor = () => {
   const [start, setStart] = useState("08:00");
   const [end, setEnd] = useState("18:00");
   const [note, setNote] = useState("");
+  const [editing, setEditing] = useState<SpecialHours | null>(null);
+
+  const resetForm = () => {
+    setEditing(null);
+    setDate("");
+    setStart("08:00");
+    setEnd("18:00");
+    setNote("");
+  };
+
+  const startEdit = (it: SpecialHours) => {
+    setEditing(it);
+    setDate(it.special_date);
+    setStart(it.start_time.slice(0, 5));
+    setEnd(it.end_time.slice(0, 5));
+    setNote(it.note || "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const load = async () => {
     try {
@@ -43,18 +61,26 @@ export const SpecialHoursEditor = () => {
 
   const handleSave = async () => {
     if (!date) return toast.error("Selecione a data");
-    if (!start || !end || end < start) return toast.error("Horário inválido");
+    if (!start || !end) return toast.error("Informe o horário de início e fim");
+    if (end <= start) {
+      return toast.error("O horário final precisa ser depois do inicial", {
+        description: "O campo usa formato 24h: para 7 da noite use 19:00.",
+      });
+    }
     setSaving(true);
     try {
+      // Se mudou a data durante a edição, remove o registro antigo
+      if (editing && editing.special_date !== date) {
+        await deleteSpecialHours(editing.id);
+      }
       await upsertSpecialHours({
         special_date: date,
         start_time: start,
         end_time: end,
         note: note.trim() || null,
       });
-      toast.success("Horário especial salvo!");
-      setDate("");
-      setNote("");
+      toast.success(editing ? "Horário especial atualizado!" : "Horário especial salvo!");
+      resetForm();
       load();
     } catch (e) {
       console.error(e);
@@ -67,6 +93,7 @@ export const SpecialHoursEditor = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteSpecialHours(id);
+      if (editing?.id === id) resetForm();
       toast.success("Horário especial removido");
       load();
     } catch (e) {
@@ -97,11 +124,28 @@ export const SpecialHoursEditor = () => {
             onChange={(e) => setNote(e.target.value)}
             className="bg-card/60 h-9 text-sm sm:w-40"
           />
-          <Button onClick={handleSave} disabled={saving || !date} size="sm" className="bg-primary text-primary-foreground h-9">
-            <Plus className="w-4 h-4 mr-1" />
-            Salvar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saving || !date} size="sm" className="bg-primary text-primary-foreground h-9 flex-1">
+              {editing ? <Pencil className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+              {editing ? "Atualizar" : "Salvar"}
+            </Button>
+            {editing && (
+              <Button onClick={resetForm} variant="outline" size="sm" className="h-9" title="Cancelar edição">
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
+        {editing && (
+          <p className="text-xs text-primary">
+            Editando o dia {format(parseISO(editing.special_date), "dd/MM/yyyy")}
+          </p>
+        )}
+        {start && end && end <= start && (
+          <p className="text-xs text-amber-500">
+            ⚠️ O horário final está igual ou antes do inicial. O campo é 24h: para 7 da noite use <strong>19:00</strong>.
+          </p>
+        )}
         <p className="text-xs text-muted-foreground">
           Nessa data, o horário semanal é substituído por este (slots de 30 em 30 min). Funciona também em dias que normalmente são fechados.
         </p>
@@ -127,7 +171,20 @@ export const SpecialHoursEditor = () => {
                     {it.start_time.slice(0, 5)} até {it.end_time.slice(0, 5)}
                     {it.note ? ` • ${it.note}` : ""}
                   </p>
+                  {it.end_time <= it.start_time && (
+                    <p className="text-[11px] text-amber-500">⚠️ Só 1 horário liberado — edite e ajuste o horário final</p>
+                  )}
                 </div>
+                <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => startEdit(it)}
+                  className="text-primary hover:bg-primary/20 h-8 w-8 p-0"
+                  title="Editar"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -137,6 +194,7 @@ export const SpecialHoursEditor = () => {
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
+                </div>
               </div>
             ))}
           </div>
