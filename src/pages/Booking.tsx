@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchSpecialHoursForDate, fetchUpcomingSpecialDates, generateSlotTimes } from "@/lib/specialHours";
+import { getSpecialSlotsForDate, applySpecialSlots, fetchUpcomingSpecialDates } from "@/lib/specialHours";
 import { useAuth } from "@/hooks/useAuth";
 import { generatePixPayload } from "@/lib/pix";
 import { QRCodeSVG } from "qrcode.react";
@@ -836,15 +836,10 @@ const Booking = () => {
       return;
     }
 
-    // Horário especial para esta data substitui o horário semanal
-    const special = await fetchSpecialHoursForDate(dateStr);
-    if (special) {
-      slots = generateSlotTimes(special.start_time, special.end_time).map((t) => ({
-        id: `special-${dateStr}-${t}`,
-        slot_time: t,
-        is_blocked: false,
-      })) as any;
-    }
+    // Horário especial: substitui o semanal nesta data e/ou soma a madrugada
+    // de um horário que virou a noite no dia anterior
+    const special = await getSpecialSlotsForDate(dateStr);
+    slots = applySpecialSlots(slots as any[], special, dateStr) as any;
 
     // Fetch ALL blocked times (manual + auto-generated from appointments)
     // This is the primary source of truth for clients because RLS prevents

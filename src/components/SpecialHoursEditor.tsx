@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarClock, Plus, Trash2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ import {
   listSpecialHours,
   upsertSpecialHours,
   deleteSpecialHours,
+  isOvernight,
 } from "@/lib/specialHours";
+
+const nextDayLabel = (d: string) => format(addDays(parseISO(d), 1), "dd/MM");
 
 /**
  * Permite definir um horário de atendimento diferente para uma data específica.
@@ -62,11 +65,6 @@ export const SpecialHoursEditor = () => {
   const handleSave = async () => {
     if (!date) return toast.error("Selecione a data");
     if (!start || !end) return toast.error("Informe o horário de início e fim");
-    if (end <= start) {
-      return toast.error("O horário final precisa ser depois do inicial", {
-        description: "O campo usa formato 24h: para 7 da noite use 19:00.",
-      });
-    }
     setSaving(true);
     try {
       // Se mudou a data durante a edição, remove o registro antigo
@@ -142,12 +140,13 @@ export const SpecialHoursEditor = () => {
           </p>
         )}
         {start && end && end <= start && (
-          <p className="text-xs text-amber-500">
-            ⚠️ O horário final está igual ou antes do inicial. O campo é 24h: para 7 da noite use <strong>19:00</strong>.
+          <p className="text-xs text-primary">
+            🌙 Vira a noite: atende de {start}{date ? ` do dia ${format(parseISO(date), "dd/MM")}` : ""} até {end} do dia seguinte
+            {date ? ` (${nextDayLabel(date)})` : ""}{start === end ? " — 24 horas" : ""}.
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Nessa data, o horário semanal é substituído por este (slots de 30 em 30 min). Funciona também em dias que normalmente são fechados.
+          Nessa data, o horário semanal é substituído por este (slots de 30 em 30 min). Funciona também em dias que normalmente são fechados. Se o horário final for igual ou menor que o inicial, o atendimento continua até o dia seguinte (ex: 07:00 até 07:00 = 24h).
         </p>
 
         {loading ? (
@@ -169,10 +168,13 @@ export const SpecialHoursEditor = () => {
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {it.start_time.slice(0, 5)} até {it.end_time.slice(0, 5)}
+                    {isOvernight(it) ? ` do dia ${nextDayLabel(it.special_date)}` : ""}
                     {it.note ? ` • ${it.note}` : ""}
                   </p>
-                  {it.end_time <= it.start_time && (
-                    <p className="text-[11px] text-amber-500">⚠️ Só 1 horário liberado — edite e ajuste o horário final</p>
+                  {isOvernight(it) && (
+                    <p className="text-[11px] text-primary">
+                      🌙 Vira a noite{it.start_time === it.end_time ? " — 24 horas" : ""}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
