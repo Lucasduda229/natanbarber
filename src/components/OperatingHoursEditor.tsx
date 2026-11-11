@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ExtraFeeEditor } from "./ExtraFeeEditor";
+import { SpecialHoursEditor } from "./SpecialHoursEditor";
 
 interface DaySchedule {
   dayOfWeek: number;
@@ -276,6 +277,8 @@ const OperatingHoursEditor = () => {
 
       </CardContent>
     </Card>
+
+    <SpecialHoursEditor />
 
     <ExtraFeeEditor />
     </div>

@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchSpecialHoursForDate, fetchUpcomingSpecialDates, generateSlotTimes } from "@/lib/specialHours";
 import { useAuth } from "@/hooks/useAuth";
 import { generatePixPayload } from "@/lib/pix";
 import { QRCodeSVG } from "qrcode.react";
@@ -176,6 +177,7 @@ const Booking = () => {
   const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
   const [openDays, setOpenDays] = useState<number[]>([1, 2, 3, 4, 5]); // dias com horários cadastrados
   const [fullBlockedDates, setFullBlockedDates] = useState<string[]>([]);
+  const [specialDates, setSpecialDates] = useState<string[]>([]);
   
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsApp, setCustomerWhatsApp] = useState("");
@@ -388,6 +390,7 @@ const Booking = () => {
     if (fullBlocks) {
       setFullBlockedDates(fullBlocks.map((b: any) => b.blocked_date));
     }
+    setSpecialDates(await fetchUpcomingSpecialDates(todayStr));
   };
 
   const loadUserProfile = async () => {
@@ -821,7 +824,7 @@ const Booking = () => {
     const currentTotalDuration = getEffectiveDuration(selectedServices, usingSubscription);
     const currentRequiredSlots = Math.ceil(currentTotalDuration / 30) || 1;
 
-    const { data: slots, error: slotsError } = await supabase
+    let { data: slots, error: slotsError } = await supabase
       .from("time_slots")
       .select("*")
       .eq("day_of_week", dayOfWeek)
@@ -831,6 +834,16 @@ const Booking = () => {
     if (slotsError) {
       console.error("Error fetching slots:", slotsError);
       return;
+    }
+
+    // Horário especial para esta data substitui o horário semanal
+    const special = await fetchSpecialHoursForDate(dateStr);
+    if (special) {
+      slots = generateSlotTimes(special.start_time, special.end_time).map((t) => ({
+        id: `special-${dateStr}-${t}`,
+        slot_time: t,
+        is_blocked: false,
+      })) as any;
     }
 
     // Fetch ALL blocked times (manual + auto-generated from appointments)
@@ -1556,7 +1569,9 @@ const Booking = () => {
     if (date < today) return true;
 
     // Bloquear dias que não estão configurados como abertos
-    if (!openDays.includes(dayOfWeek)) return true;
+    // (exceto se houver horário especial cadastrado para a data)
+    const hasSpecial = specialDates.includes(format(date, "yyyy-MM-dd"));
+    if (!openDays.includes(dayOfWeek) && !hasSpecial) return true;
 
     // Bloquear datas com dia inteiro bloqueado pelo admin
     if (fullBlockedDates.includes(format(date, "yyyy-MM-dd"))) return true;

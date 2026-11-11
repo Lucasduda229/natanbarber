@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchSpecialHoursForDate, generateSlotTimes } from "@/lib/specialHours";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import OpenClosedBadge from "@/components/OpenClosedBadge";
@@ -117,12 +118,22 @@ const Pedido = () => {
     const dayOfWeek = getDay(date);
     const dateStr = format(date, "yyyy-MM-dd");
 
-    const { data: slots } = await supabase
+    let { data: slots } = await supabase
       .from("time_slots")
       .select("*")
       .eq("day_of_week", dayOfWeek)
       .eq("is_blocked", false)
       .order("slot_time");
+
+    // Horário especial para esta data substitui o horário semanal
+    const special = await fetchSpecialHoursForDate(dateStr);
+    if (special) {
+      slots = generateSlotTimes(special.start_time, special.end_time).map((t) => ({
+        id: `special-${dateStr}-${t}`,
+        slot_time: t,
+        is_blocked: false,
+      })) as any;
+    }
 
     const { data: blockedDates } = await supabase
       .from("blocked_dates")
