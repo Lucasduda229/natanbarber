@@ -54,6 +54,7 @@ interface SubscriberWithUsage {
   monthly_cuts_limit: number;
   cuts_used_this_month: number;
   weekly_credits_available: number;
+  weekly_credits_limit?: number | null;
   current_week_start: string | null;
   consecutive_months: number;
   profile: {
@@ -101,6 +102,17 @@ interface PaymentOrder {
     package_name: string | null;
   } | null;
 }
+
+/** Resolves the weekly booking/credit limit: per-subscriber override > package setting > ceil(monthly/4). */
+const getEffectiveWeeklyLimit = (sub: {
+  weekly_credits_limit?: number | null;
+  monthly_cuts_limit: number;
+  package?: { weekly_credits?: number | null } | null;
+}): number => {
+  if (sub.weekly_credits_limit && sub.weekly_credits_limit > 0) return sub.weekly_credits_limit;
+  if (sub.package?.weekly_credits && sub.package.weekly_credits > 0) return sub.package.weekly_credits;
+  return Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+};
 
 const VIPPackagesManager = () => {
   const [activeTab, setActiveTab] = useState("orders");
@@ -214,7 +226,11 @@ const VIPPackagesManager = () => {
           sub.monthly_cuts_limit = correctLimit;
           supabase.from('subscription_progress').update({ 
             monthly_cuts_limit: correctLimit,
-            weekly_credits_available: pkg?.weekly_credits || Math.max(1, Math.ceil(correctLimit / 4))
+            weekly_credits_available: getEffectiveWeeklyLimit({
+              weekly_credits_limit: (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit,
+              monthly_cuts_limit: correctLimit,
+              package: pkg,
+            })
           }).eq('id', sub.id).then();
         }
         
@@ -355,7 +371,7 @@ const VIPPackagesManager = () => {
       
       if (!currentActive) {
         // Reactivating: update subscription_start_date to today (new 30-day window)
-        const weeklyCredits = sub?.package?.weekly_credits || (sub ? Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4)) : 1);
+        const weeklyCredits = sub ? getEffectiveWeeklyLimit(sub) : 1;
         updateData.subscription_start_date = todayStr;
         updateData.usage_reset_date = null;
         updateData.cuts_used_this_month = 0;
@@ -413,9 +429,18 @@ const VIPPackagesManager = () => {
     }
   };
 
-  const resetWeeklyCredits = async (subId: string, monthlyLimit: number, subPackage?: { weekly_credits?: number | null }) => {
-    const weeklyCredits = subPackage?.weekly_credits || Math.ceil(monthlyLimit / 4);
-    const today = new Date().toISOString().split('T')[0];
+  const resetWeeklyCredits = async (
+    subId: string,
+    monthlyLimit: number,
+    subPackage?: { weekly_credits?: number | null } | null,
+    customWeeklyLimit?: number | null
+  ) => {
+    const weeklyCredits = getEffectiveWeeklyLimit({
+      weekly_credits_limit: customWeeklyLimit,
+      monthly_cuts_limit: monthlyLimit,
+      package: subPackage,
+    });
+    const today = format(new Date(), "yyyy-MM-dd");
     
     try {
       const { error } = await supabase
@@ -434,6 +459,53 @@ const VIPPackagesManager = () => {
     } catch (error) {
       console.error("Error resetting credits:", error);
       toast.error("Erro ao resetar créditos");
+    }
+  };
+
+  /** Adjusts the weekly booking/credit limit for a single subscriber without altering the shared package. */
+  const updateSubscriberWeeklyLimit = async (sub: SubscriberWithUsage, change: number) => {
+    const currentLimit = getEffectiveWeeklyLimit(sub);
+    const maxAllowed = Math.max(1, sub.monthly_cuts_limit || 4);
+    const newLimit = Math.min(maxAllowed, Math.max(1, currentLimit + change));
+    if (newLimit === currentLimit) return;
+
+    const packageDefault = sub.package?.weekly_credits && sub.package.weekly_credits > 0
+      ? sub.package.weekly_credits
+      : Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4));
+    const storedOverride = newLimit === packageDefault ? null : newLimit;
+    const newAvailable = Math.min(newLimit, Math.max(0, (sub.weekly_credits_available ?? 0) + change));
+
+    try {
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({
+          weekly_credits_limit: storedOverride,
+          weekly_credits_available: newAvailable,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", sub.id);
+
+      if (error) throw error;
+
+      setSubscribers(prev =>
+        prev.map(s =>
+          s.id === sub.id
+            ? { ...s, weekly_credits_limit: storedOverride, weekly_credits_available: newAvailable }
+            : s
+        )
+      );
+      toast.success(`Limite semanal atualizado para ${newLimit}x/semana`);
+    } catch (error: unknown) {
+      console.error("Error updating weekly limit:", error);
+      const errObj = error as { message?: string; code?: string } | null;
+      const message = String(errObj?.message || "");
+      if (message.includes("weekly_credits_limit") || errObj?.code === "42703" || errObj?.code === "PGRST204") {
+        toast.error("Aplique a migration no Supabase para salvar limite individual por cliente", {
+          description: "Ou edite 'Créditos por semana' na aba Pacotes.",
+        });
+      } else {
+        toast.error("Erro ao atualizar limite semanal");
+      }
     }
   };
 
@@ -557,7 +629,11 @@ const VIPPackagesManager = () => {
       const newMonthlyLimit = pkgItems.length > 0
         ? Math.max(...pkgItems.map(i => i.quantity || 0))
         : sub.monthly_cuts_limit;
-      const weeklyCredits = sub.package.weekly_credits || Math.max(1, Math.ceil(newMonthlyLimit / 4));
+      const weeklyCredits = getEffectiveWeeklyLimit({
+        weekly_credits_limit: sub.weekly_credits_limit,
+        monthly_cuts_limit: newMonthlyLimit,
+        package: sub.package,
+      });
 
       // 1. Register confirmed payment immediately
       const { error: paymentError } = await supabase.from("package_payments").insert({
@@ -677,7 +753,16 @@ const VIPPackagesManager = () => {
         const orderPkgItems = order.package_id ? packageItems.filter(i => i.package_id === order.package_id) : [];
         const itemsTotalQty = orderPkgItems.length > 0 ? Math.max(...orderPkgItems.map(it => it.quantity || 0)) : 0;
         const newMonthlyLimit = itemsTotalQty > 0 ? itemsTotalQty : sub.monthly_cuts_limit;
-        const weeklyCredits = Math.max(1, Math.ceil(newMonthlyLimit / 4));
+        const orderPkg = order.package_id ? packages.find(p => p.id === order.package_id) : null;
+        const previousCustomLimit = (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit;
+        const keptCustomLimit = (!order.package_id || order.package_id === sub.package_id)
+          ? previousCustomLimit
+          : null;
+        const weeklyCredits = getEffectiveWeeklyLimit({
+          weekly_credits_limit: keptCustomLimit,
+          monthly_cuts_limit: newMonthlyLimit,
+          package: orderPkg,
+        });
 
         // Calcular consecutive_months com regra de tolerância
         if (!isRenewal) {
@@ -708,26 +793,47 @@ const VIPPackagesManager = () => {
           }
         }
 
+        const updatePayload: {
+          is_active: boolean;
+          package_id: string | null;
+          monthly_cuts_limit: number;
+          subscription_start_date: string;
+          usage_reset_date: string | null;
+          cuts_used_this_month: number;
+          credits_expired_this_month: number;
+          expired_weeks_this_period: number;
+          current_month_start: null;
+          weekly_credits_available: number;
+          current_week_start: null;
+          last_payment_date: string;
+          consecutive_months: number;
+          updated_at: string;
+          weekly_credits_limit?: number | null;
+        } = {
+          is_active: true,
+          package_id: order.package_id ?? sub.package_id,
+          monthly_cuts_limit: newMonthlyLimit,
+          subscription_start_date: todayStr,
+          // For renewals: use exact timestamp so pre-renewal same-day appointments are excluded.
+          // For first activations: null means "not started yet" (awaiting first appointment).
+          usage_reset_date: isRenewal ? nowTimestamp : null,
+          cuts_used_this_month: 0,
+          credits_expired_this_month: 0,
+          expired_weeks_this_period: 0,
+          current_month_start: null,
+          weekly_credits_available: weeklyCredits,
+          current_week_start: null,
+          last_payment_date: todayStr,
+          consecutive_months: computedNewMonths,
+          updated_at: nowTimestamp,
+        };
+        if (keptCustomLimit === null && previousCustomLimit != null) {
+          updatePayload.weekly_credits_limit = null;
+        }
+
         await supabase
           .from("subscription_progress")
-          .update({
-            is_active: true,
-            package_id: order.package_id ?? sub.package_id,
-            monthly_cuts_limit: newMonthlyLimit,
-            subscription_start_date: todayStr,
-            // For renewals: use exact timestamp so pre-renewal same-day appointments are excluded.
-            // For first activations: null means "not started yet" (awaiting first appointment).
-            usage_reset_date: isRenewal ? nowTimestamp : null,
-            cuts_used_this_month: 0,
-            credits_expired_this_month: 0,
-            expired_weeks_this_period: 0,
-            current_month_start: null,
-            weekly_credits_available: weeklyCredits,
-            current_week_start: null,
-            last_payment_date: todayStr,
-            consecutive_months: computedNewMonths,
-            updated_at: nowTimestamp,
-          } as any)
+          .update(updatePayload)
           .eq("id", sub.id);
       }
 
@@ -1491,17 +1597,50 @@ const VIPPackagesManager = () => {
                         </div>
                       </div>
                       
-                      {/* Weekly Credits Display */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
-                          sub.weekly_credits_available > 0 
-                            ? "bg-green-500/20 text-green-500 border border-green-500/30" 
-                            : "bg-amber-500/20 text-amber-500 border border-amber-500/30"
-                        }`}>
-                          <Calendar className="w-3 h-3" />
-                          {sub.weekly_credits_available}/{Math.max(1, Math.ceil(sub.monthly_cuts_limit / 4))} créditos/semana
-                        </div>
-                      </div>
+                      {/* Weekly Credits Display + Per-Subscriber Override */}
+                      {(() => {
+                        const effectiveWeeklyLimit = getEffectiveWeeklyLimit(sub);
+                        const isCustomLimit = Boolean(sub.weekly_credits_limit && sub.weekly_credits_limit > 0);
+                        return (
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${
+                              sub.weekly_credits_available > 0 
+                                ? "bg-green-500/20 text-green-500 border border-green-500/30" 
+                                : "bg-amber-500/20 text-amber-500 border border-amber-500/30"
+                            }`}>
+                              <Calendar className="w-3 h-3" />
+                              {sub.weekly_credits_available}/{effectiveWeeklyLimit} créditos/semana
+                              {isCustomLimit && (
+                                <span className="text-[10px] opacity-80">(personalizado)</span>
+                              )}
+                            </div>
+                            <div
+                              className="flex items-center gap-1 bg-muted/40 border border-border rounded-md overflow-hidden"
+                              title="Ajustar limite de créditos por semana apenas para este cliente"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => updateSubscriberWeeklyLimit(sub, -1)}
+                                disabled={effectiveWeeklyLimit <= 1}
+                                className="px-1.5 py-1 hover:bg-muted transition-colors disabled:opacity-40"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="px-1.5 text-[11px] font-medium text-muted-foreground">
+                                Limite: {effectiveWeeklyLimit}/sem
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateSubscriberWeeklyLimit(sub, 1)}
+                                disabled={effectiveWeeklyLimit >= Math.max(1, sub.monthly_cuts_limit || 4)}
+                                className="px-1.5 py-1 hover:bg-muted transition-colors disabled:opacity-40"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex flex-col items-end gap-3">
@@ -1527,7 +1666,7 @@ const VIPPackagesManager = () => {
                           size="sm" 
                           variant="outline"
                           className="gap-1 text-xs"
-                          onClick={() => resetWeeklyCredits(sub.id, sub.monthly_cuts_limit)}
+                          onClick={() => resetWeeklyCredits(sub.id, sub.monthly_cuts_limit, sub.package, sub.weekly_credits_limit)}
                         >
                           <RefreshCw className="w-3 h-3" />
                           Resetar Créditos

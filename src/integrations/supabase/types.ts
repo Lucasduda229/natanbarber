@@ -1150,6 +1150,7 @@ export type Database = {
           usage_reset_date: string | null
           user_id: string
           weekly_credits_available: number | null
+          weekly_credits_limit: number | null
         }
         Insert: {
           consecutive_months?: number
@@ -1172,6 +1173,7 @@ export type Database = {
           usage_reset_date?: string | null
           user_id: string
           weekly_credits_available?: number | null
+          weekly_credits_limit?: number | null
         }
         Update: {
           consecutive_months?: number
@@ -1194,6 +1196,7 @@ export type Database = {
           usage_reset_date?: string | null
           user_id?: string
           weekly_credits_available?: number | null
+          weekly_credits_limit?: number | null
         }
         Relationships: [
           {

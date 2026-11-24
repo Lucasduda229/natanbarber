@@ -372,10 +372,10 @@ const PackageEditor = ({ packageToEdit, existingItems = [], onClose, onSave }: P
         )}
 
         {/* Weekly credits info */}
-        {totalCuts > 0 && (
+        {(totalCuts > 0 || (packageData.weekly_credits && packageData.weekly_credits > 0)) && (
           <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-sm">
             <p className="text-primary font-medium">
-              📊 Créditos Semanais: {weeklyCredits} por semana ({totalCuts} cortes total)
+              📊 Créditos Semanais: {weeklyCredits} por semana{totalCuts > 0 ? ` (${totalCuts} cortes total)` : ""}
             </p>
           </div>
         )}

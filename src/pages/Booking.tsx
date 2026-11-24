@@ -156,7 +156,7 @@ const Booking = () => {
     monthly_cuts_limit: number;
     cuts_used_this_month: number;
     weekly_credits_available: number;
-    // Máximo de agendamentos permitidos na mesma semana (packages.weekly_credits, padrão 1)
+    // Máximo de agendamentos permitidos na mesma semana (subscription_progress.weekly_credits_limit -> packages.weekly_credits -> padrão 1)
     weekly_booking_limit: number;
     subscription_start_date: Date;
     subscription_end_date: Date;
@@ -171,7 +171,8 @@ const Booking = () => {
   const [renewalSuccess, setRenewalSuccess] = useState(false);
   const [subscriptionPackageItems, setSubscriptionPackageItems] = useState<PackageItem[]>([]);
   const [usingSubscription, setUsingSubscription] = useState(false);
-  const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates that have subscription bookings
+  const [subscriptionBookedWeeks, setSubscriptionBookedWeeks] = useState<Date[]>([]); // Dates of subscription bookings (1 entry per booking)
+  const [earliestCycleCreatedAt, setEarliestCycleCreatedAt] = useState<string | null>(null);
   
   // Track usage per service for the current month
   const [serviceUsageThisMonth, setServiceUsageThisMonth] = useState<Record<string, number>>({});
@@ -447,7 +448,7 @@ const Booking = () => {
 
     const { data: subscription } = await supabase
       .from("subscription_progress")
-      .select("id, package_id, package_name, monthly_cuts_limit, cuts_used_this_month, current_month_start, weekly_credits_available, subscription_start_date, usage_reset_date")
+      .select("*")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
@@ -501,9 +502,10 @@ const Booking = () => {
         cutsUsed = 0;
       }
 
-      // Limite de agendamentos por semana vem do pacote (créditos por semana).
-      // Se não configurado, mantém a regra padrão de 1 agendamento por semana.
-      let weeklyBookingLimit = 1;
+      // Limite de agendamentos por semana: primeiro verifica ajuste individual na assinatura,
+      // depois o campo weekly_credits do pacote; se não configurado, mantém 1 agendamento por semana.
+      const customWeeklyLimit = (subscription as { weekly_credits_limit?: number | null }).weekly_credits_limit;
+      let packageWeeklyLimit: number | null = null;
       if (subscription.package_id) {
         const { data: pkgWeekly } = await supabase
           .from("packages")
@@ -511,9 +513,12 @@ const Booking = () => {
           .eq("id", subscription.package_id)
           .maybeSingle();
         if (pkgWeekly?.weekly_credits && pkgWeekly.weekly_credits > 0) {
-          weeklyBookingLimit = pkgWeekly.weekly_credits;
+          packageWeeklyLimit = pkgWeekly.weekly_credits;
         }
       }
+      const weeklyBookingLimit = (customWeeklyLimit && customWeeklyLimit > 0)
+        ? customWeeklyLimit
+        : (packageWeeklyLimit ?? 1);
 
       setActiveSubscription({
         id: subscription.id,
@@ -526,6 +531,7 @@ const Booking = () => {
         weekly_booking_limit: weeklyBookingLimit,
         subscription_start_date: startDate,
         subscription_end_date: endDate,
+        usage_reset_date: subscription.usage_reset_date,
         has_started: hasStarted,
       });
 
@@ -670,11 +676,12 @@ const Booking = () => {
 
   // Fetch user's subscription bookings
   // Track usage per service for the CURRENT subscription period (based on subscription_start_date)
-  // Also track weekly bookings for ONE-BOOKING-PER-WEEK rule
+  // Also track weekly bookings against the weekly booking limit (supports multiple bookings in same week/day)
   const fetchSubscriptionBookings = async () => {
     if (!user) {
       setSubscriptionBookedWeeks([]);
       setServiceUsageThisMonth({});
+      setEarliestCycleCreatedAt(null);
       return;
     }
 
@@ -689,7 +696,6 @@ const Booking = () => {
     const subscriptionStart = subscription?.subscription_start_date 
       ? parseISO(subscription.subscription_start_date) 
       : startOfMonth(new Date());
-    const subscriptionEnd = addDays(subscriptionStart, 30);
     
     // Usage reset date is used to filter out appointments from previous periods
     // This is updated when admin renews the subscription
@@ -698,14 +704,16 @@ const Booking = () => {
       : subscriptionStart;
 
     // Fetch appointments with their services - from subscription start date
-    // Also fetch created_at to compare with usage_reset_date
+    // Also fetch created_at and notes to compare with usage_reset_date and group manual multi-service batches
     const { data: appointments } = await supabase
       .from("appointments")
       .select(`
         id,
         appointment_date,
+        appointment_time,
         service_id,
         created_at,
+        notes,
         appointment_services (service_id)
       `)
       .eq("user_id", user.id)
@@ -720,19 +728,28 @@ const Booking = () => {
         return createdAt >= usageResetDate;
       });
 
-      // All booked dates for weekly tracking (one entry per booking DAY).
-      // IMPORTANT: Deduplicate by day so multiple services in the same booking
-      // don't count as multiple bookings. The weekly limit (packages.weekly_credits)
-      // is checked by counting how many booking days fall in the same week.
-      const allBookedDates = validAppointments.map(apt => parseISO(apt.appointment_date));
-      const uniqueBookingDates: Date[] = [];
-      for (const date of allBookedDates) {
-        const key = format(date, "yyyy-MM-dd");
-        if (!uniqueBookingDates.some(d => format(d, "yyyy-MM-dd") === key)) {
-          uniqueBookingDates.push(date);
+      const earliestValid = validAppointments.reduce<string | null>((earliest, apt) => {
+        if (!apt.created_at) return earliest;
+        if (!earliest) return apt.created_at;
+        return new Date(apt.created_at).getTime() < new Date(earliest).getTime() ? apt.created_at : earliest;
+      }, null);
+      setEarliestCycleCreatedAt(earliestValid);
+
+      // Count 1 booking per appointment so 2 separate appointments on the same day use 2 weekly credits,
+      // while grouping multi-service manual entries created together via admin "Registrar Uso".
+      const bookingDates: Date[] = [];
+      const manualBatchKeys = new Set<string>();
+      for (const apt of validAppointments) {
+        const isManualBatch = typeof apt.notes === "string" && apt.notes.startsWith("Uso manual de assinatura");
+        if (isManualBatch) {
+          const minuteBucket = Math.floor(new Date(apt.created_at).getTime() / 60000);
+          const batchKey = `${apt.appointment_date}:${minuteBucket}`;
+          if (manualBatchKeys.has(batchKey)) continue;
+          manualBatchKeys.add(batchKey);
         }
+        bookingDates.push(parseISO(apt.appointment_date));
       }
-      setSubscriptionBookedWeeks(uniqueBookingDates);
+      setSubscriptionBookedWeeks(bookingDates);
       
       // Count ACTUAL per-service usage from appointments
       // Each service is tracked individually, so packages with different quantities
@@ -758,6 +775,7 @@ const Booking = () => {
     } else {
       setSubscriptionBookedWeeks([]);
       setServiceUsageThisMonth({});
+      setEarliestCycleCreatedAt(null);
     }
   };
 
@@ -1039,6 +1057,70 @@ const Booking = () => {
     await handleConfirmBookingWithPayment(paymentMethod);
   };
 
+  const validateSubscriptionForBooking = (targetDate: Date): boolean => {
+    if (!usingSubscription || !activeSubscription) return true;
+
+    const subStart = startOfDay(activeSubscription.subscription_start_date);
+    const subEnd = endOfDay(activeSubscription.subscription_end_date);
+    const isWithinSubscriptionPeriod =
+      (isAfter(targetDate, subStart) || isEqual(targetDate, subStart)) &&
+      (isBefore(targetDate, subEnd) || isEqual(targetDate, subEnd));
+
+    if (!isWithinSubscriptionPeriod) {
+      const startFormatted = format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR });
+      const endFormatted = format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR });
+      toast.error("Data fora do período da assinatura", {
+        description: `Sua assinatura é válida de ${startFormatted} até ${endFormatted}.`
+      });
+      return false;
+    }
+
+    if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
+      toast.error("Limite de agendamentos atingido", {
+        description: `Você já agendou ${activeSubscription.monthly_cuts_limit} vezes este mês.`
+      });
+      return false;
+    }
+
+    if (isWeekBooked(targetDate)) {
+      toast.error("Limite semanal atingido", {
+        description: activeSubscription.weekly_booking_limit > 1
+          ? `Seu pacote permite ${activeSubscription.weekly_booking_limit} agendamentos por semana e você já usou todos nesta semana.`
+          : "Você já tem um agendamento nesta semana. Escolha uma data em outra semana."
+      });
+      return false;
+    }
+
+    // Verify intelligent expiration based on the selected date
+    const isFirstAppointment = !activeSubscription.has_started;
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const startMs = isFirstAppointment ? targetDate.getTime() : activeSubscription.subscription_start_date.getTime();
+    const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((targetDate.getTime() - startMs) / msPerWeek));
+
+    for (const service of selectedServices) {
+      const packageItem = subscriptionPackageItems.find(item =>
+        item.service_id === service.id ||
+        item.service_name.toLowerCase() === service.name.toLowerCase()
+      );
+
+      if (packageItem) {
+        const limit = packageItem.quantity;
+        const realUsed = serviceUsageThisMonth[service.id] || 0;
+        const expiredAmount = Math.floor((weeksElapsedAtSelectedDate * limit) / 4);
+        const serviceUsed = Math.min(limit, Math.max(realUsed, expiredAmount));
+
+        if (serviceUsed >= limit) {
+          toast.error(`Cota expirada para ${service.name}`, {
+            description: `O limite para esta data foi atingido (faltas passadas expiram créditos).`
+          });
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
   const handleConfirmBookingWithPayment = async (paymentMethod: "pix" | "cartao" | "reception") => {
     if (selectedServices.length === 0 || !selectedDate || !selectedTime) {
       toast.error("Dados incompletos", { description: "Selecione serviços, data e horário." });
@@ -1102,71 +1184,9 @@ const Booking = () => {
       return;
     }
 
-    if (usingSubscription && activeSubscription) {
-      const subStart = startOfDay(activeSubscription.subscription_start_date);
-      const subEnd = endOfDay(activeSubscription.subscription_end_date);
-      const isWithinSubscriptionPeriod = 
-        (isAfter(selectedDate, subStart) || isEqual(selectedDate, subStart)) &&
-        (isBefore(selectedDate, subEnd) || isEqual(selectedDate, subEnd));
-      
-      if (!isWithinSubscriptionPeriod) {
-        setLoading(false);
-        const startFormatted = format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR });
-        const endFormatted = format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR });
-        toast.error("Data fora do período da assinatura", { 
-          description: `Sua assinatura é válida de ${startFormatted} até ${endFormatted}.` 
-        });
-        return;
-      }
-      
-      if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
-        setLoading(false);
-        toast.error("Limite de agendamentos atingido", { 
-          description: `Você já agendou ${activeSubscription.monthly_cuts_limit} vezes este mês.` 
-        });
-        return;
-      }
-      
-      const isWeekAlreadyBooked = isWeekBooked(selectedDate);
-      
-      if (isWeekAlreadyBooked) {
-        setLoading(false);
-        toast.error("Limite semanal atingido", { 
-          description: activeSubscription.weekly_booking_limit > 1
-            ? `Seu pacote permite ${activeSubscription.weekly_booking_limit} agendamentos por semana e você já usou todos nesta semana.`
-            : "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
-        });
-        return;
-      }
-      
-      // Verify intelligent expiration based on the selected date
-      const isFirstAppointment = activeSubscription.usage_reset_date === null;
-      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-      // If it's the first appointment, the cycle starts on the selected date, so weeksElapsed is 0.
-      const startMs = isFirstAppointment ? selectedDate.getTime() : new Date(activeSubscription.subscription_start_date).getTime();
-      const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((selectedDate.getTime() - startMs) / msPerWeek));
-
-      for (const service of selectedServices) {
-        const packageItem = subscriptionPackageItems.find(item => 
-          item.service_id === service.id || 
-          item.service_name.toLowerCase() === service.name.toLowerCase()
-        );
-        
-        if (packageItem) {
-          const limit = packageItem.quantity;
-          const realUsed = serviceUsageThisMonth[service.id] || 0;
-          const expiredAmount = Math.floor((weeksElapsedAtSelectedDate * limit) / 4);
-          const serviceUsed = Math.min(limit, Math.max(realUsed, expiredAmount));
-          
-          if (serviceUsed >= limit) {
-            setLoading(false);
-            toast.error(`Cota expirada para ${service.name}`, { 
-              description: `O limite para esta data foi atingido (faltas passadas expiram créditos).` 
-            });
-            return;
-          }
-        }
-      }
+    if (!validateSubscriptionForBooking(selectedDate)) {
+      setLoading(false);
+      return;
     }
 
     const { data: appointment, error } = await supabase
@@ -1244,12 +1264,12 @@ const Booking = () => {
 
     if (usingSubscription && activeSubscription) {
       if (!activeSubscription.has_started) {
-        // First time using the subscription, let's start the cycle!
-        // The cycle starts TODAY (the day they are booking), not the appointment date
-        const todayStr = new Date().toISOString().split('T')[0];
-        
-        // We use the exact created_at of this appointment so it's included in usage counting
-        const resetDate = appointment.created_at || new Date().toISOString();
+        // First time starting the cycle from client booking; preserve any earlier appointments already in this unstarted cycle.
+        const newApptMs = new Date(appointment.created_at || new Date().toISOString()).getTime();
+        const earliestMs = earliestCycleCreatedAt ? new Date(earliestCycleCreatedAt).getTime() : newApptMs;
+        const cycleStartMs = Math.min(newApptMs, earliestMs);
+        const todayStr = format(new Date(cycleStartMs), "yyyy-MM-dd");
+        const resetDate = new Date(cycleStartMs - 1000).toISOString();
         
         const startError = await supabase
           .from("subscription_progress")
@@ -1268,7 +1288,9 @@ const Booking = () => {
           setActiveSubscription({
             ...activeSubscription,
             has_started: true,
-            subscription_start_date: parseISO(todayStr)
+            usage_reset_date: resetDate,
+            subscription_start_date: parseISO(todayStr),
+            subscription_end_date: addDays(parseISO(todayStr), 30),
           });
         }
       }
@@ -1360,77 +1382,9 @@ const Booking = () => {
       return;
     }
 
-    // If using subscription, verify rules
-    if (usingSubscription && activeSubscription) {
-      const today = new Date();
-      
-      // Rule 1: Subscription only valid within the subscription period (30 days from start date)
-      const subStart = startOfDay(activeSubscription.subscription_start_date);
-      const subEnd = endOfDay(activeSubscription.subscription_end_date);
-      const isWithinSubscriptionPeriod = 
-        (isAfter(selectedDate, subStart) || isEqual(selectedDate, subStart)) &&
-        (isBefore(selectedDate, subEnd) || isEqual(selectedDate, subEnd));
-      
-      if (!isWithinSubscriptionPeriod) {
-        setLoading(false);
-        const startFormatted = format(activeSubscription.subscription_start_date, "dd/MM", { locale: ptBR });
-        const endFormatted = format(activeSubscription.subscription_end_date, "dd/MM", { locale: ptBR });
-        toast.error("Data fora do período da assinatura", { 
-          description: `Sua assinatura é válida de ${startFormatted} até ${endFormatted}.` 
-        });
-        return;
-      }
-      
-      // Rule 2: Check if user reached monthly booking limit
-      if (subscriptionBookedWeeks.length >= activeSubscription.monthly_cuts_limit) {
-        setLoading(false);
-        toast.error("Limite de agendamentos atingido", { 
-          description: `Você já agendou ${activeSubscription.monthly_cuts_limit} vezes este mês.` 
-        });
-        return;
-      }
-      
-      // Rule 3: Check if user already has an appointment in this week
-      // Always check database for existing bookings in the selected week to prevent duplicates
-      const isWeekAlreadyBooked = isWeekBooked(selectedDate);
-      
-      if (isWeekAlreadyBooked) {
-        setLoading(false);
-        toast.error("Limite semanal atingido", { 
-          description: activeSubscription.weekly_booking_limit > 1
-            ? `Seu pacote permite ${activeSubscription.weekly_booking_limit} agendamentos por semana e você já usou todos nesta semana.`
-            : "Você já tem um agendamento nesta semana. Escolha uma data em outra semana." 
-        });
-        return;
-      }
-      
-      // Rule 4: Verify each selected service has available credits taking intelligent expiration into account
-      const isFirstAppointment = activeSubscription.usage_reset_date === null;
-      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-      const startMs = isFirstAppointment ? selectedDate.getTime() : activeSubscription.subscription_start_date.getTime();
-      const weeksElapsedAtSelectedDate = Math.max(0, Math.floor((selectedDate.getTime() - startMs) / msPerWeek));
-
-      for (const service of selectedServices) {
-        const packageItem = subscriptionPackageItems.find(item => 
-          item.service_id === service.id || 
-          item.service_name.toLowerCase() === service.name.toLowerCase()
-        );
-        
-        if (packageItem) {
-          const limit = packageItem.quantity;
-          const realUsed = serviceUsageThisMonth[service.id] || 0;
-          const expiredAmount = Math.floor((weeksElapsedAtSelectedDate * limit) / 4);
-          const serviceUsed = Math.min(limit, Math.max(realUsed, expiredAmount));
-          
-          if (serviceUsed >= limit) {
-            setLoading(false);
-            toast.error(`Cota expirada para ${service.name}`, { 
-              description: `O limite para esta data foi atingido (faltas passadas expiram créditos).` 
-            });
-            return;
-          }
-        }
-      }
+    if (!validateSubscriptionForBooking(selectedDate)) {
+      setLoading(false);
+      return;
     }
 
     // Criar o agendamento com o primeiro serviço (para compatibilidade)
@@ -1929,15 +1883,20 @@ const Booking = () => {
                       <p className="font-bold text-foreground flex items-center gap-2">
                         {activeSubscription.package_name}
                       </p>
-                      {!activeSubscription.has_started ? (
-                        <span className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-0.5 bg-amber-500/10 w-fit px-1.5 py-0.5 rounded">
-                          <Clock className="w-3 h-3" /> 1º agendamento pendente
+                      <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                        {!activeSubscription.has_started ? (
+                          <span className="text-[10px] text-amber-500 font-medium flex items-center gap-1 bg-amber-500/10 w-fit px-1.5 py-0.5 rounded">
+                            <Clock className="w-3 h-3" /> 1º agendamento pendente
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 bg-green-500/10 w-fit px-1.5 py-0.5 rounded">
+                            <Check className="w-3 h-3" /> Assinatura ativa
+                          </span>
+                        )}
+                        <span className="text-[10px] text-green-500 font-medium bg-green-500/10 w-fit px-1.5 py-0.5 rounded">
+                          {activeSubscription.weekly_booking_limit}x/semana
                         </span>
-                      ) : (
-                        <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 mt-0.5 bg-green-500/10 w-fit px-1.5 py-0.5 rounded">
-                          <Check className="w-3 h-3" /> Assinatura ativa
-                        </span>
-                      )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded-full">
                       <CalendarIcon className="w-3 h-3" />
@@ -1988,14 +1947,14 @@ const Booking = () => {
                     );
                   })()}
                   
-                  {/* Show booked weeks */}
+                  {/* Show booked dates in current cycle */}
                   {subscriptionBookedWeeks.length > 0 && (() => {
                     const trueLimit = subscriptionPackageItems.length > 0 
                       ? Math.max(...subscriptionPackageItems.map(i => i.quantity || 0)) 
                       : (activeSubscription.monthly_cuts_limit || 4);
                     return (
                     <div className="mb-3 p-2 bg-muted/30 rounded-lg">
-                      <p className="text-[10px] text-muted-foreground mb-1">Semanas agendadas ({subscriptionBookedWeeks.length}/{trueLimit}):</p>
+                      <p className="text-[10px] text-muted-foreground mb-1">Agendamentos no ciclo ({subscriptionBookedWeeks.length}/{trueLimit}):</p>
                       <div className="flex flex-wrap gap-1">
                         {subscriptionBookedWeeks.map((date, i) => (
                           <span key={i} className="text-xs bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
@@ -2257,7 +2216,7 @@ const Booking = () => {
                   {usingSubscription && subscriptionBookedWeeks.length > 0 && (
                     <p className="text-xs text-amber-500 flex items-center gap-1 mt-1">
                       <span className="w-3 h-3 rounded bg-amber-500/30 border border-amber-500/50"></span>
-                      Semanas com agendamento marcado
+                      Semanas com limite semanal atingido
                     </p>
                   )}
                 </CardHeader>

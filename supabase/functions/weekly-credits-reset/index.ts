@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     // Get all active subscriptions with package duration info
     const { data: subscriptions, error: fetchError } = await supabase
       .from('subscription_progress')
-      .select('id, user_id, monthly_cuts_limit, weekly_credits_available, cuts_used_this_month, credits_expired_this_month, current_week_start, subscription_start_date, package_id')
+      .select('*')
       .eq('is_active', true)
 
     if (fetchError) {
@@ -98,9 +98,12 @@ Deno.serve(async (req) => {
         // Calculate unused weekly credits that will expire
         const expiredCredits = sub.weekly_credits_available || 0
         
-        // Calculate new weekly credits (package weekly credits or 1/4 of monthly, rounded up)
+        // Calculate new weekly credits (per-subscriber override, package weekly credits, or 1/4 of monthly, rounded up)
+        const customWeeklyLimit = (sub as Record<string, unknown>).weekly_credits_limit
         const packageWeeklyCredits = (sub as any).packageWeeklyCredits
-        const weeklyCreditsPerWeek = packageWeeklyCredits || Math.ceil(sub.monthly_cuts_limit / 4)
+        const weeklyCreditsPerWeek = (typeof customWeeklyLimit === 'number' && customWeeklyLimit > 0)
+          ? customWeeklyLimit
+          : (packageWeeklyCredits || Math.ceil(sub.monthly_cuts_limit / 4))
         
         // Only count as an "expired week" (which consumes 1 of each benefit)
         // when the client made ZERO bookings during the week (full credits remained).
