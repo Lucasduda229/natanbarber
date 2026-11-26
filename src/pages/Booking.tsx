@@ -464,16 +464,38 @@ const Booking = () => {
       // Subscription is valid for 30 days from start date (can be adjusted per package)
       const endDate = addDays(startDate, 30);
 
-      // Always resolve authoritative package metadata from `packages` by package_id
-      // so client UI & renewal never drift from the real package in Admin.
-      let pkgDetails: { name?: string | null; price?: number | null; weekly_credits?: number | null } | null = null;
+      // Resolve authoritative package metadata from `packages`; if a legacy row has
+      // mismatched package_name vs package_id, honor the matching active package by name.
+      const findActivePackageByName = async (name: string) => {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, name, price, weekly_credits")
+          .eq("active", true)
+          .ilike("name", name.trim())
+          .maybeSingle();
+        return data;
+      };
+
+      let resolvedPackageId = subscription.package_id;
+      let pkgDetails: { id?: string; name?: string | null; price?: number | null; weekly_credits?: number | null } | null = null;
       if (subscription.package_id) {
         const { data: pkgData } = await supabase
           .from("packages")
-          .select("name, price, weekly_credits")
+          .select("id, name, price, weekly_credits")
           .eq("id", subscription.package_id)
           .maybeSingle();
         pkgDetails = pkgData;
+      }
+      if (
+        subscription.package_name &&
+        pkgDetails?.name &&
+        subscription.package_name.trim().toLowerCase() !== pkgDetails.name.trim().toLowerCase()
+      ) {
+        const pkgByName = await findActivePackageByName(subscription.package_name);
+        if (pkgByName) {
+          pkgDetails = pkgByName;
+          resolvedPackageId = pkgByName.id;
+        }
       }
       const authoritativePackageName = pkgDetails?.name || subscription.package_name || "Assinatura";
       
@@ -487,7 +509,7 @@ const Booking = () => {
 
         setExpiredSubscriptionDetails({
           id: subscription.id,
-          package_id: subscription.package_id || "",
+          package_id: resolvedPackageId || "",
           package_name: authoritativePackageName,
           price: pkgDetails?.price || 0,
         });
@@ -516,7 +538,7 @@ const Booking = () => {
 
       setActiveSubscription({
         id: subscription.id,
-        package_id: subscription.package_id,
+        package_id: resolvedPackageId,
         package_name: authoritativePackageName,
         monthly_cuts_limit: subscription.monthly_cuts_limit,
         cuts_used_this_month: cutsUsed,
@@ -530,12 +552,12 @@ const Booking = () => {
       });
 
       // Fetch package items AND benefits for this subscription's package
-      if (subscription.package_id) {
+      if (resolvedPackageId) {
         // Fetch package_items
         const { data: packageItems } = await supabase
           .from("package_items")
           .select("id, service_name, service_id, quantity")
-          .eq("package_id", subscription.package_id);
+          .eq("package_id", resolvedPackageId);
 
         // Fetch package_benefits (extras like Sobrancelha)
         const { data: packageBenefits } = await supabase
@@ -546,7 +568,7 @@ const Booking = () => {
             quantity,
             services (name)
           `)
-          .eq("package_id", subscription.package_id);
+          .eq("package_id", resolvedPackageId);
 
         // Combine package_items and package_benefits
         const allItems: PackageItem[] = [];
@@ -607,6 +629,7 @@ const Booking = () => {
       if (inactiveSub) {
         // Tenta pegar nome e preço do join, mas faz fallback buscando diretamente
         const joinedPkg = inactiveSub.packages as { name?: string | null; price?: number | null } | null;
+        let resolvedPkgId = inactiveSub.package_id || "";
         let packagePrice = joinedPkg?.price || 0;
         let packageName = joinedPkg?.name || "";
         if ((!packagePrice || !packageName) && inactiveSub.package_id) {
@@ -620,9 +643,26 @@ const Booking = () => {
             if (!packageName) packageName = pkgData.name || "";
           }
         }
+        if (
+          inactiveSub.package_name &&
+          packageName &&
+          inactiveSub.package_name.trim().toLowerCase() !== packageName.trim().toLowerCase()
+        ) {
+          const { data: pkgByName } = await supabase
+            .from("packages")
+            .select("id, name, price")
+            .eq("active", true)
+            .ilike("name", inactiveSub.package_name.trim())
+            .maybeSingle();
+          if (pkgByName) {
+            resolvedPkgId = pkgByName.id;
+            packageName = pkgByName.name;
+            packagePrice = pkgByName.price || packagePrice;
+          }
+        }
         setExpiredSubscriptionDetails({
           id: inactiveSub.id,
-          package_id: inactiveSub.package_id || "",
+          package_id: resolvedPkgId,
           package_name: packageName || inactiveSub.package_name || "",
           price: packagePrice,
         });

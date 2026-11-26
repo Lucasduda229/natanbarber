@@ -227,17 +227,37 @@ const VIPPackagesManager = () => {
       // Map only real subscribers with a linked package, whether active or inactive
       const subscribersWithData = (subsResult.data || []).filter(sub => sub.package_id != null).map(sub => {
         const profile = profilesResult.data?.find(p => p.user_id === sub.user_id);
-        const pkg = packagesResult.data?.find(p => p.id === sub.package_id);
+        let pkg = packagesResult.data?.find(p => p.id === sub.package_id);
+
+        // AUTO FIX when subscription_progress.package_id and package_name diverged
+        // (e.g. client shows "Pacote Ouro 2" while package_id pointed to "Pacote Bronze 1").
+        const pendingHealFields: Record<string, unknown> = {};
+        if (sub.package_name && pkg && sub.package_name.trim().toLowerCase() !== pkg.name.trim().toLowerCase()) {
+          const pkgByName = packagesResult.data?.find(
+            p => p.name.trim().toLowerCase() === sub.package_name!.trim().toLowerCase()
+          );
+          if (pkgByName) {
+            pkg = pkgByName;
+            sub.package_id = pkgByName.id;
+            sub.package_name = pkgByName.name;
+            pendingHealFields.package_id = pkgByName.id;
+            pendingHealFields.package_name = pkgByName.name;
+          } else {
+            sub.package_name = pkg.name;
+            pendingHealFields.package_name = pkg.name;
+          }
+        }
         
         // Get all benefits for this package (from package_items + package_benefits)
         const pkgItems = (itemsResult.data || []).filter(i => i.package_id === sub.package_id);
         const pkgBenefits = processedBenefits.filter(b => b.package_id === sub.package_id);
         
-        // AUTO FIX for legacy subscriptions with incorrect monthly_cuts_limit (sum vs max)
+        // AUTO FIX for legacy subscriptions with incorrect monthly_cuts_limit (sum vs max) or healed package
         const correctLimit = pkgItems.length > 0 ? Math.max(...pkgItems.map(i => i.quantity || 0)) : 4;
-        if (sub.monthly_cuts_limit !== correctLimit) {
+        if (sub.monthly_cuts_limit !== correctLimit || Object.keys(pendingHealFields).length > 0) {
           sub.monthly_cuts_limit = correctLimit;
-          supabase.from('subscription_progress').update({ 
+          supabase.from('subscription_progress').update({
+            ...pendingHealFields,
             monthly_cuts_limit: correctLimit,
             weekly_credits_available: getEffectiveWeeklyLimit({
               weekly_credits_limit: (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit,
