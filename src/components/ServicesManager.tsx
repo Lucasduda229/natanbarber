@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Scissors, Plus, Pencil, Trash2, Clock, DollarSign, Crown, Save, X } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -146,6 +147,35 @@ export const ServicesManager = () => {
           .eq("id", editingService.id);
 
         if (error) throw error;
+
+        if (Number(editingService.price) !== serviceData.price) {
+          const todayStr = format(new Date(), "yyyy-MM-dd");
+          await supabase
+            .from("appointments")
+            .update({ price: serviceData.price })
+            .eq("service_id", editingService.id)
+            .in("status", ["pending", "confirmed"])
+            .eq("payment_status", "pending")
+            .or("payment_method.eq.reception,payment_method.is.null")
+            .gte("appointment_date", todayStr);
+
+          const { data: futureReceptionAppts } = await supabase
+            .from("appointments")
+            .select("id")
+            .in("status", ["pending", "confirmed"])
+            .eq("payment_status", "pending")
+            .or("payment_method.eq.reception,payment_method.is.null")
+            .gte("appointment_date", todayStr);
+
+          if (futureReceptionAppts && futureReceptionAppts.length > 0) {
+            await supabase
+              .from("appointment_services")
+              .update({ price: serviceData.price })
+              .eq("service_id", editingService.id)
+              .in("appointment_id", futureReceptionAppts.map((a) => a.id));
+          }
+        }
+
         toast.success("Serviço atualizado com sucesso!");
       } else {
         const { error } = await supabase.from("services").insert(serviceData);

@@ -53,6 +53,13 @@ interface AppointmentService {
   price: number;
 }
 
+interface PendingCatalogSync {
+  appointmentId: string;
+  newPrimaryPrice?: number;
+  serviceUpdates: { id: string; price: number }[];
+  catalogServicesTotal: number;
+}
+
 interface Appointment {
   id: string;
   user_id: string;
@@ -65,6 +72,7 @@ interface Appointment {
   updated_at?: string;
   used_referral_redemption_id?: string | null;
   used_store_redemption_id?: string | null;
+  pendingCatalogSync?: PendingCatalogSync | null;
   profiles: {
     full_name: string | null;
     phone: string | null;
@@ -370,6 +378,7 @@ const Admin = () => {
   };
 
   const appointmentsRef = useRef<Appointment[]>([]);
+  const autoSyncedPriceIdsRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     appointmentsRef.current = appointments;
   }, [appointments]);
@@ -523,6 +532,17 @@ const Admin = () => {
         },
         (payload) => {
           console.log('📡 Realtime event received:', payload.eventType);
+
+          if (payload.eventType === 'UPDATE') {
+            const newRecord = payload.new as { id?: string; status?: string };
+            const syncedAt = newRecord?.id ? autoSyncedPriceIdsRef.current.get(newRecord.id) : undefined;
+            const existing = appointmentsRef.current.find(a => a.id === newRecord.id);
+            if (syncedAt && Date.now() - syncedAt < 8000 && (!existing || existing.status === newRecord.status)) {
+              autoSyncedPriceIdsRef.current.delete(newRecord.id);
+              return;
+            }
+          }
+
           setLastUpdate(new Date());
           fetchData(true, true); // skip auto-complete on realtime updates
           
@@ -787,7 +807,9 @@ const Admin = () => {
           supabase
             .from("appointment_services")
             .select(`
+              id,
               appointment_id,
+              service_id,
               price,
               services (
                 name,
@@ -802,14 +824,22 @@ const Admin = () => {
     const allProfiles = profilesResults.flatMap(r => r.data || []);
     const allAppointmentServices = appointmentServicesResults.flatMap(r => r.data || []);
 
-    const additionalServicesMap = new Map<string, AppointmentService[]>();
+    const additionalServicesMap = new Map<
+      string,
+      { id: string; name: string; price: number; catalogPrice: number }[]
+    >();
     allAppointmentServices.forEach(as => {
       const existing = additionalServicesMap.get(as.appointment_id) || [];
-      if (as.services) {
+      const linkedService = as.services as { name: string; price: number } | null;
+      if (linkedService) {
+        const catalogPrice = Number(linkedService.price ?? 0);
+        const storedPrice = as.price;
         existing.push({
-          name: (as.services as any).name,
+          id: as.id,
+          name: linkedService.name,
           // Preço congelado no momento do agendamento (fallback: preço atual)
-          price: (as as any).price ?? (as.services as any).price
+          price: storedPrice !== null && storedPrice !== undefined ? Number(storedPrice) : catalogPrice,
+          catalogPrice,
         });
       }
       additionalServicesMap.set(as.appointment_id, existing);
@@ -820,28 +850,108 @@ const Admin = () => {
       allProfiles.map(p => [p.user_id, { full_name: p.full_name, phone: p.phone }])
     );
 
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const priceSyncPromises: PromiseLike<unknown>[] = [];
+
     // Combine appointments with profiles and all services (primary + additional)
     const appointmentsWithData = appointmentsData.map(appointment => {
-      const primaryService = appointment.services as any;
+      const primaryService = appointment.services as { name: string; price: number } | null;
       const additionalServices = additionalServicesMap.get(appointment.id) || [];
-      
+
+      const isActiveUnpaid =
+        (appointment.status === "pending" || appointment.status === "confirmed") &&
+        appointment.payment_status === "pending" &&
+        appointment.payment_method !== "subscription" &&
+        appointment.appointment_date >= todayStr;
+
+      const shouldAutoSyncCatalogPrice =
+        isActiveUnpaid &&
+        (appointment.payment_method === "reception" || !appointment.payment_method);
+
+      const primaryCatalogPrice = primaryService ? Number(primaryService.price ?? 0) : 0;
+      const rawPrimaryPrice = appointment.price;
+      const storedPrimaryPrice =
+        rawPrimaryPrice !== null && rawPrimaryPrice !== undefined
+          ? Number(rawPrimaryPrice)
+          : primaryCatalogPrice;
+
+      let effectivePrimaryPrice = storedPrimaryPrice;
+      const primaryNeedsSync =
+        Boolean(primaryService) &&
+        rawPrimaryPrice !== null &&
+        rawPrimaryPrice !== undefined &&
+        storedPrimaryPrice !== primaryCatalogPrice;
+
+      if (shouldAutoSyncCatalogPrice && primaryNeedsSync) {
+        effectivePrimaryPrice = primaryCatalogPrice;
+        autoSyncedPriceIdsRef.current.set(appointment.id, Date.now());
+        priceSyncPromises.push(
+          supabase
+            .from("appointments")
+            .update({ price: primaryCatalogPrice })
+            .eq("id", appointment.id)
+        );
+      }
+
       // Build full services array: primary service first, then additional
       const allServices: AppointmentService[] = [];
       if (primaryService && primaryService.name) {
         allServices.push({
           name: primaryService.name,
-          // Preço congelado no momento do agendamento (fallback: preço atual)
-          price: (appointment as any).price ?? primaryService.price ?? 0
+          price: effectivePrimaryPrice,
         });
       }
-      allServices.push(...additionalServices);
+
+      const pendingAdditionalUpdates: { id: string; price: number }[] = [];
+      let catalogServicesTotal = primaryService && primaryService.name ? primaryCatalogPrice : 0;
+
+      for (const extra of additionalServices) {
+        catalogServicesTotal += extra.catalogPrice;
+        let effectiveExtraPrice = extra.price;
+        if (extra.price !== extra.catalogPrice) {
+          if (shouldAutoSyncCatalogPrice && extra.id) {
+            effectiveExtraPrice = extra.catalogPrice;
+            priceSyncPromises.push(
+              supabase
+                .from("appointment_services")
+                .update({ price: extra.catalogPrice })
+                .eq("id", extra.id)
+            );
+          } else if (isActiveUnpaid && extra.id) {
+            pendingAdditionalUpdates.push({ id: extra.id, price: extra.catalogPrice });
+          }
+        }
+        allServices.push({
+          name: extra.name,
+          price: effectiveExtraPrice,
+        });
+      }
+
+      const hasPendingManualSync =
+        isActiveUnpaid &&
+        !shouldAutoSyncCatalogPrice &&
+        (primaryNeedsSync || pendingAdditionalUpdates.length > 0);
 
       return {
         ...appointment,
         profiles: profilesMap.get(appointment.user_id) || null,
         services: allServices,
+        pendingCatalogSync: hasPendingManualSync
+          ? {
+              appointmentId: appointment.id,
+              newPrimaryPrice: primaryNeedsSync ? primaryCatalogPrice : undefined,
+              serviceUpdates: pendingAdditionalUpdates,
+              catalogServicesTotal,
+            }
+          : null,
       };
     });
+
+    if (priceSyncPromises.length > 0) {
+      Promise.all(priceSyncPromises).catch(err =>
+        console.error("Error syncing active reception appointment prices:", err)
+      );
+    }
 
     // Sort: active appointments first (by date/time ascending), then completed/cancelled at the end
     const sortedAppointments = (appointmentsWithData as Appointment[]).sort((a, b) => {
@@ -1183,6 +1293,35 @@ const Admin = () => {
 
     toast.success("Pagamento atualizado");
     fetchData();
+  };
+
+  const syncAppointmentCatalogPrice = async (sync: PendingCatalogSync) => {
+    try {
+      const updates: PromiseLike<unknown>[] = [];
+      if (sync.newPrimaryPrice !== undefined) {
+        autoSyncedPriceIdsRef.current.set(sync.appointmentId, Date.now());
+        updates.push(
+          supabase
+            .from("appointments")
+            .update({ price: sync.newPrimaryPrice })
+            .eq("id", sync.appointmentId)
+        );
+      }
+      for (const item of sync.serviceUpdates) {
+        updates.push(
+          supabase
+            .from("appointment_services")
+            .update({ price: item.price })
+            .eq("id", item.id)
+        );
+      }
+      await Promise.all(updates);
+      toast.success("Valor atualizado para o preço atual da tabela!");
+      fetchData(true, true);
+    } catch (err) {
+      console.error("Error updating appointment price to catalog:", err);
+      toast.error("Erro ao atualizar valor do agendamento");
+    }
   };
 
   const deleteAppointment = async (id: string) => {
@@ -1990,7 +2129,19 @@ const Admin = () => {
                               }
                               const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id), appointment.appointment_time, appointment.appointment_date, extraFeeConfig);
                               return (
-                                <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                <span className="inline-flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                  {appointment.pendingCatalogSync && (
+                                    <button
+                                      type="button"
+                                      onClick={() => syncAppointmentCatalogPrice(appointment.pendingCatalogSync!)}
+                                      className="text-[10px] px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                                      title="O preço desse serviço foi alterado após o agendamento. Clique para atualizar."
+                                    >
+                                      Atualizar p/ tabela
+                                    </button>
+                                  )}
+                                </span>
                               );
                             })()}
                           </div>
@@ -2369,7 +2520,19 @@ const Admin = () => {
                                 }
                               const total = getServicesTotal(appointment.services, appointment.notes, !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id), appointment.appointment_time, appointment.appointment_date, extraFeeConfig);
                               return (
-                                <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                <span className="inline-flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
+                                  {appointment.pendingCatalogSync && (
+                                    <button
+                                      type="button"
+                                      onClick={() => syncAppointmentCatalogPrice(appointment.pendingCatalogSync!)}
+                                      className="text-[10px] px-1.5 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                                      title="O preço desse serviço foi alterado após o agendamento. Clique para atualizar."
+                                    >
+                                      Atualizar p/ tabela
+                                    </button>
+                                  )}
+                                </span>
                               );
                             })()}
                           </div>
