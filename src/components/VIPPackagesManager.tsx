@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { format, addDays } from "date-fns";
+import { format, addDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import PackageEditor from "./PackageEditor";
 
@@ -103,6 +103,14 @@ interface PaymentOrder {
   } | null;
 }
 
+/** Parses YYYY-MM-DD as local date (avoids UTC midnight shifting -1 day in BRT). */
+const parseDateSafe = (dateStr: string): Date => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return parseISO(dateStr);
+  }
+  return new Date(dateStr);
+};
+
 /** Resolves the weekly booking/credit limit: per-subscriber override > package setting > ceil(monthly/4). */
 const getEffectiveWeeklyLimit = (sub: {
   weekly_credits_limit?: number | null;
@@ -144,6 +152,11 @@ const VIPPackagesManager = () => {
   const [renewingSubscriber, setRenewingSubscriber] = useState<SubscriberWithUsage | null>(null);
   const [renewalPaymentMethod, setRenewalPaymentMethod] = useState<"pix" | "dinheiro" | "cartao">("pix");
   const [renewalLoading, setRenewalLoading] = useState(false);
+  // Change subscriber package modal state
+  const [showChangePackageModal, setShowChangePackageModal] = useState(false);
+  const [changingPackageSub, setChangingPackageSub] = useState<SubscriberWithUsage | null>(null);
+  const [newPackageIdForSub, setNewPackageIdForSub] = useState<string>("");
+  const [changingPackageLoading, setChangingPackageLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -553,7 +566,8 @@ const VIPPackagesManager = () => {
       if (error) throw error;
 
       // Register action in package_payments to keep the financial history accurate
-      if (sub.package_id && sub.package_name && sub.package?.price !== undefined) {
+      const effectivePkgName = sub.package?.name || sub.package_name;
+      if (sub.package_id && effectivePkgName && sub.package?.price !== undefined) {
         const amount = change > 0 ? sub.package.price : -(sub.package.price);
         const actionText = change > 0 ? "adicionado" : "removido";
         const absChange = Math.abs(change);
@@ -565,11 +579,11 @@ const VIPPackagesManager = () => {
         await supabase.from("package_payments").insert({
           user_id: sub.user_id,
           package_id: sub.package_id,
-          package_name: sub.package_name,
+          package_name: effectivePkgName,
           amount: amount,
           payment_method: "admin", 
           payment_status: "approved",
-          notes: `${absChange} mês ${actionText} pelo admin - ${sub.package_name} (R$ ${sub.package.price.toFixed(2)}) em ${dataFormatada} às ${horaFormatada}`
+          notes: `${absChange} mês ${actionText} pelo admin - ${effectivePkgName} (R$ ${sub.package.price.toFixed(2)}) em ${dataFormatada} às ${horaFormatada}`
         });
       }
 
@@ -602,9 +616,10 @@ const VIPPackagesManager = () => {
 
     const sub = renewingSubscriber;
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = format(today, "yyyy-MM-dd");
     // Use full timestamp so fetchSubscriptionBookings can filter out pre-renewal appointments
     const nowTimestamp = today.toISOString();
+    const authoritativePkgName = sub.package.name;
 
     const RENEWAL_TOLERANCE_DAYS = 3;
     let computedNewMonths = 1;
@@ -612,12 +627,10 @@ const VIPPackagesManager = () => {
     try {
       // Calculate consecutive months with tolerance rule
       const durationDays = sub.package.duration_days ?? 30;
-      const startDate = sub.subscription_start_date ? new Date(sub.subscription_start_date) : null;
+      const startDate = sub.subscription_start_date ? parseDateSafe(sub.subscription_start_date) : null;
       if (startDate) {
-        const expirationDate = new Date(startDate);
-        expirationDate.setDate(expirationDate.getDate() + durationDays);
-        const toleranceLimit = new Date(expirationDate);
-        toleranceLimit.setDate(toleranceLimit.getDate() + RENEWAL_TOLERANCE_DAYS);
+        const expirationDate = addDays(startDate, durationDays);
+        const toleranceLimit = addDays(expirationDate, RENEWAL_TOLERANCE_DAYS);
         computedNewMonths = today <= toleranceLimit
           ? (sub.consecutive_months || 0) + 1
           : 1;
@@ -639,7 +652,7 @@ const VIPPackagesManager = () => {
       const { error: paymentError } = await supabase.from("package_payments").insert({
         user_id: sub.user_id,
         package_id: sub.package_id,
-        package_name: sub.package_name || sub.package.name,
+        package_name: authoritativePkgName,
         amount: sub.package.price,
         payment_date: todayStr,
         payment_method: renewalPaymentMethod,
@@ -658,6 +671,7 @@ const VIPPackagesManager = () => {
         .update({
           is_active: true,
           package_id: sub.package_id,
+          package_name: authoritativePkgName,
           monthly_cuts_limit: newMonthlyLimit,
           subscription_start_date: todayStr,
           usage_reset_date: nowTimestamp,
@@ -670,7 +684,7 @@ const VIPPackagesManager = () => {
           last_payment_date: todayStr,
           consecutive_months: computedNewMonths,
           updated_at: nowTimestamp,
-        } as any)
+        })
         .eq("id", sub.id);
       if (subError) throw subError;
 
@@ -678,7 +692,7 @@ const VIPPackagesManager = () => {
       await supabase.from("notifications").insert({
         user_id: sub.user_id,
         title: "Assinatura Renovada! 🔄",
-        message: `Seu ${sub.package_name || sub.package.name} foi renovado com sucesso (Mês ${computedNewMonths}). Você já pode agendar usando seus benefícios!`,
+        message: `Seu ${authoritativePkgName} foi renovado com sucesso (Mês ${computedNewMonths}). Você já pode agendar usando seus benefícios!`,
         type: "subscription_activated",
       });
 
@@ -744,16 +758,18 @@ const VIPPackagesManager = () => {
       // Tolerância (em dias) após o vencimento para ainda contar como renovação consecutiva
       const RENEWAL_TOLERANCE_DAYS = 3;
       let computedNewMonths = 1;
+      const targetPkgId = order.package_id ?? sub?.package_id ?? null;
+      const targetPkg = targetPkgId ? packages.find(p => p.id === targetPkgId) : null;
+      const authoritativePkgName = targetPkg?.name || order.package_name || sub?.package_name || null;
 
       if (sub) {
         const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = format(today, "yyyy-MM-dd");
         const nowTimestamp = today.toISOString();
         // Use the package from the paid order (may differ from previous package on upgrade/downgrade)
-        const orderPkgItems = order.package_id ? packageItems.filter(i => i.package_id === order.package_id) : [];
+        const orderPkgItems = targetPkgId ? packageItems.filter(i => i.package_id === targetPkgId) : [];
         const itemsTotalQty = orderPkgItems.length > 0 ? Math.max(...orderPkgItems.map(it => it.quantity || 0)) : 0;
         const newMonthlyLimit = itemsTotalQty > 0 ? itemsTotalQty : sub.monthly_cuts_limit;
-        const orderPkg = order.package_id ? packages.find(p => p.id === order.package_id) : null;
         const previousCustomLimit = (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit;
         const keptCustomLimit = (!order.package_id || order.package_id === sub.package_id)
           ? previousCustomLimit
@@ -761,7 +777,7 @@ const VIPPackagesManager = () => {
         const weeklyCredits = getEffectiveWeeklyLimit({
           weekly_credits_limit: keptCustomLimit,
           monthly_cuts_limit: newMonthlyLimit,
-          package: orderPkg,
+          package: targetPkg,
         });
 
         // Calcular consecutive_months com regra de tolerância
@@ -770,16 +786,12 @@ const VIPPackagesManager = () => {
           computedNewMonths = sub.consecutive_months > 0 ? sub.consecutive_months : 1;
         } else {
           // Renovação: verificar se foi feita dentro do prazo + tolerância
-          const durationDays = order.package_id
-            ? (packages.find(p => p.id === order.package_id)?.duration_days ?? 30)
-            : 30;
-          const startDate = sub.subscription_start_date ? new Date(sub.subscription_start_date) : null;
+          const durationDays = targetPkg?.duration_days ?? 30;
+          const startDate = sub.subscription_start_date ? parseDateSafe(sub.subscription_start_date) : null;
 
           if (startDate) {
-            const expirationDate = new Date(startDate);
-            expirationDate.setDate(expirationDate.getDate() + durationDays);
-            const toleranceLimit = new Date(expirationDate);
-            toleranceLimit.setDate(toleranceLimit.getDate() + RENEWAL_TOLERANCE_DAYS);
+            const expirationDate = addDays(startDate, durationDays);
+            const toleranceLimit = addDays(expirationDate, RENEWAL_TOLERANCE_DAYS);
 
             if (today <= toleranceLimit) {
               // Renovou dentro do prazo + tolerância → soma +1
@@ -796,6 +808,7 @@ const VIPPackagesManager = () => {
         const updatePayload: {
           is_active: boolean;
           package_id: string | null;
+          package_name: string | null;
           monthly_cuts_limit: number;
           subscription_start_date: string;
           usage_reset_date: string | null;
@@ -811,7 +824,8 @@ const VIPPackagesManager = () => {
           weekly_credits_limit?: number | null;
         } = {
           is_active: true,
-          package_id: order.package_id ?? sub.package_id,
+          package_id: targetPkgId,
+          package_name: authoritativePkgName,
           monthly_cuts_limit: newMonthlyLimit,
           subscription_start_date: todayStr,
           // For renewals: use exact timestamp so pre-renewal same-day appointments are excluded.
@@ -842,7 +856,7 @@ const VIPPackagesManager = () => {
       await supabase.from("notifications").insert({
         user_id: order.user_id,
         title: isRenewal ? "Assinatura Renovada! 🔄" : "Assinatura Ativada! 🎉",
-        message: `Seu ${order.package_name} foi ${isRenewal ? 'renovado' : 'ativado'} com sucesso${monthInfo}. Você já pode agendar usando seus benefícios!`,
+        message: `Seu ${authoritativePkgName || order.package_name} foi ${isRenewal ? 'renovado' : 'ativado'} com sucesso${monthInfo}. Você já pode agendar usando seus benefícios!`,
         type: "subscription_activated",
       });
 
@@ -984,8 +998,60 @@ const VIPPackagesManager = () => {
     p => !subscribers.find(s => s.user_id === p.user_id)
   );
 
+  const openChangePackageModal = (subscriber: SubscriberWithUsage) => {
+    setChangingPackageSub(subscriber);
+    setNewPackageIdForSub(subscriber.package_id || packages[0]?.id || "");
+    setShowChangePackageModal(true);
+  };
+
+  const changeSubscriberPackage = async () => {
+    if (!changingPackageSub || !newPackageIdForSub) return;
+    const targetPkg = packages.find(p => p.id === newPackageIdForSub);
+    if (!targetPkg) {
+      toast.error("Pacote selecionado não encontrado");
+      return;
+    }
+
+    setChangingPackageLoading(true);
+    try {
+      const pkgItems = packageItems.filter(i => i.package_id === targetPkg.id);
+      const newMonthlyLimit = pkgItems.length > 0
+        ? Math.max(...pkgItems.map(i => i.quantity || 0))
+        : changingPackageSub.monthly_cuts_limit || 4;
+      const weeklyCredits = getEffectiveWeeklyLimit({
+        weekly_credits_limit: changingPackageSub.weekly_credits_limit,
+        monthly_cuts_limit: newMonthlyLimit,
+        package: targetPkg,
+      });
+
+      const { error } = await supabase
+        .from("subscription_progress")
+        .update({
+          package_id: targetPkg.id,
+          package_name: targetPkg.name,
+          monthly_cuts_limit: newMonthlyLimit,
+          weekly_credits_available: weeklyCredits,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", changingPackageSub.id);
+
+      if (error) throw error;
+
+      toast.success(`Pacote atualizado para ${targetPkg.name}`);
+      setShowChangePackageModal(false);
+      setChangingPackageSub(null);
+      setNewPackageIdForSub("");
+      fetchData();
+    } catch (error) {
+      console.error("Error changing subscriber package:", error);
+      toast.error("Erro ao trocar pacote do assinante");
+    } finally {
+      setChangingPackageLoading(false);
+    }
+  };
+
   const calculateEndDate = (startDate: string, durationDays: number | null) => {
-    const start = new Date(startDate);
+    const start = parseDateSafe(startDate);
     const end = addDays(start, durationDays || 30);
     return format(end, "dd/MM/yyyy", { locale: ptBR });
   };
@@ -1572,9 +1638,25 @@ const VIPPackagesManager = () => {
                       <p className="text-sm text-muted-foreground">
                         {sub.profile?.phone || "Sem telefone"}
                       </p>
-                      <p className="text-sm text-primary font-medium mt-1">
-                        {sub.package?.name || sub.package_name || "Sem pacote"} • R$ {sub.package?.price || 0}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <p className="text-sm text-primary font-medium">
+                          {sub.package?.name || sub.package_name || "Sem pacote"} • R$ {sub.package?.price || 0}
+                        </p>
+                        {sub.package_name && sub.package?.name && sub.package_name !== sub.package.name && (
+                          <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-500">
+                            No app estava: {sub.package_name}
+                          </Badge>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openChangePackageModal(sub)}
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Trocar pacote do assinante sem perder meses ou histórico"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Trocar pacote
+                        </button>
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <div className="flex items-center gap-1 bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/30 overflow-hidden">
                           <button 
@@ -1646,10 +1728,10 @@ const VIPPackagesManager = () => {
                     <div className="flex flex-col items-end gap-3">
                       <div className="flex flex-col items-end gap-1 mb-2">
                         <span className="text-xs text-muted-foreground font-medium">
-                          Comprado em: {format(new Date(sub.created_at || sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })}
+                          Comprado em: {format(parseDateSafe(sub.created_at || sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR })}
                         </span>
                         <span className="text-sm text-foreground">
-                          Ciclo: {sub.usage_reset_date ? format(new Date(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR }) : "A iniciar"} - {sub.usage_reset_date ? calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30) : "?"}
+                          Ciclo: {sub.usage_reset_date ? format(parseDateSafe(sub.subscription_start_date), "dd/MM/yyyy", { locale: ptBR }) : "A iniciar"} - {sub.usage_reset_date ? calculateEndDate(sub.subscription_start_date, sub.package?.duration_days || 30) : "?"}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2 justify-end">
@@ -1953,7 +2035,7 @@ const VIPPackagesManager = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Pacote</span>
                   <span className="text-sm font-semibold text-foreground">
-                    {renewingSubscriber.package_name || renewingSubscriber.package?.name}
+                    {renewingSubscriber.package?.name || renewingSubscriber.package_name}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -2022,6 +2104,91 @@ const VIPPackagesManager = () => {
                     <>
                       <Check className="w-4 h-4" />
                       Confirmar Renovação
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Change Subscriber Package Modal ───────────────────────── */}
+      <Dialog
+        open={showChangePackageModal}
+        onOpenChange={(open) => {
+          if (!open && !changingPackageLoading) {
+            setShowChangePackageModal(false);
+            setChangingPackageSub(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <Pencil className="w-5 h-5 text-primary" />
+              Trocar Pacote do Assinante
+            </DialogTitle>
+          </DialogHeader>
+
+          {changingPackageSub && (
+            <div className="space-y-4">
+              <div className="bg-muted/40 rounded-xl p-3 space-y-1 text-sm">
+                <p className="font-semibold text-foreground">
+                  {changingPackageSub.profile?.full_name || "Cliente"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Pacote atual: <span className="text-foreground font-medium">{changingPackageSub.package?.name || changingPackageSub.package_name || "Sem pacote"}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Mantém meses consecutivos ({changingPackageSub.consecutive_months}) e histórico.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wide block">
+                  Novo Pacote
+                </label>
+                <select
+                  value={newPackageIdForSub}
+                  onChange={(e) => setNewPackageIdForSub(e.target.value)}
+                  className="w-full p-2.5 rounded-lg bg-muted/30 border border-border text-foreground text-sm"
+                >
+                  <option value="">Selecione um pacote...</option>
+                  {packages.map(pkg => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} — R$ {pkg.price.toFixed(2).replace('.', ',')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowChangePackageModal(false);
+                    setChangingPackageSub(null);
+                  }}
+                  disabled={changingPackageLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={changeSubscriberPackage}
+                  disabled={!newPackageIdForSub || changingPackageLoading}
+                >
+                  {changingPackageLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Salvar Pacote
                     </>
                   )}
                 </Button>

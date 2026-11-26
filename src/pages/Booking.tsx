@@ -463,6 +463,19 @@ const Booking = () => {
       
       // Subscription is valid for 30 days from start date (can be adjusted per package)
       const endDate = addDays(startDate, 30);
+
+      // Always resolve authoritative package metadata from `packages` by package_id
+      // so client UI & renewal never drift from the real package in Admin.
+      let pkgDetails: { name?: string | null; price?: number | null; weekly_credits?: number | null } | null = null;
+      if (subscription.package_id) {
+        const { data: pkgData } = await supabase
+          .from("packages")
+          .select("name, price, weekly_credits")
+          .eq("id", subscription.package_id)
+          .maybeSingle();
+        pkgDetails = pkgData;
+      }
+      const authoritativePackageName = pkgDetails?.name || subscription.package_name || "Assinatura";
       
       // CHECK: If subscription period has expired AND it has started, treat as no active subscription
       const now = new Date();
@@ -472,22 +485,11 @@ const Booking = () => {
         setSubscriptionPackageItems([]);
         setHasExpiredSubscription(true);
 
-        // Busca o preço do pacote para popular os detalhes de renovação
-        // (sem isso, o modal de renovar PIX nunca abre ao clicar)
-        let packagePrice = 0;
-        if (subscription.package_id) {
-          const { data: pkgData } = await supabase
-            .from("packages")
-            .select("price")
-            .eq("id", subscription.package_id)
-            .maybeSingle();
-          if (pkgData) packagePrice = pkgData.price || 0;
-        }
         setExpiredSubscriptionDetails({
           id: subscription.id,
           package_id: subscription.package_id || "",
-          package_name: subscription.package_name || "Assinatura",
-          price: packagePrice,
+          package_name: authoritativePackageName,
+          price: pkgDetails?.price || 0,
         });
         return;
       }
@@ -505,17 +507,9 @@ const Booking = () => {
       // Limite de agendamentos por semana: primeiro verifica ajuste individual na assinatura,
       // depois o campo weekly_credits do pacote; se não configurado, mantém 1 agendamento por semana.
       const customWeeklyLimit = (subscription as { weekly_credits_limit?: number | null }).weekly_credits_limit;
-      let packageWeeklyLimit: number | null = null;
-      if (subscription.package_id) {
-        const { data: pkgWeekly } = await supabase
-          .from("packages")
-          .select("weekly_credits")
-          .eq("id", subscription.package_id)
-          .maybeSingle();
-        if (pkgWeekly?.weekly_credits && pkgWeekly.weekly_credits > 0) {
-          packageWeeklyLimit = pkgWeekly.weekly_credits;
-        }
-      }
+      const packageWeeklyLimit = (pkgDetails?.weekly_credits && pkgDetails.weekly_credits > 0)
+        ? pkgDetails.weekly_credits
+        : null;
       const weeklyBookingLimit = (customWeeklyLimit && customWeeklyLimit > 0)
         ? customWeeklyLimit
         : (packageWeeklyLimit ?? 1);
@@ -523,7 +517,7 @@ const Booking = () => {
       setActiveSubscription({
         id: subscription.id,
         package_id: subscription.package_id,
-        package_name: subscription.package_name || "Assinatura",
+        package_name: authoritativePackageName,
         monthly_cuts_limit: subscription.monthly_cuts_limit,
         cuts_used_this_month: cutsUsed,
         // IMPORTANT: 0 é um valor válido (sem créditos). Use ?? para não mascarar 0.
@@ -600,7 +594,7 @@ const Booking = () => {
           package_id,
           package_name,
           last_payment_date,
-          packages (price)
+          packages (name, price)
         `)
         .eq("user_id", user.id)
         .eq("is_active", false)
@@ -611,20 +605,25 @@ const Booking = () => {
       
       setHasExpiredSubscription(!!inactiveSub);
       if (inactiveSub) {
-        // Tenta pegar o preço do join, mas faz fallback buscando diretamente
-        let packagePrice = (inactiveSub.packages as any)?.price || 0;
-        if (!packagePrice && inactiveSub.package_id) {
+        // Tenta pegar nome e preço do join, mas faz fallback buscando diretamente
+        const joinedPkg = inactiveSub.packages as { name?: string | null; price?: number | null } | null;
+        let packagePrice = joinedPkg?.price || 0;
+        let packageName = joinedPkg?.name || "";
+        if ((!packagePrice || !packageName) && inactiveSub.package_id) {
           const { data: pkgData } = await supabase
             .from("packages")
-            .select("price")
+            .select("name, price")
             .eq("id", inactiveSub.package_id)
             .maybeSingle();
-          if (pkgData) packagePrice = pkgData.price || 0;
+          if (pkgData) {
+            if (!packagePrice) packagePrice = pkgData.price || 0;
+            if (!packageName) packageName = pkgData.name || "";
+          }
         }
         setExpiredSubscriptionDetails({
           id: inactiveSub.id,
           package_id: inactiveSub.package_id || "",
-          package_name: inactiveSub.package_name || "",
+          package_name: packageName || inactiveSub.package_name || "",
           price: packagePrice,
         });
       }
