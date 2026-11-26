@@ -9,23 +9,36 @@ export const openWhatsApp = (phone: string, message: string): void => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
+const isAtOrAfter19h = (time: string): boolean => {
+  const hour = parseInt(time.split(":")[0], 10);
+  return !isNaN(hour) && hour >= 19;
+};
+
 export const getConfirmationMessage = (
   customerName: string,
   serviceName: string,
   date: string,
-  time: string
+  time: string,
+  price?: number | string
 ): string => {
-  return `Olá ${customerName}! 👋
+  const formattedPrice =
+    typeof price === "number"
+      ? price.toFixed(2).replace(".", ",")
+      : price || "0,00";
 
-Seu agendamento foi *CONFIRMADO*! ✅
+  const nightFeeNotice = isAtOrAfter19h(time)
+    ? "\n\nInformamos que atendimentos após as 19h possuem um adicional de R$ 5,00 sobre o valor do serviço."
+    : "";
 
-📅 *${serviceName}*
-📆 Data: ${date}
-⏰ Horário: ${time}
+  return `Olá, ${customerName}! Seu agendamento foi confirmado! ✂️
 
-Até lá! 💈
+Serviço: ${serviceName}
+Data: ${date}
+Horário: ${time}
+Valor: R$ ${formattedPrice}${nightFeeNotice}
 
-_Natan Barber_`;
+Até lá!
+Natan Barber Shop`;
 };
 
 export const getCancellationMessage = (

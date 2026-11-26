@@ -385,6 +385,36 @@ const Admin = () => {
     return subscription.cuts_used_this_month < subscription.monthly_cuts_limit;
   };
 
+  // Builds the WhatsApp confirmation message with the appointment's real value and conditional 19h+ notice
+  const getAppointmentConfirmationMessage = (appointment: Appointment): string => {
+    const clientInfo = getClientDisplayInfo(appointment);
+    const subscription = getUserSubscription(appointment.user_id);
+    const isCoveredBySubscription =
+      appointment.payment_method === "subscription" ||
+      (subscription !== null && hasRemainingCuts(subscription));
+
+    const priceLabel = isCoveredBySubscription
+      ? "0,00 (Assinatura)"
+      : getServicesTotal(
+          appointment.services,
+          appointment.notes,
+          !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id),
+          appointment.appointment_time,
+          appointment.appointment_date,
+          extraFeeConfig
+        )
+          .toFixed(2)
+          .replace(".", ",");
+
+    return getConfirmationMessage(
+      clientInfo.name,
+      getServicesNames(appointment.services),
+      format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
+      appointment.appointment_time.slice(0, 5),
+      priceLabel
+    );
+  };
+
   // Filter appointments by date range for reports
   const getFilteredAppointmentsForReports = useCallback(() => {
     if (!reportStartDate || !reportEndDate) return appointments;
@@ -2031,12 +2061,7 @@ const Admin = () => {
 
                         <WhatsAppButton
                           phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
-                          message={getConfirmationMessage(
-                            getClientDisplayInfo(appointment).name,
-                            getServicesNames(appointment.services),
-                            format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
-                            appointment.appointment_time.slice(0, 5)
-                          )}
+                          message={getAppointmentConfirmationMessage(appointment)}
                           disabled={getClientDisplayInfo(appointment).phone === "Sem telefone"}
                         />
                       </div>
@@ -2392,12 +2417,7 @@ const Admin = () => {
 
                           <WhatsAppButton
                             phone={getClientDisplayInfo(appointment).phone !== "Sem telefone" ? getClientDisplayInfo(appointment).phone : ""}
-                            message={getConfirmationMessage(
-                              getClientDisplayInfo(appointment).name,
-                              getServicesNames(appointment.services),
-                              format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
-                              appointment.appointment_time.slice(0, 5)
-                            )}
+                            message={getAppointmentConfirmationMessage(appointment)}
                             disabled={getClientDisplayInfo(appointment).phone === "Sem telefone"}
                           />
 
