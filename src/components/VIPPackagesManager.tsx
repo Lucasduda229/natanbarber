@@ -236,7 +236,19 @@ const VIPPackagesManager = () => {
           const pkgByName = packagesResult.data?.find(
             p => p.name.trim().toLowerCase() === sub.package_name!.trim().toLowerCase()
           );
-          if (pkgByName) {
+          const latestConfirmedOrder = (ordersResult.data || []).find(
+            o =>
+              o.user_id === sub.user_id &&
+              o.payment_method !== "admin" &&
+              ((o as { payment_status?: string }).payment_status || 'confirmed') === 'confirmed'
+          );
+          const orderExplicitlyBoughtCurrentId = Boolean(
+            latestConfirmedOrder &&
+            latestConfirmedOrder.package_id === pkg.id &&
+            latestConfirmedOrder.package_name?.trim().toLowerCase() === pkg.name.trim().toLowerCase()
+          );
+
+          if (pkgByName && !orderExplicitlyBoughtCurrentId) {
             pkg = pkgByName;
             sub.package_id = pkgByName.id;
             sub.package_name = pkgByName.name;
@@ -254,17 +266,24 @@ const VIPPackagesManager = () => {
         
         // AUTO FIX for legacy subscriptions with incorrect monthly_cuts_limit (sum vs max) or healed package
         const correctLimit = pkgItems.length > 0 ? Math.max(...pkgItems.map(i => i.quantity || 0)) : 4;
-        if (sub.monthly_cuts_limit !== correctLimit || Object.keys(pendingHealFields).length > 0) {
+        const autoFixUpdate: Record<string, unknown> = { ...pendingHealFields };
+        if (sub.monthly_cuts_limit !== correctLimit) {
           sub.monthly_cuts_limit = correctLimit;
-          supabase.from('subscription_progress').update({
-            ...pendingHealFields,
+          autoFixUpdate.monthly_cuts_limit = correctLimit;
+          autoFixUpdate.weekly_credits_available = getEffectiveWeeklyLimit({
+            weekly_credits_limit: (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit,
             monthly_cuts_limit: correctLimit,
-            weekly_credits_available: getEffectiveWeeklyLimit({
-              weekly_credits_limit: (sub as { weekly_credits_limit?: number | null }).weekly_credits_limit,
-              monthly_cuts_limit: correctLimit,
-              package: pkg,
-            })
-          }).eq('id', sub.id).then();
+            package: pkg,
+          });
+        }
+        if (Object.keys(autoFixUpdate).length > 0) {
+          supabase
+            .from('subscription_progress')
+            .update(autoFixUpdate)
+            .eq('id', sub.id)
+            .then(({ error }) => {
+              if (error) console.error("Error auto-healing subscription:", error);
+            });
         }
         
         // Get completed/confirmed appointments for this subscriber AFTER last reset

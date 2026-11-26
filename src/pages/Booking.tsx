@@ -453,6 +453,16 @@ const Booking = () => {
       .eq("is_active", true)
       .maybeSingle();
 
+    const findActivePackageByName = async (name: string) => {
+      const { data } = await supabase
+        .from("packages")
+        .select("id, name, price, weekly_credits")
+        .eq("active", true)
+        .ilike("name", name.trim())
+        .maybeSingle();
+      return data;
+    };
+
     if (subscription) {
       const hasStarted = subscription.usage_reset_date !== null;
       
@@ -466,16 +476,6 @@ const Booking = () => {
 
       // Resolve authoritative package metadata from `packages`; if a legacy row has
       // mismatched package_name vs package_id, honor the matching active package by name.
-      const findActivePackageByName = async (name: string) => {
-        const { data } = await supabase
-          .from("packages")
-          .select("id, name, price, weekly_credits")
-          .eq("active", true)
-          .ilike("name", name.trim())
-          .maybeSingle();
-        return data;
-      };
-
       let resolvedPackageId = subscription.package_id;
       let pkgDetails: { id?: string; name?: string | null; price?: number | null; weekly_credits?: number | null } | null = null;
       if (subscription.package_id) {
@@ -648,12 +648,7 @@ const Booking = () => {
           packageName &&
           inactiveSub.package_name.trim().toLowerCase() !== packageName.trim().toLowerCase()
         ) {
-          const { data: pkgByName } = await supabase
-            .from("packages")
-            .select("id, name, price")
-            .eq("active", true)
-            .ilike("name", inactiveSub.package_name.trim())
-            .maybeSingle();
+          const pkgByName = await findActivePackageByName(inactiveSub.package_name);
           if (pkgByName) {
             resolvedPkgId = pkgByName.id;
             packageName = pkgByName.name;
