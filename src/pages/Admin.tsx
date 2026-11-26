@@ -385,7 +385,7 @@ const Admin = () => {
     return subscription.cuts_used_this_month < subscription.monthly_cuts_limit;
   };
 
-  // Builds the WhatsApp confirmation message with the appointment's real value and conditional 19h+ notice
+  // Builds the WhatsApp confirmation message with itemized service/fee breakdown and conditional 19h+ notice
   const getAppointmentConfirmationMessage = (appointment: Appointment): string => {
     const clientInfo = getClientDisplayInfo(appointment);
     const subscription = getUserSubscription(appointment.user_id);
@@ -393,25 +393,50 @@ const Admin = () => {
       appointment.payment_method === "subscription" ||
       (subscription !== null && hasRemainingCuts(subscription));
 
-    const priceLabel = isCoveredBySubscription
-      ? "0,00 (Assinatura)"
-      : getServicesTotal(
-          appointment.services,
-          appointment.notes,
-          !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id),
-          appointment.appointment_time,
-          appointment.appointment_date,
-          extraFeeConfig
-        )
-          .toFixed(2)
-          .replace(".", ",");
+    const dateStr = format(parseISO(appointment.appointment_date), "dd/MM/yyyy");
+    const timeStr = appointment.appointment_time.slice(0, 5);
+    const serviceNames = getServicesNames(appointment.services);
+
+    if (isCoveredBySubscription) {
+      return getConfirmationMessage(
+        clientInfo.name,
+        serviceNames,
+        dateStr,
+        timeStr,
+        "0,00 (Assinatura)",
+        { nightFee: 0 }
+      );
+    }
+
+    const isReward = !!(appointment?.used_referral_redemption_id || appointment?.used_store_redemption_id);
+    const defaultNightAmount = (extraFeeConfig?.enabled && extraFeeConfig.amount > 0) ? extraFeeConfig.amount : 5;
+    const rawNightAmt = getNightSurcharge(appointment.notes, appointment.appointment_time, defaultNightAmount);
+    const rawExtraAmt = getExtraFeeFromNotes(appointment.notes, appointment.appointment_date, rawNightAmt > 0, extraFeeConfig);
+    const total = getServicesTotal(
+      appointment.services,
+      appointment.notes,
+      isReward,
+      appointment.appointment_time,
+      appointment.appointment_date,
+      extraFeeConfig
+    );
+
+    const effectiveNightAmt = rawNightAmt > 0 && total >= rawNightAmt ? rawNightAmt : 0;
+    const effectiveExtraAmt = effectiveNightAmt === 0 && rawExtraAmt > 0 && total >= rawExtraAmt ? rawExtraAmt : 0;
+    const serviceValue = Math.max(0, total - effectiveNightAmt - effectiveExtraAmt);
 
     return getConfirmationMessage(
       clientInfo.name,
-      getServicesNames(appointment.services),
-      format(parseISO(appointment.appointment_date), "dd/MM/yyyy"),
-      appointment.appointment_time.slice(0, 5),
-      priceLabel
+      serviceNames,
+      dateStr,
+      timeStr,
+      total,
+      {
+        servicePrice: serviceValue,
+        nightFee: effectiveNightAmt,
+        extraFee: effectiveExtraAmt,
+        extraFeeName: extraFeeConfig?.name,
+      }
     );
   };
 
