@@ -56,24 +56,29 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewCustomer = false;
 
-    // Check if a profile with this phone already exists (handle duplicates)
+    // Check if a profile with this phone already exists (prefer exact name match when sharing phone)
     const { data: existingProfiles } = await supabaseAdmin
       .from("profiles")
-      .select("user_id, created_at")
+      .select("user_id, full_name, created_at")
       .eq("phone", cleanPhone)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    const existingProfile = existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null;
+      .order("created_at", { ascending: true });
+    const normalizedInputName = name.trim().toLowerCase();
+    const exactNameMatch = existingProfiles?.find(
+      (p) => (p.full_name || "").trim().toLowerCase() === normalizedInputName
+    );
+    const existingProfile = exactNameMatch || (existingProfiles && existingProfiles.length > 0 ? existingProfiles[0] : null);
 
     if (existingProfile) {
       userId = existingProfile.user_id;
       console.log("Found existing customer with phone:", cleanPhone);
-      
-      // Update the name if it changed
-      await supabaseAdmin
-        .from("profiles")
-        .update({ full_name: name })
-        .eq("user_id", userId);
+
+      // Only fill full_name if empty — avoids overwriting another person's name when sharing a family WhatsApp
+      if (!existingProfile.full_name?.trim()) {
+        await supabaseAdmin
+          .from("profiles")
+          .update({ full_name: name })
+          .eq("user_id", userId);
+      }
     } else {
       // Create a new user with generated email
       const generatedEmail = `guest_${cleanPhone}@natanbarbershop.local`;

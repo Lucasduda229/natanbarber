@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -104,6 +104,7 @@ export const AIAssistantPanel = () => {
 
   /* ---------- submit ---------- */
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   /* ---------------------------------------------------------------- */
   /* Load services once                                               */
@@ -228,14 +229,16 @@ export const AIAssistantPanel = () => {
   };
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return;
     if (!appointmentDate) return toast.error('Selecione a data');
     if (!appointmentTime) return toast.error('Selecione o horário');
     if (selectedServices.length === 0) return toast.error('Selecione pelo menos 1 serviço');
 
-    const name = selectedClient?.full_name || guestName.trim();
-    const phone = selectedClient?.phone || guestPhone.trim();
+    const name = guestName.trim() || selectedClient?.full_name?.trim() || '';
+    const phone = guestPhone.trim() || selectedClient?.phone?.trim() || '';
     if (!name) return toast.error('Informe o nome do cliente');
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const [primaryId, ...additionalIds] = selectedServices;
@@ -266,9 +269,11 @@ export const AIAssistantPanel = () => {
       playSuccessSound();
       toast.success('Agendamento criado com sucesso!');
       handleClear();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao criar agendamento');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar agendamento';
+      toast.error(msg);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -346,6 +351,7 @@ export const AIAssistantPanel = () => {
                 />
                 {(clientQuery || selectedClient) && (
                   <button
+                    type="button"
                     onClick={clearClient}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -367,6 +373,7 @@ export const AIAssistantPanel = () => {
                       clientResults.map(c => (
                         <button
                           key={c.id}
+                          type="button"
                           onClick={() => selectClient(c)}
                           className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
                         >
@@ -396,7 +403,16 @@ export const AIAssistantPanel = () => {
                 <Input
                   placeholder="Nome completo"
                   value={guestName}
-                  onChange={e => setGuestName(e.target.value)}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setGuestName(value);
+                    if (selectedClient && value.trim() !== (selectedClient.full_name || '').trim()) {
+                      setSelectedClient(null);
+                      setClientQuery('');
+                      setClientResults([]);
+                      setShowDropdown(false);
+                    }
+                  }}
                   className="h-11 rounded-xl border-border/60 bg-background/60 text-sm"
                 />
               </div>
@@ -408,7 +424,16 @@ export const AIAssistantPanel = () => {
                 <Input
                   placeholder="Ex: 48996915303"
                   value={guestPhone}
-                  onChange={e => setGuestPhone(e.target.value)}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setGuestPhone(value);
+                    if (selectedClient && value.trim() !== (selectedClient.phone || '').trim()) {
+                      setSelectedClient(null);
+                      setClientQuery('');
+                      setClientResults([]);
+                      setShowDropdown(false);
+                    }
+                  }}
                   className="h-11 rounded-xl border-border/60 bg-background/60 text-sm"
                   inputMode="numeric"
                 />

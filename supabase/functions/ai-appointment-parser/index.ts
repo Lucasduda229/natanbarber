@@ -50,7 +50,8 @@ serve(async (req) => {
 
     const servicesList = services?.map(s => `- "${s.name}" (ID: ${s.id}, R$${s.price})`).join('\n') || 'Nenhum serviço cadastrado';
 
-    const today = new Date().toISOString().split('T')[0];
+    // Use Brasília time (UTC-3) so after 21:00 local time "today" does not roll over to tomorrow
+    const today = new Date(Date.now() - 3 * 3600 * 1000).toISOString().split('T')[0];
 
     const systemPrompt = `Você interpreta mensagens de agendamento de barbearia e retorna JSON puro (sem markdown).
 

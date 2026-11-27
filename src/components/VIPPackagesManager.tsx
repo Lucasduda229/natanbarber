@@ -415,7 +415,7 @@ const VIPPackagesManager = () => {
   const toggleSubscriptionStatus = async (subId: string, currentActive: boolean, sub?: SubscriberWithUsage) => {
     try {
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = format(today, "yyyy-MM-dd");
       const nowTimestamp = today.toISOString();
 
       // When activating (from inactive to active), reset dates and counters
@@ -564,7 +564,7 @@ const VIPPackagesManager = () => {
   const resetBenefitsUsage = async (subId: string) => {
     // Use full timestamp to properly filter appointments created after this moment
     const now = new Date().toISOString();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     
     try {
       const { error } = await supabase
@@ -950,7 +950,7 @@ const VIPPackagesManager = () => {
 
     try {
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
+      const today = format(now, "yyyy-MM-dd");
       
       // Create appointments for each selected benefit with unique timestamps
       const insertPromises = benefitsToRegister.map((benefit, index) => {

@@ -54,7 +54,15 @@ serve(async (req) => {
       .eq('id', appointment.service_id)
       .single();
 
-    const clientName = profile?.full_name || 'Novo cliente';
+    const rawNotes = (appointment.notes as string | null) || '';
+    const legacyClientMatch = rawNotes.match(/^Cliente:\s*([^|\r\n]+)/i);
+    const structuredClientMatch = rawNotes.match(
+      /^(?:Agendamento Manual|Pedido via Site)\s*-\s*([^\r\n]+?)(?:\s+-\s+Tel:\s*[^\r\n|]+)?(?:\r?\n|$)/i
+    );
+    const clientName =
+      (legacyClientMatch?.[1] || structuredClientMatch?.[1])?.trim() ||
+      profile?.full_name ||
+      'Novo cliente';
     const serviceName = service?.name || 'Serviço';
     const appointmentTime = (appointment.appointment_time as string)?.slice(0, 5) || '';
     const appointmentDate = appointment.appointment_date as string || '';

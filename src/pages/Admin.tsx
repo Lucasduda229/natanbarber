@@ -134,17 +134,21 @@ const statusLabels: Record<string, string> = {
   no_show: "Falta",
 };
 
-// Helper function to extract client name and phone from AI-generated notes
+// Helper function to extract client name and phone from manual, site order, or AI-generated notes
 const extractClientInfoFromNotes = (notes: string | null): { name: string | null; phone: string | null } => {
   if (!notes) return { name: null, phone: null };
-  
-  // Pattern: "Cliente: Nome do Cliente | Tel: 123456789 | observações"
-  const clientMatch = notes.match(/^Cliente:\s*([^|]+)/i);
-  const phoneMatch = notes.match(/Tel:\s*([^|]+)/i);
-  
+
+  // Pattern 1: "Cliente: Nome do Cliente | Tel: 123456789 | observações"
+  const legacyClientMatch = notes.match(/^Cliente:\s*([^|\n]+)/i);
+  // Pattern 2: "Agendamento Manual - Nome - Tel: 123456789" or "Pedido via Site - Nome - Tel: 123456789"
+  const structuredMatch = notes.match(
+    /^(?:Agendamento Manual|Pedido via Site)\s*-\s*([^\n]+?)(?:\s+-\s+Tel:\s*([^\n|]+))?(?:\n|$)/i
+  );
+  const phoneMatch = notes.match(/Tel:\s*([^|\n]+)/i);
+
   return {
-    name: clientMatch ? clientMatch[1].trim() : null,
-    phone: phoneMatch ? phoneMatch[1].trim() : null
+    name: (legacyClientMatch?.[1] || structuredMatch?.[1])?.trim() || null,
+    phone: (structuredMatch?.[2] || phoneMatch?.[1])?.trim() || null,
   };
 };
 
